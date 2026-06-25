@@ -54,14 +54,14 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: var(--brand-card);
+  --sidebar-foreground: var(--brand-text);
+  --sidebar-primary: var(--brand-primary);
+  --sidebar-primary-foreground: var(--brand-primary-text);
+  --sidebar-accent: color-mix(in srgb, var(--brand-primary) 14%, transparent);
+  --sidebar-accent-foreground: var(--brand-text);
+  --sidebar-border: var(--brand-card-border);
+  --sidebar-ring: var(--brand-primary);
 }
 
 /* ── Dark theme (golden + black) ── */
@@ -890,14 +890,14 @@ a.auth-button-outline:hover {
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: var(--brand-card);
+  --sidebar-foreground: var(--brand-text);
+  --sidebar-primary: var(--brand-primary);
+  --sidebar-primary-foreground: var(--brand-primary-text);
+  --sidebar-accent: color-mix(in srgb, var(--brand-primary) 14%, transparent);
+  --sidebar-accent-foreground: var(--brand-text);
+  --sidebar-border: var(--brand-card-border);
+  --sidebar-ring: var(--brand-primary);
 }
 
 @layer base {
@@ -919,6 +919,67 @@ a.auth-button-outline:hover {
   flex: 1;
   flex-direction: column;
   background: var(--brand-background);
+}
+
+/* Shadcn sidebar — sync with brand theme + smooth collapse */
+.dashboard-topbar {
+  display: flex;
+  height: 4rem;
+  flex-shrink: 0;
+  align-items: center;
+  border-bottom: 1px solid var(--brand-card-border);
+}
+
+[data-slot="sidebar-wrapper"] [data-slot="sidebar-inner"],
+[data-slot="sidebar-wrapper"] [data-sidebar="sidebar"][data-mobile="true"] {
+  background-color: var(--brand-card);
+  color: var(--brand-text);
+}
+
+[data-slot="sidebar-wrapper"] [data-slot="sidebar-container"][data-side="left"] {
+  border-right: 1px solid var(--brand-card-border);
+}
+
+[data-slot="sidebar-wrapper"] [data-slot="sidebar-header"] {
+  min-height: 4rem;
+}
+
+[data-slot="sidebar-wrapper"] [data-slot="sidebar-gap"],
+[data-slot="sidebar-wrapper"] [data-slot="sidebar-container"] {
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-slot="sidebar-wrapper"] [data-slot="sidebar-menu-button"] {
+  transition:
+    width 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    height 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    padding 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 200ms ease,
+    color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+[data-slot="sidebar-wrapper"] [data-slot="sidebar-menu-button"] > span:last-child,
+[data-slot="sidebar-wrapper"] [data-slot="sidebar-group-label"] {
+  transition:
+    opacity 250ms cubic-bezier(0.4, 0, 0.2, 1),
+    margin 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-slot="sidebar-wrapper"] .group[data-collapsible="icon"] [data-slot="sidebar-menu-button"] > span:last-child {
+  opacity: 0;
+}
+
+[data-slot="sidebar-wrapper"] .dashboard-sidebar__nav-icon {
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-slot="sidebar-wrapper"] .group[data-collapsible="icon"] .dashboard-sidebar__nav-icon {
+  transform: scale(0.92);
 }
 
 .dashboard-shell__header {

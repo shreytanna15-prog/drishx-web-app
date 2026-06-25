@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Bell,
   ChevronRight,
   FileText,
   Headphones,
@@ -177,7 +176,7 @@ export function CustomerDashboard() {
   const displayName = getDisplayName(user.name, user.email);
 
   return (
-    <main className="relative mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <div className="relative mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       {/* Ambient glow */}
       <div
         aria-hidden
@@ -359,6 +358,6 @@ export function CustomerDashboard() {
           </Card>
         </section>
       </div>
-    </main>
+    </div>
   );
 }
