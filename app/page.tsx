@@ -1,65 +1,231 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BrandLogo } from "@/components/brand-logo";
+import { BrandSplash } from "@/components/brand-splash";
+import { useAuth } from "@/contexts/auth-context";
+import {
+  buildGstDetailsHref,
+  getCustomerNextRoute,
+  isCustomerApproved,
+} from "@/lib/auth-routing";
+
+const SPLASH_SESSION_KEY = "drishx-splash-done";
+
+function shouldSkipSplash(): boolean {
+  if (typeof window === "undefined") return false;
+
+  const nav = performance.getEntriesByType("navigation")[0] as
+    | PerformanceNavigationTiming
+    | undefined;
+
+  if (nav?.type === "reload") {
+    return false;
+  }
+
+  return sessionStorage.getItem(SPLASH_SESSION_KEY) === "1";
+}
+
+const LANDING_FEATURES = [
+  { label: "Order", text: "Place lens orders online" },
+  { label: "Track", text: "Monitor order status live" },
+  { label: "Manage", text: "Your business account" },
+] as const;
+
+function HomeContent() {
+  const { user, isLoading, logout } = useAuth();
+
+  const showDashboard =
+    user && (user.role !== "CUSTOMER" || isCustomerApproved(user));
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="landing-page">
+      <header className="landing-header">
+        <div className="landing-header__inner">
+          <BrandLogo size="sm" />
+
+          <nav className="landing-header__nav">
+            {isLoading ? (
+              <span
+                className="text-sm"
+                style={{ color: "var(--brand-text-muted)" }}
+              >
+                Loading...
+              </span>
+            ) : user ? (
+              <>
+                <span
+                  className="hidden text-sm sm:inline"
+                  style={{ color: "var(--brand-text-muted)" }}
+                >
+                  {user.name ?? user.email}
+                </span>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="auth-button-outline auth-button--inline"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <div className="header-auth-pair">
+                <Link
+                  href="/login"
+                  className="auth-button-outline auth-button--inline"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="auth-button auth-button--inline"
+                >
+                  Sign up
+                </Link>
+              </div>
+            )}
+          </nav>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      </header>
+
+      <main className="landing-hero">
+        {showDashboard ? (
+          <div className="landing-hero__content">
+            <div className="auth-card w-full text-left">
+              <h1 className="auth-card-title">
+                Welcome{user?.name ? `, ${user.name}` : ""}
+              </h1>
+              <p style={{ color: "var(--brand-text-muted)" }}>
+                You are signed in as{" "}
+                <span
+                  className="font-semibold"
+                  style={{ color: "var(--brand-text)" }}
+                >
+                  {user?.email}
+                </span>
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <span className="brand-badge">{user?.role}</span>
+                <span className="brand-badge">
+                  {user?.approvalStatus.replace("_", " ")}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : user ? (
+          <div
+            className="landing-hero__content"
+            style={{ color: "var(--brand-text-muted)" }}
           >
+            <div className="auth-spinner" />
+            <p className="mt-4">Redirecting...</p>
+          </div>
+        ) : (
+          <div className="landing-hero__content">
+            <p className="brand-badge mb-5">Lens ordering portal</p>
+
             <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+              src="/edited-photo.png"
+              alt=""
+              width={120}
+              height={120}
+              className="landing-hero__logo"
+              priority
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+            <h1 className="landing-hero__title">
+              Precision lenses,
+              <br />
+              <span className="landing-hero__title-accent">
+                delivered for you
+              </span>
+            </h1>
+
+            <p className="landing-hero__subtitle">
+              Sign in to manage your orders, or create a new customer account
+              to get started with Drishx.
+            </p>
+
+            <div className="landing-hero__actions">
+              <Link href="/login" className="auth-button">
+                Sign in
+              </Link>
+              <Link href="/signup" className="auth-button-outline">
+                Create account
+              </Link>
+            </div>
+
+            <div className="landing-features">
+              {LANDING_FEATURES.map((feature) => (
+                <div key={feature.label} className="landing-feature">
+                  <span className="landing-feature__label">{feature.label}</span>
+                  <p className="landing-feature__text">{feature.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     </div>
+  );
+}
+
+export default function Home() {
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
+  const hasNavigated = useRef(false);
+
+  const [mounted, setMounted] = useState(false);
+  const [splashDone, setSplashDone] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (shouldSkipSplash()) {
+      setSplashDone(true);
+    }
+  }, []);
+
+  const handleSplashFinish = useCallback(() => {
+    sessionStorage.setItem(SPLASH_SESSION_KEY, "1");
+    setSplashDone(true);
+  }, []);
+
+  const navigateAfterSplash = useCallback(() => {
+    if (!splashDone || isLoading || hasNavigated.current || !user) {
+      return;
+    }
+
+    const nextRoute = getCustomerNextRoute(user);
+    if (nextRoute === "/gst-details") {
+      hasNavigated.current = true;
+      router.replace(buildGstDetailsHref(user.id, user.email));
+    } else if (nextRoute === "/pending-approval") {
+      hasNavigated.current = true;
+      router.replace(
+        `/pending-approval?email=${encodeURIComponent(user.email)}`
+      );
+    }
+  }, [splashDone, isLoading, user, router]);
+
+  useEffect(() => {
+    navigateAfterSplash();
+  }, [navigateAfterSplash]);
+
+  return (
+    <>
+      {mounted && !splashDone && (
+        <BrandSplash onFinish={handleSplashFinish} />
+      )}
+      {!mounted && <div className="brand-splash" aria-hidden />}
+      <div
+        className={splashDone ? "flex min-h-full flex-1 flex-col" : "hidden"}
+        aria-hidden={!splashDone}
+      >
+        <HomeContent />
+      </div>
+    </>
   );
 }

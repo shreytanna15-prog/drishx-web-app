@@ -1,0 +1,33 @@
+export const BrandColorsLight = {
+  background: "#FFFFFF",
+  card: "#FFFFFF",
+  cardBorder: "rgba(240, 161, 50, 0.35)",
+  primary: "#F0A132",
+  primaryText: "#0B0F14",
+  text: "#0B0F14",
+  textMuted: "#6B7280",
+  label: "#4B5563",
+  inputBg: "#FFFFFF",
+  inputBorder: "rgba(240, 161, 50, 0.45)",
+  placeholder: "#9CA3AF",
+  link: "#C27803",
+  success: "#059669",
+  danger: "#DC2626",
+} as const;
+
+export const BrandColorsDark = {
+  background: "#0B0F14",
+  card: "#0F1620",
+  cardBorder: "rgba(240, 161, 50, 0.18)",
+  primary: "#F0A132",
+  primaryText: "#0B0F14",
+  text: "#EAF0FA",
+  textMuted: "#AAB2C0",
+  label: "#B9C0CC",
+  inputBg: "#0B0F14",
+  inputBorder: "rgba(240, 161, 50, 0.28)",
+  placeholder: "#6B7280",
+  link: "#F0A132",
+  success: "#7DD3A8",
+  danger: "#FCA5A5",
+} as const;
