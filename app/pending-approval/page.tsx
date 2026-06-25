@@ -39,7 +39,7 @@ function PendingApprovalContent() {
       if (isCustomerApproved(currentUser)) {
         stopPolling();
         login(token, currentUser);
-        router.replace("/");
+        router.replace("/home");
         return;
       }
 

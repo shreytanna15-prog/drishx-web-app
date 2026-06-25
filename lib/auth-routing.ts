@@ -1,6 +1,6 @@
 import type { SafeUser } from "./types";
 
-export type CustomerRoute = "/gst-details" | "/pending-approval" | "/";
+export type CustomerRoute = "/gst-details" | "/pending-approval" | "/home" | "/";
 
 export function isCustomerApproved(user: SafeUser | null | undefined): boolean {
   if (!user || user.role !== "CUSTOMER") {
@@ -22,7 +22,7 @@ export function getCustomerNextRoute(user: SafeUser): CustomerRoute {
   if (!user.isApproved || user.approvalStatus !== "APPROVED") {
     return "/pending-approval";
   }
-  return "/";
+  return "/home";
 }
 
 export function buildGstDetailsHref(userId: string, email: string): string {

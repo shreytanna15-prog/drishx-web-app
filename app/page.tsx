@@ -10,7 +10,6 @@ import { useAuth } from "@/contexts/auth-context";
 import {
   buildGstDetailsHref,
   getCustomerNextRoute,
-  isCustomerApproved,
 } from "@/lib/auth-routing";
 
 const SPLASH_SESSION_KEY = "drishx-splash-done";
@@ -37,9 +36,6 @@ const LANDING_FEATURES = [
 
 function HomeContent() {
   const { user, isLoading, logout } = useAuth();
-
-  const showDashboard =
-    user && (user.role !== "CUSTOMER" || isCustomerApproved(user));
 
   return (
     <div className="landing-page">
@@ -92,39 +88,7 @@ function HomeContent() {
       </header>
 
       <main className="landing-hero">
-        {showDashboard ? (
-          <div className="landing-hero__content">
-            <div className="auth-card w-full text-left">
-              <h1 className="auth-card-title">
-                Welcome{user?.name ? `, ${user.name}` : ""}
-              </h1>
-              <p style={{ color: "var(--brand-text-muted)" }}>
-                You are signed in as{" "}
-                <span
-                  className="font-semibold"
-                  style={{ color: "var(--brand-text)" }}
-                >
-                  {user?.email}
-                </span>
-              </p>
-              <div className="mt-6 flex flex-wrap gap-2">
-                <span className="brand-badge">{user?.role}</span>
-                <span className="brand-badge">
-                  {user?.approvalStatus.replace("_", " ")}
-                </span>
-              </div>
-            </div>
-          </div>
-        ) : user ? (
-          <div
-            className="landing-hero__content"
-            style={{ color: "var(--brand-text-muted)" }}
-          >
-            <div className="auth-spinner" />
-            <p className="mt-4">Redirecting...</p>
-          </div>
-        ) : (
-          <div className="landing-hero__content">
+        <div className="landing-hero__content">
             <p className="brand-badge mb-5">Lens ordering portal</p>
 
             <Image
@@ -166,8 +130,7 @@ function HomeContent() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+        </div>
       </main>
     </div>
   );
@@ -199,7 +162,10 @@ export default function Home() {
     }
 
     const nextRoute = getCustomerNextRoute(user);
-    if (nextRoute === "/gst-details") {
+    if (nextRoute === "/home") {
+      hasNavigated.current = true;
+      router.replace("/home");
+    } else if (nextRoute === "/gst-details") {
       hasNavigated.current = true;
       router.replace(buildGstDetailsHref(user.id, user.email));
     } else if (nextRoute === "/pending-approval") {
