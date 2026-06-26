@@ -119,3 +119,39 @@ export function coerceDisplayQuantity(
     ? coerceTypedQuantity(trimmed, "wholesale")
     : trimmed;
 }
+
+export function pairsFromPieces(pieces: number): number {
+  if (!Number.isInteger(pieces) || pieces < 1) {
+    return 0;
+  }
+  return Math.floor(pieces / PIECES_PER_PAIR);
+}
+
+export function displayQuantityFromPieces(
+  pieces: number,
+  mode: OrderQuantityMode
+): number {
+  if (!Number.isInteger(pieces) || pieces < 1) {
+    return 0;
+  }
+  return mode === "wholesale" ? pairsFromPieces(pieces) : pieces;
+}
+
+export function getQuantityStep(mode: OrderQuantityMode): number {
+  return mode === "wholesale" ? 2 : 1;
+}
+
+export function nextQuantityAfterDelta(
+  current: number,
+  delta: number,
+  mode: OrderQuantityMode
+): number {
+  const step = getQuantityStep(mode);
+  const signedStep = delta > 0 ? step : -step;
+  const next = current + signedStep;
+  const min = getMinimumOrderQuantity(mode);
+  if (next < min) {
+    return 0;
+  }
+  return next;
+}

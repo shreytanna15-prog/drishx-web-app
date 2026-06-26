@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -18,7 +19,13 @@ import {
 } from "@/lib/cart-api";
 import { buildCartLineId } from "@/lib/cart-utils";
 import { lineTotalForPieceQuantity } from "@/lib/lens-pricing";
+import {
+  nextQuantityAfterDelta,
+  type OrderQuantityMode,
+} from "@/lib/order-quantity";
 import type { CartItem, LensItem } from "@/lib/types/lens";
+
+const SYNC_DEBOUNCE_MS = 200;
 
 type CartContextValue = {
   items: CartItem[];
@@ -28,16 +35,51 @@ type CartContextValue = {
   refreshCart: () => Promise<void>;
   addToCart: (item: LensItem, quantity: number) => Promise<void>;
   removeFromCart: (cartLineId: string) => Promise<void>;
-  updateQuantity: (cartLineId: string, quantity: number) => Promise<void>;
+  removeLinesFromCart: (cartLineIds: string[]) => Promise<void>;
+  updateQuantity: (
+    cartLineId: string,
+    quantity: number,
+    mode?: OrderQuantityMode
+  ) => Promise<void>;
+  adjustQuantity: (
+    cartLineId: string,
+    delta: number,
+    mode: OrderQuantityMode
+  ) => void;
   clearCart: () => Promise<void>;
 };
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
 
+function toLensItem(entry: CartItem): LensItem {
+  return {
+    id: entry.id,
+    costPrice: entry.costPrice,
+    price: entry.price,
+    sph: entry.sph,
+    cyl: entry.cyl,
+    axis: entry.axis,
+    add: entry.add,
+    eye: entry.eye,
+    quantity: entry.quantity,
+    createdAt: entry.createdAt,
+    lensType: entry.lensType,
+    brand: entry.brand,
+    item: entry.item,
+    coating: entry.coating,
+  };
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const { token, user } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const itemsRef = useRef<CartItem[]>([]);
+  const syncTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map()
+  );
+  const syncVersionRef = useRef<Map<string, number>>(new Map());
 
   const authHeaders = useMemo(() => {
     if (!token) return null;
@@ -45,6 +87,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   const useServerCart = Boolean(authHeaders && user?.role === "CUSTOMER");
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
+  const applyItems = useCallback(
+    (updater: (current: CartItem[]) => CartItem[]) => {
+      setItems((current) => {
+        const next = updater(current);
+        itemsRef.current = next;
+        return next;
+      });
+    },
+    []
+  );
 
   const refreshCart = useCallback(async () => {
     if (!useServerCart || !authHeaders) {
@@ -66,11 +123,74 @@ export function CartProvider({ children }: { children: ReactNode }) {
     void refreshCart();
   }, [refreshCart]);
 
+  const flushLineSync = useCallback(
+    async (cartLineId: string, version: number) => {
+      if (!useServerCart || !authHeaders) {
+        return;
+      }
+
+      if (syncVersionRef.current.get(cartLineId) !== version) {
+        return;
+      }
+
+      const entry = itemsRef.current.find((item) => item.cartLineId === cartLineId);
+      if (!entry) {
+        try {
+          await removeCartLine(cartLineId, authHeaders);
+        } catch {
+          await refreshCart();
+        }
+        return;
+      }
+
+      try {
+        const { item: saved } = await upsertCartLine(
+          toLensItem(entry),
+          entry.cartQuantity,
+          authHeaders
+        );
+        if (syncVersionRef.current.get(cartLineId) !== version) {
+          return;
+        }
+        setItems((current) =>
+          current.map((row) =>
+            row.cartLineId === cartLineId ? saved : row
+          )
+        );
+      } catch {
+        await refreshCart();
+      }
+    },
+    [authHeaders, refreshCart, useServerCart]
+  );
+
+  const scheduleLineSync = useCallback(
+    (cartLineId: string) => {
+      const nextVersion = (syncVersionRef.current.get(cartLineId) ?? 0) + 1;
+      syncVersionRef.current.set(cartLineId, nextVersion);
+
+      const existingTimer = syncTimersRef.current.get(cartLineId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+
+      const timer = setTimeout(() => {
+        syncTimersRef.current.delete(cartLineId);
+        void flushLineSync(cartLineId, nextVersion);
+      }, SYNC_DEBOUNCE_MS);
+
+      syncTimersRef.current.set(cartLineId, timer);
+    },
+    [flushLineSync]
+  );
+
   const addToCart = useCallback(
     async (item: LensItem, quantity: number) => {
       const safeQuantity = Math.max(1, Math.floor(quantity));
       const cartLineId = buildCartLineId(item);
-      const existing = items.find((entry) => entry.cartLineId === cartLineId);
+      const existing = itemsRef.current.find(
+        (entry) => entry.cartLineId === cartLineId
+      );
       const nextQty = (existing?.cartQuantity ?? 0) + safeQuantity;
 
       const optimisticItem: CartItem = {
@@ -82,7 +202,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         isBackorder: false,
       };
 
-      setItems((current) => {
+      applyItems((current) => {
         const without = current.filter((entry) => entry.cartLineId !== cartLineId);
         return [...without, optimisticItem];
       });
@@ -111,13 +231,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     },
-    [authHeaders, items, useServerCart]
+    [applyItems, authHeaders, useServerCart]
   );
 
   const removeFromCart = useCallback(
     async (cartLineId: string) => {
-      const snapshot = items;
-      setItems((current) =>
+      const snapshot = itemsRef.current;
+      const existingTimer = syncTimersRef.current.get(cartLineId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+        syncTimersRef.current.delete(cartLineId);
+      }
+
+      applyItems((current) =>
         current.filter((entry) => entry.cartLineId !== cartLineId)
       );
 
@@ -131,7 +257,46 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems(snapshot);
       }
     },
-    [authHeaders, items, useServerCart]
+    [applyItems, authHeaders, useServerCart]
+  );
+
+  const removeLinesFromCart = useCallback(
+    async (cartLineIds: string[]) => {
+      const uniqueIds = [...new Set(cartLineIds.filter(Boolean))];
+      if (uniqueIds.length === 0) {
+        return;
+      }
+
+      const idSet = new Set(uniqueIds);
+      const snapshot = itemsRef.current;
+
+      for (const cartLineId of uniqueIds) {
+        const existingTimer = syncTimersRef.current.get(cartLineId);
+        if (existingTimer) {
+          clearTimeout(existingTimer);
+          syncTimersRef.current.delete(cartLineId);
+        }
+      }
+
+      applyItems((current) =>
+        current.filter((entry) => !idSet.has(entry.cartLineId))
+      );
+
+      if (!useServerCart || !authHeaders) {
+        return;
+      }
+
+      try {
+        await Promise.all(
+          uniqueIds.map((cartLineId) =>
+            removeCartLine(cartLineId, authHeaders)
+          )
+        );
+      } catch {
+        setItems(snapshot);
+      }
+    },
+    [applyItems, authHeaders, useServerCart]
   );
 
   const updateQuantity = useCallback(
@@ -141,11 +306,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const existing = items.find((entry) => entry.cartLineId === cartLineId);
+      const existing = itemsRef.current.find(
+        (entry) => entry.cartLineId === cartLineId
+      );
       if (!existing) return;
 
-      const snapshot = items;
-      setItems((current) =>
+      applyItems((current) =>
         current.map((entry) =>
           entry.cartLineId === cartLineId
             ? { ...entry, cartQuantity: quantity }
@@ -153,50 +319,70 @@ export function CartProvider({ children }: { children: ReactNode }) {
         )
       );
 
-      if (!useServerCart || !authHeaders) {
+      scheduleLineSync(cartLineId);
+    },
+    [applyItems, removeFromCart, scheduleLineSync]
+  );
+
+  const adjustQuantity = useCallback(
+    (cartLineId: string, delta: number, mode: OrderQuantityMode) => {
+      if (!delta) return;
+
+      let shouldRemove = false;
+
+      applyItems((current) => {
+        const entry = current.find((row) => row.cartLineId === cartLineId);
+        if (!entry) return current;
+
+        const nextQty = nextQuantityAfterDelta(
+          entry.cartQuantity,
+          delta,
+          mode
+        );
+
+        if (nextQty <= 0) {
+          shouldRemove = true;
+          return current.filter((row) => row.cartLineId !== cartLineId);
+        }
+
+        return current.map((row) =>
+          row.cartLineId === cartLineId
+            ? { ...row, cartQuantity: nextQty }
+            : row
+        );
+      });
+
+      if (shouldRemove) {
+        const existingTimer = syncTimersRef.current.get(cartLineId);
+        if (existingTimer) {
+          clearTimeout(existingTimer);
+          syncTimersRef.current.delete(cartLineId);
+        }
+        if (useServerCart && authHeaders) {
+          void removeCartLine(cartLineId, authHeaders).catch(() => {
+            void refreshCart();
+          });
+        }
         return;
       }
 
-      try {
-        const lensItem: LensItem = {
-          id: existing.id,
-          costPrice: existing.costPrice,
-          price: existing.price,
-          sph: existing.sph,
-          cyl: existing.cyl,
-          axis: existing.axis,
-          add: existing.add,
-          eye: existing.eye,
-          quantity: existing.quantity,
-          createdAt: existing.createdAt,
-          lensType: existing.lensType,
-          brand: existing.brand,
-          item: existing.item,
-          coating: existing.coating,
-        };
-        const { item: saved } = await upsertCartLine(
-          lensItem,
-          quantity,
-          authHeaders
-        );
-        setItems((current) =>
-          current.map((entry) =>
-            entry.cartLineId === cartLineId ? saved : entry
-          )
-        );
-      } catch {
-        setItems(snapshot);
-      }
+      scheduleLineSync(cartLineId);
     },
-    [authHeaders, items, removeFromCart, useServerCart]
+    [applyItems, authHeaders, refreshCart, scheduleLineSync, useServerCart]
   );
 
   const clearCart = useCallback(async () => {
+    for (const timer of syncTimersRef.current.values()) {
+      clearTimeout(timer);
+    }
+    syncTimersRef.current.clear();
+    syncVersionRef.current.clear();
+
     if (useServerCart && authHeaders) {
       await clearServerCart(authHeaders);
     }
-    setItems([]);
-  }, [authHeaders, useServerCart]);
+    applyItems(() => []);
+  }, [applyItems, authHeaders, useServerCart]);
 
   const itemCount = useMemo(
     () => items.reduce((sum, entry) => sum + entry.cartQuantity, 0),
@@ -222,7 +408,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       refreshCart,
       addToCart,
       removeFromCart,
+      removeLinesFromCart,
       updateQuantity,
+      adjustQuantity,
       clearCart,
     }),
     [
@@ -233,7 +421,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       refreshCart,
       addToCart,
       removeFromCart,
+      removeLinesFromCart,
       updateQuantity,
+      adjustQuantity,
       clearCart,
     ]
   );
