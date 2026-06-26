@@ -1,8 +1,5 @@
-import { ComingSoonScreen } from "@/components/dashboard/coming-soon";
-import { getNavItemByHref } from "@/lib/dashboard-nav";
+import { ProfileScreen } from "@/components/profile/profile-screen";
 
 export default function ProfilePage() {
-  const item = getNavItemByHref("/profile");
-  if (!item) return null;
-  return <ComingSoonScreen item={item} />;
+  return <ProfileScreen />;
 }

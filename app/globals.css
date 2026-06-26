@@ -64,9 +64,9 @@
   --sidebar-ring: var(--brand-primary);
 }
 
-/* ── Dark theme (golden + black) ── */
+/* ── Dark theme (golden + black) — system preference ── */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
 
     --brand-background: #0b0f14;
@@ -107,6 +107,84 @@
     --input: rgba(240, 161, 50, 0.22);
     --ring: #f0a132;
   }
+}
+
+/* ── Manual theme overrides (profile appearance toggle) ── */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --brand-background: #ffffff;
+  --brand-background-glow: rgba(240, 161, 50, 0.14);
+  --brand-card: #ffffff;
+  --brand-card-border: rgba(240, 161, 50, 0.38);
+  --brand-card-shadow: 0 24px 48px -12px rgba(240, 161, 50, 0.18);
+  --brand-text: #0b0f14;
+  --brand-text-muted: #6b7280;
+  --brand-label: #4b5563;
+  --brand-input-bg: #ffffff;
+  --brand-input-border: rgba(240, 161, 50, 0.45);
+  --brand-placeholder: #9ca3af;
+  --brand-link: #c27803;
+  --brand-success: #059669;
+  --brand-danger: #dc2626;
+  --brand-danger-bg: #fef2f2;
+  --brand-danger-border: #fecaca;
+  --brand-success-bg: #ecfdf5;
+  --brand-success-border: #a7f3d0;
+  --brand-header-bg: rgba(255, 255, 255, 0.92);
+  --background: #ffffff;
+  --foreground: #0b0f14;
+  --card: #ffffff;
+  --card-foreground: #0b0f14;
+  --popover: #ffffff;
+  --popover-foreground: #0b0f14;
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --border: rgba(240, 161, 50, 0.28);
+  --input: rgba(240, 161, 50, 0.28);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --brand-background: #0b0f14;
+  --brand-background-glow: rgba(240, 161, 50, 0.1);
+  --brand-card: #0f1620;
+  --brand-card-border: rgba(240, 161, 50, 0.28);
+  --brand-card-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.55);
+  --brand-text: #eaf0fa;
+  --brand-text-muted: #aab2c0;
+  --brand-label: #b9c0cc;
+  --brand-input-bg: #0b0f14;
+  --brand-input-border: rgba(240, 161, 50, 0.32);
+  --brand-placeholder: #6b7280;
+  --brand-link: #f0a132;
+  --brand-success: #7dd3a8;
+  --brand-danger: #fca5a5;
+  --brand-danger-bg: rgba(220, 38, 38, 0.14);
+  --brand-danger-border: rgba(252, 165, 165, 0.28);
+  --brand-success-bg: rgba(5, 150, 105, 0.14);
+  --brand-success-border: rgba(125, 211, 168, 0.28);
+  --brand-header-bg: rgba(15, 22, 32, 0.92);
+  --background: #0b0f14;
+  --foreground: #eaf0fa;
+  --card: #0f1620;
+  --card-foreground: #eaf0fa;
+  --popover: #0f1620;
+  --popover-foreground: #eaf0fa;
+  --secondary: #1a2332;
+  --secondary-foreground: #eaf0fa;
+  --muted: #1a2332;
+  --muted-foreground: #aab2c0;
+  --accent: #1a2332;
+  --accent-foreground: #eaf0fa;
+  --border: rgba(240, 161, 50, 0.22);
+  --input: rgba(240, 161, 50, 0.22);
+  --ring: #f0a132;
 }
 
 @theme inline {
