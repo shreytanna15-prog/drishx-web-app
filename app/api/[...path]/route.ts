@@ -20,10 +20,17 @@ async function proxyRequest(
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
 
   try {
+    let body: BodyInit | undefined;
+    if (hasBody) {
+      body = contentType?.includes("multipart/form-data")
+        ? await req.arrayBuffer()
+        : await req.text();
+    }
+
     const backendRes = await fetch(targetUrl, {
       method: req.method,
       headers,
-      body: hasBody ? await req.text() : undefined,
+      body,
       cache: "no-store",
     });
 

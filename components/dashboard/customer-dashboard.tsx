@@ -12,6 +12,7 @@ import {
   Truck,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, type ComponentType } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,30 @@ import {
 import { fetchOrders } from "@/lib/orders-api";
 import { cn } from "@/lib/utils";
 import { getDisplayName } from "@/lib/user-display";
+
+function goToCategory(
+  router: ReturnType<typeof useRouter>,
+  categoryId: string
+) {
+  switch (categoryId) {
+    case "rx":
+      router.push("/rx");
+      return;
+    case "singlevision":
+      router.push("/shop?category=sv");
+      return;
+    case "progressive":
+      router.push("/shop?category=v2");
+      return;
+    case "kryptok":
+      router.push("/shop?category=kt");
+      return;
+    case "color":
+    case "white":
+    default:
+      router.push("/shop");
+  }
+}
 
 const QUICK_ACTIONS = [
   { id: "place-order", label: "Place order", icon: ShoppingCart },
@@ -135,6 +160,7 @@ function ProductRow({
 }
 
 export function CustomerDashboard() {
+  const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState({
@@ -294,6 +320,7 @@ export function CustomerDashboard() {
               <button
                 key={category.id}
                 type="button"
+                onClick={() => goToCategory(router, category.id)}
                 className={cn(
                   "flex min-h-[5.5rem] flex-col justify-between rounded-2xl border p-4 text-left transition-all",
                   "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
