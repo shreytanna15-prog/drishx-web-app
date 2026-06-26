@@ -215,7 +215,11 @@ export function ShopProductsScreen() {
         ) : (
           <div className="space-y-3">
             {lenses.map((item, index) => (
-              <LensProductCard key={`${item.id}-${index}`} item={item} />
+              <LensProductCard
+                key={`${item.id}-${index}`}
+                item={item}
+                href={`/shop/products/${item.id}?category=${category}&item=${encodeURIComponent(selectedItem)}`}
+              />
             ))}
             {loadingMore && (
               <div className="space-y-3 pt-2">

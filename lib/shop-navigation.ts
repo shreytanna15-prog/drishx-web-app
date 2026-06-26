@@ -70,6 +70,16 @@ export function parseShopCategory(raw: string | null | undefined): ShopCategoryI
   return "sv";
 }
 
+export function parseLensDetailSearchParams(searchParams: {
+  category?: string;
+  item?: string;
+}) {
+  return {
+    category: parseShopCategory(searchParams.category),
+    catalogItem: searchParams.item?.trim() ?? "",
+  };
+}
+
 export function getShopCategoryById(id: ShopCategoryId): ShopCategory {
   return SHOP_CATEGORIES.find((c) => c.id === id) ?? SHOP_CATEGORIES[0];
 }

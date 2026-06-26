@@ -36,6 +36,15 @@ export type LensItem = {
   selectableRange?: SelectableRange | null;
 };
 
+export type CartItem = LensItem & {
+  cartLineId: string;
+  cartLineKey: string;
+  cartQuantity: number;
+  reservedQuantity?: number;
+  isBackorder?: boolean;
+  expiresAt?: string;
+};
+
 export function toApiLensType(lensType: LensType): ApiLensType {
   switch (lensType) {
     case "Kryptok":

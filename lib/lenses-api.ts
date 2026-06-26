@@ -137,3 +137,126 @@ export async function fetchLensesPage({
 
   return response.json() as Promise<LensesPageResponse>;
 }
+
+type LensDetailResponse = {
+  id: string;
+  costPrice?: number | string | null;
+  price: number | string;
+  sph?: number | string | null;
+  cyl?: number | string | null;
+  crossPower?: number | string | null;
+  axis?: number | string | null;
+  add?: number | string | null;
+  eye?: string | null;
+  quantity: number;
+  createdAt: string;
+  brand?: string | null;
+  item?: string | null;
+  coating?: string | null;
+  index?: number | string | null;
+  selectableRange?: SelectableRange | null;
+};
+
+function apiTypeFromFilter(type: FilterOption): LensesPageResponse["items"][number]["lensType"] {
+  switch (type) {
+    case "Kryptok":
+      return "KRYPTOK";
+    case "Progressive":
+      return "PROGRESSIVE";
+  }
+  return "SINGLE_VISION";
+}
+
+function mapDetailLens(
+  data: LensDetailResponse,
+  type: FilterOption
+): LensItem {
+  return mapApiLens({
+    id: data.id,
+    lensType: apiTypeFromFilter(type),
+    costPrice:
+      data.costPrice !== null && data.costPrice !== undefined
+        ? Number(data.costPrice)
+        : null,
+    price: Number(data.price),
+    sph:
+      data.sph !== null && data.sph !== undefined ? Number(data.sph) : null,
+    cyl: data.cyl !== null && data.cyl !== undefined ? Number(data.cyl) : null,
+    crossPower:
+      data.crossPower !== null && data.crossPower !== undefined
+        ? Number(data.crossPower)
+        : null,
+    axis:
+      data.axis !== null && data.axis !== undefined ? Number(data.axis) : null,
+    add: data.add !== null && data.add !== undefined ? Number(data.add) : null,
+    eye: data.eye ?? null,
+    quantity: data.quantity,
+    createdAt:
+      typeof data.createdAt === "string"
+        ? data.createdAt
+        : new Date(data.createdAt).toISOString(),
+    brand: data.brand ?? null,
+    item: data.item ?? null,
+    coating: data.coating ?? null,
+    index:
+      data.index !== null && data.index !== undefined
+        ? Number(data.index)
+        : null,
+    selectableRange: data.selectableRange ?? null,
+  });
+}
+
+export async function fetchLensById(
+  id: string,
+  type: FilterOption
+): Promise<LensItem> {
+  const apiType = filterToApiType(type);
+  const response = await fetch(`/api/lenses/${apiType}/${id}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load lens details");
+  }
+  const data = (await response.json()) as LensDetailResponse;
+  return mapDetailLens(data, type);
+}
+
+export async function fetchRelatedLenses(
+  lensId: string,
+  lensType: FilterOption
+): Promise<LensItem[]> {
+  const params = new URLSearchParams({
+    id: lensId,
+    lensType: filterToApiType(lensType),
+  });
+
+  const response = await fetch(`/api/lenses/related?${params.toString()}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load related lenses");
+  }
+
+  const data = (await response.json()) as { items: LensesPageResponse["items"] };
+  return (data.items ?? []).map(mapApiLens);
+}
+
+export async function fetchProductSiblings(
+  lensId: string,
+  lensType: FilterOption
+): Promise<LensItem[]> {
+  const params = new URLSearchParams({
+    id: lensId,
+    lensType: filterToApiType(lensType),
+  });
+
+  const response = await fetch(`/api/lenses/siblings?${params.toString()}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load product siblings");
+  }
+
+  const data = (await response.json()) as { items: LensesPageResponse["items"] };
+  return (data.items ?? []).map(mapApiLens);
+}
