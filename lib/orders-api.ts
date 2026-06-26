@@ -1,7 +1,11 @@
+import { getBackendUrl } from "./backend-url";
 import type { OrderRecord } from "./types/orders";
+import type { OrderTrackingStatus } from "./order-tracking";
 import type { ApiLensType, CartItem } from "./types/lens";
 import { toApiLensType } from "./types/lens";
 import { getStoredToken } from "./auth-storage";
+
+export type { OrderRecord } from "./types/orders";
 
 export const ORDER_NOTES_MAX_LENGTH = 2000;
 
@@ -109,4 +113,84 @@ export async function fetchOrders(): Promise<OrderRecord[]> {
   }
 
   return res.json() as Promise<OrderRecord[]>;
+}
+
+export async function cancelOrder(orderId: string): Promise<void> {
+  const token = getStoredToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+
+  const res = await fetch(`/api/orders/${orderId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status: "CANCELLED" satisfies OrderTrackingStatus }),
+  });
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? "Failed to cancel order.");
+  }
+}
+
+export function resolveOrderImageUrl(imageUrl: string): string {
+  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+    return imageUrl;
+  }
+  const backend = getBackendUrl();
+  return `${backend}${imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`}`;
+}
+
+function hasOrderPrescription(order: OrderRecord): boolean {
+  const hasSph =
+    order.sph !== undefined && order.sph !== null && order.sph !== "";
+  const hasCyl =
+    order.cyl !== undefined && order.cyl !== null && order.cyl !== "";
+  return hasSph || hasCyl;
+}
+
+export function getOrderLensDetails(order: OrderRecord) {
+  if (hasOrderPrescription(order)) {
+    const catalog =
+      order.progressiveLens ?? order.kryptokLens ?? order.singleVisionLens ?? null;
+    return {
+      sph: order.sph ?? catalog?.sph ?? 0,
+      cyl: order.cyl ?? catalog?.cyl ?? null,
+      axis:
+        order.axis ??
+        (order.kryptokLens?.axis ?? order.progressiveLens?.axis ?? null),
+      add:
+        order.add ??
+        (order.kryptokLens?.add ?? order.progressiveLens?.add ?? null),
+      eye: order.eye ?? order.progressiveLens?.eye ?? undefined,
+    };
+  }
+
+  if (order.progressiveLens) {
+    return {
+      sph: order.progressiveLens.sph,
+      cyl: order.progressiveLens.cyl,
+      axis: order.progressiveLens.axis,
+      add: order.progressiveLens.add,
+      eye: order.progressiveLens.eye,
+    };
+  }
+  if (order.kryptokLens) {
+    return {
+      sph: order.kryptokLens.sph,
+      cyl: order.kryptokLens.cyl,
+      axis: order.kryptokLens.axis,
+      add: order.kryptokLens.add,
+    };
+  }
+  if (order.singleVisionLens) {
+    return {
+      sph: order.singleVisionLens.sph,
+      cyl: order.singleVisionLens.cyl,
+    };
+  }
+  return null;
 }

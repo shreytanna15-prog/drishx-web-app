@@ -1,8 +1,5 @@
-import { ComingSoonScreen } from "@/components/dashboard/coming-soon";
-import { getNavItemByHref } from "@/lib/dashboard-nav";
+import { MyOrdersScreen } from "@/components/orders/my-orders-screen";
 
 export default function MyOrdersPage() {
-  const item = getNavItemByHref("/my-orders");
-  if (!item) return null;
-  return <ComingSoonScreen item={item} />;
+  return <MyOrdersScreen />;
 }
