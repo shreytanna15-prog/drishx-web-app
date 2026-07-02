@@ -87,7 +87,7 @@ export function createDefaultRxPrescription(
   const base = createDefaultPrescription(lensType);
   const withDiameter = (eye: EyePowerValues): RxEyePower => ({
     ...eye,
-    axis: snapToRxAxis(Math.abs(eye.axis) >= 10 ? eye.axis : 180),
+    axis: snapToRxAxis(eye.axis || 180),
     diameter: "",
   });
 
@@ -101,30 +101,72 @@ export function rxShowsAdd(lensType: RxLensTypeId): boolean {
   return lensTypeShowsAdd(lensType);
 }
 
+export const RX_AXIS_LIMITS = { min: 0, max: 180, step: 1 } as const;
+
+const RX_POWER_STEP = 0.25;
+
+function roundRxPowerStep(value: number, step: number): number {
+  return Math.round(value / step) * step;
+}
+
+function clampRxValue(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+/** RX SPH/CYL stepper: + moves further positive or further negative; − moves toward zero. */
+export function stepRxSphCyl(
+  field: "sph" | "cyl",
+  current: number,
+  direction: 1 | -1
+): number {
+  const limits =
+    field === "sph" ? { min: -10, max: 6 } : { min: -6, max: 0 };
+  const step = RX_POWER_STEP;
+  const value = roundRxPowerStep(current, step);
+  let next: number;
+
+  if (direction === 1) {
+    next = value < 0 ? value - step : value + step;
+  } else if (value > 0) {
+    next = value - step;
+  } else if (value < 0) {
+    next = value + step;
+  } else {
+    next = value - step;
+  }
+
+  return clampRxValue(roundRxPowerStep(next, step), limits.min, limits.max);
+}
+
 export function buildRxAxisOptions(): number[] {
-  return Array.from({ length: 18 }, (_, index) => (index + 1) * 10);
+  return Array.from(
+    { length: RX_AXIS_LIMITS.max - RX_AXIS_LIMITS.min + 1 },
+    (_, index) => RX_AXIS_LIMITS.min + index
+  );
 }
 
 export function snapToRxAxis(value: number): number {
-  const options = buildRxAxisOptions();
-  if (options.length === 0) {
-    return value;
-  }
-  return options.reduce((best, option) =>
-    Math.abs(option - value) < Math.abs(best - value) ? option : best
-  );
+  return clampRxValue(Math.round(value), RX_AXIS_LIMITS.min, RX_AXIS_LIMITS.max);
 }
 
 export function stepRxAxis(current: number, direction: 1 | -1): number {
-  const options = buildRxAxisOptions();
-  const snapped = snapToRxAxis(current);
-  const index = options.indexOf(snapped);
-  const safeIndex = index >= 0 ? index : 0;
-  const nextIndex = Math.min(
-    options.length - 1,
-    Math.max(0, safeIndex + direction)
-  );
-  return options[nextIndex] ?? snapped;
+  return snapToRxAxis(current + direction * RX_AXIS_LIMITS.step);
+}
+
+export function parseRxCustomAxisInput(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  const rounded = Math.round(parsed);
+  if (rounded < RX_AXIS_LIMITS.min || rounded > RX_AXIS_LIMITS.max) {
+    return null;
+  }
+  return rounded;
 }
 
 export function getRxOrderSummaryLabel(

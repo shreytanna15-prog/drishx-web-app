@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RxAxisField } from "@/components/rx/rx-axis-field";
 import { RxCheckoutBar } from "@/components/rx/rx-checkout-bar";
 import { RxDiameterField } from "@/components/rx/rx-diameter-field";
 import { RxOrderPlacedModal } from "@/components/rx/rx-order-placed-modal";
@@ -42,6 +43,7 @@ import {
   snapToRxAxis,
   stepEyePower,
   stepRxAxis,
+  stepRxSphCyl,
   type RxEyePower,
   type RxLensTypeId,
   type RxOrderFor,
@@ -140,6 +142,9 @@ export function RxOrderScreen() {
       if (field === "axis") {
         return stepRxAxis(current, direction);
       }
+      if (field === "sph" || field === "cyl") {
+        return stepRxSphCyl(field, current, direction);
+      }
       return stepEyePower(field, current, direction);
     },
     []
@@ -170,6 +175,30 @@ export function RxOrderScreen() {
       });
     },
     [orderFor, samePowerForBothEyes, snapPower, stepField]
+  );
+
+  const updateAxisValue = useCallback(
+    (eye: EyeSide, value: number) => {
+      setPrescription((current) => {
+        const updatedEye: RxEyePower = {
+          ...current[eye],
+          axis: snapToRxAxis(value),
+        };
+
+        if (samePowerForBothEyes && orderFor === "both") {
+          return {
+            right: { ...updatedEye },
+            left: { ...updatedEye },
+          };
+        }
+
+        return {
+          ...current,
+          [eye]: updatedEye,
+        };
+      });
+    },
+    [orderFor, samePowerForBothEyes]
   );
 
   const updateDiameter = useCallback(
@@ -286,8 +315,8 @@ export function RxOrderScreen() {
     .filter(Boolean)
     .join("\n");
 
-  const powerFields = (
-    ["sph", "cyl", "axis", ...(showAdd ? (["add"] as const) : [])] as PowerField[]
+  const powerStepperFields = (
+    ["sph", "cyl", ...(showAdd ? (["add"] as const) : [])] as PowerField[]
   ).map((field) => ({
     field,
     label:
@@ -483,7 +512,7 @@ export function RxOrderScreen() {
             ) : null}
           </div>
 
-          {powerFields.map(({ field, label }) => (
+          {powerStepperFields.map(({ field, label }) => (
             <div
               key={field}
               className={cn(
@@ -511,6 +540,37 @@ export function RxOrderScreen() {
               ) : null}
             </div>
           ))}
+
+          <div
+            className={cn(
+              "mb-3 grid items-start gap-3",
+              showRightEye && showLeftEye
+                ? "grid-cols-[4.5rem_1fr_1fr]"
+                : "grid-cols-[4.5rem_1fr]"
+            )}
+          >
+            <div>
+              <p className="text-sm font-bold text-[var(--brand-text)]">AXIS</p>
+              <p className="text-[10px] text-[var(--brand-text-muted)]">Custom 0–180</p>
+            </div>
+            {showRightEye ? (
+              <RxAxisField
+                value={prescription.right.axis}
+                onDecrease={() => updateEyeField("right", "axis", -1)}
+                onIncrease={() => updateEyeField("right", "axis", 1)}
+                onCustomChange={(value) => updateAxisValue("right", value)}
+              />
+            ) : null}
+            {showLeftEye ? (
+              <RxAxisField
+                value={prescription.left.axis}
+                onDecrease={() => updateEyeField("left", "axis", -1)}
+                onIncrease={() => updateEyeField("left", "axis", 1)}
+                onCustomChange={(value) => updateAxisValue("left", value)}
+                disabled={orderFor === "both" && samePowerForBothEyes}
+              />
+            ) : null}
+          </div>
 
           <div
             className={cn(

@@ -53,6 +53,8 @@ function goToCategory(
       router.push("/shop?category=kt");
       return;
     case "color":
+      router.push("/color");
+      return;
     case "white":
     default:
       router.push("/shop");

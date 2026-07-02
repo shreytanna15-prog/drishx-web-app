@@ -21,27 +21,12 @@ import { cancelOrder, resolveOrderImageUrl } from "@/lib/orders-api";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import { OrderNotesDisplay } from "@/components/orders/order-notes-display";
+
 type OrderGroupDetailProps = {
   group: OrderListGroup;
   onOrderCancelled?: () => void;
 };
-
-function OrderNotesDisplay({ notes }: { notes: string }) {
-  const lines = notes.split("\n").filter((line) => line.trim());
-
-  return (
-    <div className="space-y-1">
-      {lines.map((line, index) => (
-        <p
-          key={`${index}-${line}`}
-          className="text-sm leading-5 text-[var(--brand-text)]"
-        >
-          {line}
-        </p>
-      ))}
-    </div>
-  );
-}
 
 export function OrderGroupDetail({ group, onOrderCancelled }: OrderGroupDetailProps) {
   const productSections = useMemo(

@@ -147,3 +147,34 @@ export function stepEyePower(
   const next = roundStep(current + direction * limits.step, limits.step);
   return clampValue(next, limits.min, limits.max);
 }
+
+export function formatOdOsAxisSummary(
+  prescription: ColorLensPrescription
+): string {
+  return `${formatAxisPickerLabel(prescription.right.axis)} / ${formatAxisPickerLabel(prescription.left.axis)}`;
+}
+
+export function formatOdOsAddSummary(
+  prescription: ColorLensPrescription
+): string {
+  return `${formatPowerLabel(prescription.right.add)} / ${formatPowerLabel(prescription.left.add)}`;
+}
+
+export function snapPrescriptionToLensType(
+  prescription: ColorLensPrescription,
+  lensType: ColorLensTypeId | string | undefined
+): ColorLensPrescription {
+  const axisOptions = getAxisOptionsForLensType(lensType);
+
+  const snapEye = (eye: EyePowerValues): EyePowerValues => ({
+    sph: snapToOption(eye.sph, buildSphOptions()),
+    cyl: snapToOption(eye.cyl, buildCylOptions()),
+    axis: snapToOption(eye.axis, axisOptions),
+    add: snapToOption(eye.add, buildAddOptions()),
+  });
+
+  return {
+    right: snapEye(prescription.right),
+    left: snapEye(prescription.left),
+  };
+}
