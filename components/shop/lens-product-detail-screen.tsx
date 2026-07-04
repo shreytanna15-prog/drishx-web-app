@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCart } from "@/contexts/cart-context";
+import { useOrderMode } from "@/contexts/order-mode-context";
 import {
   buildCartLineId,
   formatPowerLabel,
@@ -50,14 +51,17 @@ import {
   restrictSelectableRangeForCheaperSiblings,
 } from "@/lib/prescription-range";
 import {
+  PROGRESSIVE_EYE_OPTIONS,
+  progressiveCartEyes,
+  type ProgressiveEyeOption,
+} from "@/lib/progressive-eye";
+import {
   shopCategoryDisplayTitle,
   shopCategoryToFilter,
   type ShopCategoryId,
 } from "@/lib/shop-navigation";
 import type { LensItem } from "@/lib/types/lens";
 import { cn } from "@/lib/utils";
-
-const ORDER_MODE = "wholesale" as const;
 
 type LensProductDetailScreenProps = {
   lensId: string;
@@ -71,6 +75,7 @@ export function LensProductDetailScreen({
   catalogItem,
 }: LensProductDetailScreenProps) {
   const { addToCart, updateQuantity, items: cartItems } = useCart();
+  const { mode: orderMode, isWholesale } = useOrderMode();
   const filter = shopCategoryToFilter(category);
   const categoryTitle = shopCategoryDisplayTitle(category);
 
@@ -83,6 +88,7 @@ export function LensProductDetailScreen({
 
   const lensType = item?.lensType ?? filter;
   const showAdd = lensType !== "Single Vision";
+  const showProgressiveEye = lensType === "Progressive";
 
   const selectableRange = useMemo(() => {
     if (!item) {
@@ -116,11 +122,12 @@ export function LensProductDetailScreen({
   const [sph, setSph] = useState<number>(initialSph);
   const [cyl, setCyl] = useState<number>(initialCyl);
   const [add, setAdd] = useState<number>(initialAdd);
+  const [selectedEye, setSelectedEye] = useState<ProgressiveEyeOption>("LEFT");
   const [qtyUnit, setQtyUnit] = useState<QuantityUnit>(() =>
-    getDefaultQuantityUnit(ORDER_MODE)
+    getDefaultQuantityUnit(orderMode)
   );
   const [quantity, setQuantity] = useState(() =>
-    String(getDefaultDisplayQuantity(ORDER_MODE, getDefaultQuantityUnit(ORDER_MODE)))
+    String(getDefaultDisplayQuantity(orderMode, getDefaultQuantityUnit(orderMode)))
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -193,11 +200,18 @@ export function LensProductDetailScreen({
     setSph(nextSph);
     setCyl(nextCyl);
     setAdd(resolveAddOptions(item)[0] ?? 1);
-    const unit = getDefaultQuantityUnit(ORDER_MODE);
+    setSelectedEye("LEFT");
+    const unit = getDefaultQuantityUnit(orderMode);
     setQtyUnit(unit);
-    setQuantity(String(getDefaultDisplayQuantity(ORDER_MODE, unit)));
+    setQuantity(String(getDefaultDisplayQuantity(orderMode, unit)));
     setError(null);
-  }, [item, productSiblings, crossMeta]);
+  }, [item, productSiblings, crossMeta, orderMode]);
+
+  useEffect(() => {
+    const unit = getDefaultQuantityUnit(orderMode);
+    setQtyUnit(unit);
+    setQuantity(String(getDefaultDisplayQuantity(orderMode, unit)));
+  }, [orderMode]);
 
   useEffect(() => {
     if (!effectiveSelectableRange) {
@@ -271,7 +285,7 @@ export function LensProductDetailScreen({
       return;
     }
     setQtyUnit(nextUnit);
-    setQuantity(String(getDefaultDisplayQuantity(ORDER_MODE, nextUnit)));
+    setQuantity(String(getDefaultDisplayQuantity(orderMode, nextUnit)));
     setError(null);
   }
 
@@ -290,31 +304,50 @@ export function LensProductDetailScreen({
     setError(null);
   }
 
-  const cartLineForSelection = useMemo(() => {
+  const cartLinesForSelection = useMemo(() => {
     if (!item) {
       return null;
     }
 
     const cylForLine = effectiveSelectableRange?.cyl ? cyl : item.cyl ?? 0;
-    const lineId = buildCartLineId({
-      id: item.id,
-      crossPower: item.crossPower,
-      sph,
-      cyl: cylForLine,
-      add: showAdd ? add : null,
-    });
+    const eyes = showProgressiveEye ? progressiveCartEyes(selectedEye) : [undefined];
 
-    return cartItems.find((entry) => entry.cartLineId === lineId) ?? null;
-  }, [add, cartItems, cyl, item, showAdd, sph, effectiveSelectableRange?.cyl]);
+    return eyes.map((eye) => {
+      const lineId = buildCartLineId({
+        id: item.id,
+        crossPower: item.crossPower,
+        sph,
+        cyl: cylForLine,
+        add: showAdd ? add : null,
+        axis: item.axis,
+        eye,
+      });
+
+      return cartItems.find((entry) => entry.cartLineId === lineId) ?? null;
+    });
+  }, [
+    add,
+    cartItems,
+    cyl,
+    item,
+    selectedEye,
+    showAdd,
+    showProgressiveEye,
+    sph,
+    effectiveSelectableRange?.cyl,
+  ]);
 
   const showsAddedState = useMemo(() => {
-    if (!cartLineForSelection || !formQuantityText) {
+    if (!cartLinesForSelection || !formQuantityText) {
       return false;
     }
-    return (
-      totalPieces > 0 && cartLineForSelection.cartQuantity === totalPieces
+    if (totalPieces <= 0) {
+      return false;
+    }
+    return cartLinesForSelection.every(
+      (line) => line != null && line.cartQuantity === totalPieces
     );
-  }, [cartLineForSelection, totalPieces, formQuantityText]);
+  }, [cartLinesForSelection, totalPieces, formQuantityText]);
 
   const prescriptionHint = effectiveSelectableRange
     ? (() => {
@@ -395,50 +428,57 @@ export function LensProductDetailScreen({
     const qtyError = validateDisplayQuantityForMode(
       parsedDisplayQty,
       qtyUnit,
-      ORDER_MODE
+      orderMode
     );
     if (qtyError) {
       setError(qtyError);
       return;
     }
     const parsedQty = piecesFromDisplayQuantity(parsedDisplayQty, qtyUnit);
-
-    const updatedItem: LensItem = {
-      id: currentItem.id,
-      costPrice: currentItem.costPrice,
-      price: currentItem.price,
-      sph,
-      cyl: parsedCyl,
-      crossPower: currentItem.crossPower,
-      axis: currentItem.axis,
-      add: showAdd ? parsedAdd : null,
-      eye: currentItem.eye,
-      quantity: currentItem.quantity,
-      createdAt: currentItem.createdAt,
-      lensType: currentItem.lensType,
-      brand: currentItem.brand,
-      item: currentItem.item,
-      coating: currentItem.coating,
-      index: currentItem.index,
-      selectableRange: currentItem.selectableRange,
-    };
-
-    const lineId = buildCartLineId({
-      id: updatedItem.id,
-      crossPower: updatedItem.crossPower,
-      sph,
-      cyl: parsedCyl,
-      add: parsedAdd,
-    });
-    const existingLine = cartItems.find((entry) => entry.cartLineId === lineId);
+    const eyesToAdd = showProgressiveEye
+      ? progressiveCartEyes(selectedEye)
+      : [undefined];
 
     setSubmitting(true);
     setError(null);
     try {
-      if (existingLine) {
-        await updateQuantity(lineId, parsedQty);
-      } else {
-        await addToCart(updatedItem, parsedQty);
+      for (const eye of eyesToAdd) {
+        const updatedItem: LensItem = {
+          id: currentItem.id,
+          costPrice: currentItem.costPrice,
+          price: currentItem.price,
+          sph,
+          cyl: parsedCyl,
+          crossPower: currentItem.crossPower,
+          axis: currentItem.axis,
+          add: showAdd ? parsedAdd : null,
+          eye,
+          quantity: currentItem.quantity,
+          createdAt: currentItem.createdAt,
+          lensType: currentItem.lensType,
+          brand: currentItem.brand,
+          item: currentItem.item,
+          coating: currentItem.coating,
+          index: currentItem.index,
+          selectableRange: currentItem.selectableRange,
+        };
+
+        const lineId = buildCartLineId({
+          id: updatedItem.id,
+          crossPower: updatedItem.crossPower,
+          sph,
+          cyl: parsedCyl,
+          add: parsedAdd,
+          axis: currentItem.axis,
+          eye,
+        });
+        const existingLine = cartItems.find((entry) => entry.cartLineId === lineId);
+
+        if (existingLine) {
+          await updateQuantity(lineId, parsedQty);
+        } else {
+          await addToCart(updatedItem, parsedQty);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add to cart.");
@@ -551,9 +591,48 @@ export function LensProductDetailScreen({
           <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--brand-text-muted)]">
             Prescription
           </h3>
-          <p className="mb-1 text-sm font-bold text-[var(--brand-primary)]">
-            You are able to order in pairs only.
-          </p>
+          {isWholesale ? (
+            <p className="mb-1 text-sm font-bold text-[var(--brand-primary)]">
+              You are able to order in pairs only.
+            </p>
+          ) : null}
+
+          {showProgressiveEye ? (
+            <div className="mb-4 space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-[var(--brand-text-muted)]">
+                Eye
+              </p>
+              <div className="grid grid-cols-3 gap-2 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-1.5">
+                {PROGRESSIVE_EYE_OPTIONS.map((option) => {
+                  const active = selectedEye === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedEye(option.id);
+                        setError(null);
+                      }}
+                      className={cn(
+                        "rounded-xl px-2 py-2.5 text-center text-xs font-extrabold transition-colors sm:text-sm",
+                        active
+                          ? "bg-[var(--brand-primary)] text-[var(--brand-primary-text)] shadow-sm"
+                          : "text-[var(--brand-text-muted)] hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-text)]"
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedEye === "BOTH" ? (
+                <p className="text-sm font-medium text-[var(--brand-text-muted)]">
+                  Adds separate LEFT and RIGHT lines to cart.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <p className="mb-4 text-sm leading-relaxed text-[var(--brand-text-muted)]">
             {prescriptionHint}
           </p>
@@ -648,14 +727,14 @@ export function LensProductDetailScreen({
                       return;
                     }
                     setQuantity(
-                      coerceDisplayQuantity(sanitized, qtyUnit, ORDER_MODE)
+                      coerceDisplayQuantity(sanitized, qtyUnit, orderMode)
                     );
                     setError(null);
                   }}
                   inputMode="numeric"
                   className="h-11 max-w-[88px] rounded-xl border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] text-center text-base font-bold"
                   placeholder={String(
-                    getDefaultDisplayQuantity(ORDER_MODE, qtyUnit)
+                    getDefaultDisplayQuantity(orderMode, qtyUnit)
                   )}
                 />
               </div>

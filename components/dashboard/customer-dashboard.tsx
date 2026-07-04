@@ -62,10 +62,10 @@ function goToCategory(
 }
 
 const QUICK_ACTIONS = [
-  { id: "place-order", label: "Place order", icon: ShoppingCart },
-  { id: "my-orders", label: "My orders", icon: Receipt },
-  { id: "invoices", label: "Invoices", icon: FileText },
-  { id: "support", label: "Support", icon: Headphones },
+  { id: "place-order", label: "Place order", icon: ShoppingCart, href: "/shop" },
+  { id: "my-orders", label: "My orders", icon: Receipt, href: "/my-orders" },
+  { id: "invoices", label: "Invoices", icon: FileText, href: "/profile/invoices" },
+  { id: "support", label: "Support", icon: Headphones, href: null },
 ] as const;
 
 const STAT_CONFIG = [
@@ -276,24 +276,35 @@ export function CustomerDashboard() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {QUICK_ACTIONS.map((action) => {
               const Icon = action.icon;
-              return (
-                <button
-                  key={action.id}
-                  type="button"
-                  className={cn(
-                    "flex flex-col items-center gap-3 rounded-2xl border p-4 transition-all sm:p-5",
-                    "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
-                    "hover:border-[var(--brand-primary)]/45 hover:bg-[color-mix(in_srgb,var(--brand-primary)_8%,var(--brand-card))]",
-                    "hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-10px_rgba(240,161,50,0.35)]"
-                  )}
-                >
+              const className = cn(
+                "flex flex-col items-center gap-3 rounded-2xl border p-4 transition-all sm:p-5",
+                "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
+                "hover:border-[var(--brand-primary)]/45 hover:bg-[color-mix(in_srgb,var(--brand-primary)_8%,var(--brand-card))]",
+                "hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-10px_rgba(240,161,50,0.35)]"
+              );
+              const content = (
+                <>
                   <span className="flex size-11 items-center justify-center rounded-xl bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]">
                     <Icon className="size-5" />
                   </span>
                   <span className="text-center text-sm font-bold text-[var(--brand-text)]">
                     {action.label}
                   </span>
-                </button>
+                </>
+              );
+
+              if (!action.href) {
+                return (
+                  <button key={action.id} type="button" className={className}>
+                    {content}
+                  </button>
+                );
+              }
+
+              return (
+                <Link key={action.id} href={action.href} className={className}>
+                  {content}
+                </Link>
               );
             })}
           </div>
