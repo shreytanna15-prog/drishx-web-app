@@ -1,3 +1,10 @@
+import {
+  computeCrossCylOptionsForSph,
+  computeCrossSphOptions,
+  computeFullCrossCylOptions,
+  resolveCrossPowerMeta,
+  type CrossPowerRangeMeta,
+} from "@/lib/cross-power";
 import type { LensItem, PowerAxisRange, SelectableRange } from "@/lib/types/lens";
 import { resolveWholesalePowerProfile } from "@/lib/wholesale-powers";
 
@@ -307,6 +314,29 @@ export function restrictSelectableRangeForCheaperSiblings(
 }
 
 export function resolveSelectableRange(item: LensItem): SelectableRange {
+  const crossMeta = resolveCrossPowerMeta(item);
+  if (crossMeta) {
+    const sphOptions = computeCrossSphOptions(crossMeta.maxCyl);
+    const initialSph = sphOptions[0] ?? 0;
+    const cylOptions = computeCrossCylOptionsForSph(initialSph, crossMeta.maxCyl);
+
+    return {
+      sph: {
+        min: sphOptions[0] ?? 0,
+        max: sphOptions[sphOptions.length - 1] ?? 0,
+        options: sphOptions,
+      },
+      cyl: cylOptions.length
+        ? {
+            min: cylOptions[0]!,
+            max: cylOptions[cylOptions.length - 1]!,
+            options: cylOptions,
+          }
+        : null,
+      crossPower: crossMeta,
+    };
+  }
+
   if (item.selectableRange?.sph.options.length) {
     return withPickerRules(item, normalizeSelectableRange(item.selectableRange));
   }
@@ -326,6 +356,39 @@ export function resolveSelectableRange(item: LensItem): SelectableRange {
     sph: { min: sphMin, max: sphMax, options: sphOptions },
     cyl: null,
   });
+}
+
+/** Full positive SPH scroll range for cross products. */
+export function resolveCrossSphRangeForMax(meta: CrossPowerRangeMeta): PowerAxisRange {
+  const options = computeCrossSphOptions(meta.maxCyl);
+  return {
+    min: options[0] ?? 0,
+    max: options[options.length - 1] ?? 0,
+    options,
+  };
+}
+
+/** CYL scroll options for the selected SPH on cross products. */
+export function resolveCrossCylRangeForSph(
+  sph: number,
+  meta: CrossPowerRangeMeta
+): PowerAxisRange {
+  const options = computeCrossCylOptionsForSph(sph, meta.maxCyl);
+  return {
+    min: options[0] ?? 0,
+    max: options[options.length - 1] ?? 0,
+    options,
+  };
+}
+
+/** Wholesale / catalog CYL bounds for cross products (negative only). */
+export function resolveFullCrossCylRange(meta: CrossPowerRangeMeta): PowerAxisRange {
+  const options = computeFullCrossCylOptions(meta.maxCyl);
+  return {
+    min: options[0] ?? 0,
+    max: options[options.length - 1] ?? 0,
+    options,
+  };
 }
 
 export function resolveAddOptions(

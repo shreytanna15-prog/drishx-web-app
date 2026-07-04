@@ -13,6 +13,9 @@ export type PowerAxisRange = {
 export type SelectableRange = {
   sph: PowerAxisRange;
   cyl: PowerAxisRange | null;
+  crossPower?: {
+    maxCyl: number;
+  } | null;
 };
 
 export type LensItem = {

@@ -21,6 +21,7 @@ import {
   sanitizePositiveIntegerInput,
   validatePrescriptionInOptions,
 } from "@/lib/cart-utils";
+import { coerceCrossCylForSph, resolveCrossPowerMeta } from "@/lib/cross-power";
 import {
   formatAddValue,
   formatAxisValue,
@@ -43,6 +44,8 @@ import {
 } from "@/lib/order-quantity";
 import {
   resolveAddOptions,
+  resolveCrossCylRangeForSph,
+  resolveCrossSphRangeForMax,
   resolveSelectableRange,
   restrictSelectableRangeForCheaperSiblings,
 } from "@/lib/prescription-range";
@@ -89,13 +92,25 @@ export function LensProductDetailScreen({
     return restrictSelectableRangeForCheaperSiblings(base, item, productSiblings);
   }, [item, productSiblings]);
 
+  const crossMeta = useMemo(
+    () => (item ? resolveCrossPowerMeta(item) : null),
+    [item]
+  );
+
   const addOptions = useMemo(
     () => (item && showAdd ? resolveAddOptions(item) : []),
     [item, showAdd]
   );
 
   const initialSph = selectableRange?.sph.options[0] ?? item?.sph ?? 0;
-  const initialCyl = selectableRange?.cyl?.options[0] ?? item?.cyl ?? 0;
+  const initialCyl =
+    crossMeta && selectableRange
+      ? coerceCrossCylForSph(
+          initialSph,
+          selectableRange.cyl?.options[0] ?? 0,
+          crossMeta.maxCyl
+        )
+      : (selectableRange?.cyl?.options[0] ?? item?.cyl ?? 0);
   const initialAdd = addOptions[0] ?? 1;
 
   const [sph, setSph] = useState<number>(initialSph);
@@ -109,6 +124,20 @@ export function LensProductDetailScreen({
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const effectiveSelectableRange = useMemo(() => {
+    if (!selectableRange || !crossMeta) {
+      return selectableRange;
+    }
+
+    const sphRange = resolveCrossSphRangeForMax(crossMeta);
+    const cylRange = resolveCrossCylRangeForSph(sph, crossMeta);
+    return {
+      ...selectableRange,
+      sph: sphRange,
+      cyl: cylRange.options.length ? cylRange : selectableRange.cyl,
+    };
+  }, [sph, crossMeta, selectableRange]);
 
   const formQuantityText = quantity.trim();
   const displayQtyNumber = formQuantityText ? Number(formQuantityText) : 0;
@@ -156,34 +185,43 @@ export function LensProductDetailScreen({
       item,
       productSiblings
     );
-    setSph(range.sph.options[0] ?? item.sph ?? 0);
-    setCyl(range.cyl?.options[0] ?? item.cyl ?? 0);
+    const nextSph = range.sph.options[0] ?? item.sph ?? 0;
+    const nextCyl =
+      crossMeta && range.cyl
+        ? coerceCrossCylForSph(nextSph, range.cyl.options[0] ?? 0, crossMeta.maxCyl)
+        : (range.cyl?.options[0] ?? item.cyl ?? 0);
+    setSph(nextSph);
+    setCyl(nextCyl);
     setAdd(resolveAddOptions(item)[0] ?? 1);
     const unit = getDefaultQuantityUnit(ORDER_MODE);
     setQtyUnit(unit);
     setQuantity(String(getDefaultDisplayQuantity(ORDER_MODE, unit)));
     setError(null);
-  }, [item, productSiblings]);
+  }, [item, productSiblings, crossMeta]);
 
   useEffect(() => {
-    if (!selectableRange) {
+    if (!effectiveSelectableRange) {
       return;
     }
 
-    const sphOpts = selectableRange.sph.options;
+    const sphOpts = effectiveSelectableRange.sph.options;
     if (sphOpts.length > 0 && !sphOpts.some((opt) => Math.abs(opt - sph) < 0.001)) {
       setSph(sphOpts[0]!);
     }
 
-    const cylOpts = selectableRange.cyl?.options ?? [];
+    const cylOpts = effectiveSelectableRange.cyl?.options ?? [];
     if (cylOpts.length > 0 && !cylOpts.some((opt) => Math.abs(opt - cyl) < 0.001)) {
-      setCyl(cylOpts[0]!);
+      if (crossMeta) {
+        setCyl(coerceCrossCylForSph(sph, cyl, crossMeta.maxCyl));
+      } else {
+        setCyl(cylOpts[0]!);
+      }
     }
 
     if (showAdd && addOptions.length > 0 && !addOptions.some((opt) => Math.abs(opt - add) < 0.001)) {
       setAdd(addOptions[0]!);
     }
-  }, [selectableRange, addOptions, showAdd, sph, cyl, add]);
+  }, [effectiveSelectableRange, addOptions, showAdd, sph, cyl, add, crossMeta]);
 
   useEffect(() => {
     if (!item?.id || !item.lensType) {
@@ -237,21 +275,37 @@ export function LensProductDetailScreen({
     setError(null);
   }
 
+  function handleSphChange(value: number) {
+    setSph(value);
+    if (crossMeta) {
+      setCyl((currentCyl) =>
+        coerceCrossCylForSph(value, currentCyl, crossMeta.maxCyl)
+      );
+    }
+    setError(null);
+  }
+
+  function handleCylChange(value: number) {
+    setCyl(value);
+    setError(null);
+  }
+
   const cartLineForSelection = useMemo(() => {
     if (!item) {
       return null;
     }
 
-    const cylForLine = selectableRange?.cyl ? cyl : item.cyl ?? 0;
+    const cylForLine = effectiveSelectableRange?.cyl ? cyl : item.cyl ?? 0;
     const lineId = buildCartLineId({
       id: item.id,
+      crossPower: item.crossPower,
       sph,
       cyl: cylForLine,
       add: showAdd ? add : null,
     });
 
     return cartItems.find((entry) => entry.cartLineId === lineId) ?? null;
-  }, [add, cartItems, cyl, item, showAdd, sph, selectableRange?.cyl]);
+  }, [add, cartItems, cyl, item, showAdd, sph, effectiveSelectableRange?.cyl]);
 
   const showsAddedState = useMemo(() => {
     if (!cartLineForSelection || !formQuantityText) {
@@ -262,13 +316,17 @@ export function LensProductDetailScreen({
     );
   }, [cartLineForSelection, totalPieces, formQuantityText]);
 
-  const prescriptionHint = selectableRange
+  const prescriptionHint = effectiveSelectableRange
     ? (() => {
-        const sphRange = powerRangeFromOptions(selectableRange.sph.options);
-        let hint = `Select SPH (${formatPowerLabel(sphRange.low)} to ${formatPowerLabel(sphRange.high)})`;
-        if (selectableRange.cyl?.options.length) {
-          const cylRange = powerRangeFromOptions(selectableRange.cyl.options);
-          hint += ` and CYL (${formatPowerLabel(cylRange.low)} to ${formatPowerLabel(cylRange.high)})`;
+        const sphOpts = effectiveSelectableRange.sph.options;
+        const sphStart = sphOpts[0] ?? effectiveSelectableRange.sph.min;
+        const sphEnd = sphOpts[sphOpts.length - 1] ?? effectiveSelectableRange.sph.max;
+        let hint = `Select SPH (${formatPowerLabel(sphStart)} to ${formatPowerLabel(sphEnd)})`;
+        if (effectiveSelectableRange.cyl?.options.length) {
+          const cylOpts = effectiveSelectableRange.cyl.options;
+          const cylStart = cylOpts[0] ?? effectiveSelectableRange.cyl.min;
+          const cylEnd = cylOpts[cylOpts.length - 1] ?? effectiveSelectableRange.cyl.max;
+          hint += ` and CYL (${formatPowerLabel(cylStart)} to ${formatPowerLabel(cylEnd)})`;
         }
         if (showAdd && addOptions.length > 0) {
           const addRange = powerRangeFromOptions(addOptions);
@@ -288,7 +346,7 @@ export function LensProductDetailScreen({
       return;
     }
 
-    if (!selectableRange) {
+    if (!effectiveSelectableRange) {
       setError("Unable to resolve prescription range.");
       return;
     }
@@ -296,7 +354,7 @@ export function LensProductDetailScreen({
     const sphError = validatePrescriptionInOptions(
       "SPH",
       String(sph),
-      selectableRange.sph.options
+      effectiveSelectableRange.sph.options
     );
     if (sphError) {
       setError(sphError);
@@ -304,11 +362,11 @@ export function LensProductDetailScreen({
     }
 
     let parsedCyl: number;
-    if (selectableRange.cyl) {
+    if (effectiveSelectableRange.cyl) {
       const cylError = validatePrescriptionInOptions(
         "CYL",
         String(cyl),
-        selectableRange.cyl.options
+        effectiveSelectableRange.cyl.options
       );
       if (cylError) {
         setError(cylError);
@@ -351,6 +409,7 @@ export function LensProductDetailScreen({
       price: currentItem.price,
       sph,
       cyl: parsedCyl,
+      crossPower: currentItem.crossPower,
       axis: currentItem.axis,
       add: showAdd ? parsedAdd : null,
       eye: currentItem.eye,
@@ -366,6 +425,7 @@ export function LensProductDetailScreen({
 
     const lineId = buildCartLineId({
       id: updatedItem.id,
+      crossPower: updatedItem.crossPower,
       sph,
       cyl: parsedCyl,
       add: parsedAdd,
@@ -550,21 +610,15 @@ export function LensProductDetailScreen({
               )}
             >
               <PrescriptionWheelPicker
-                options={selectableRange?.sph.options ?? []}
+                options={effectiveSelectableRange?.sph.options ?? []}
                 value={sph}
-                onChange={(value) => {
-                  setSph(value);
-                  setError(null);
-                }}
+                onChange={handleSphChange}
               />
-              {selectableRange?.cyl ? (
+              {effectiveSelectableRange?.cyl ? (
                 <PrescriptionWheelPicker
-                  options={selectableRange.cyl.options}
+                  options={effectiveSelectableRange.cyl.options}
                   value={cyl}
-                  onChange={(value) => {
-                    setCyl(value);
-                    setError(null);
-                  }}
+                  onChange={handleCylChange}
                 />
               ) : (
                 <div className="flex h-[132px] items-center justify-center text-[var(--brand-text-muted)]">
