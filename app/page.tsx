@@ -9,7 +9,8 @@ import { BrandSplash } from "@/components/brand-splash";
 import { useAuth } from "@/contexts/auth-context";
 import {
   buildGstDetailsHref,
-  getCustomerNextRoute,
+  buildPendingApprovalHref,
+  getPostLoginRoute,
 } from "@/lib/auth-routing";
 
 const SPLASH_SESSION_KEY = "drishx-splash-done";
@@ -161,18 +162,21 @@ export default function Home() {
       return;
     }
 
-    const nextRoute = getCustomerNextRoute(user);
-    if (nextRoute === "/home") {
+    const nextRoute = getPostLoginRoute(user);
+    if (
+      nextRoute === "/home" ||
+      nextRoute === "/employee/home" ||
+      nextRoute === "/gst-details" ||
+      nextRoute === "/pending-approval"
+    ) {
       hasNavigated.current = true;
-      router.replace("/home");
-    } else if (nextRoute === "/gst-details") {
-      hasNavigated.current = true;
-      router.replace(buildGstDetailsHref(user.id, user.email));
-    } else if (nextRoute === "/pending-approval") {
-      hasNavigated.current = true;
-      router.replace(
-        `/pending-approval?email=${encodeURIComponent(user.email)}`
-      );
+      if (nextRoute === "/gst-details") {
+        router.replace(buildGstDetailsHref(user.id, user.email));
+      } else if (nextRoute === "/pending-approval") {
+        router.replace(buildPendingApprovalHref(user.email));
+      } else {
+        router.replace(nextRoute);
+      }
     }
   }, [splashDone, isLoading, user, router]);
 

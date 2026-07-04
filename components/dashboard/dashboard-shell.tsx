@@ -20,6 +20,7 @@ import {
   buildGstDetailsHref,
   getCustomerNextRoute,
   isCustomerApproved,
+  isStaffUser,
 } from "@/lib/auth-routing";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/user-display";
@@ -37,7 +38,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     }
 
     if (user.role !== "CUSTOMER") {
-      router.replace("/");
+      if (isStaffUser(user)) {
+        router.replace("/employee/home");
+      } else {
+        router.replace("/");
+      }
       return;
     }
 

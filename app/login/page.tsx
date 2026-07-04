@@ -12,18 +12,31 @@ import { LoginRejectedError, login } from "@/lib/api";
 import {
   buildGstDetailsHref,
   buildPendingApprovalHref,
-  getCustomerNextRoute,
+  getPostLoginRoute,
 } from "@/lib/auth-routing";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login: setSession } = useAuth();
+  const { user, isLoading, login: setSession } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isLoading || !user) return;
+
+    const nextRoute = getPostLoginRoute(user);
+    if (nextRoute === "/gst-details") {
+      router.replace(buildGstDetailsHref(user.id, user.email));
+    } else if (nextRoute === "/pending-approval") {
+      router.replace(buildPendingApprovalHref(user.email));
+    } else if (nextRoute !== "/") {
+      router.replace(nextRoute);
+    }
+  }, [user, isLoading, router]);
 
   useEffect(() => {
     const emailParam = searchParams.get("email");
@@ -47,13 +60,6 @@ function LoginForm() {
       const normalizedEmail = email.trim().toLowerCase();
       const data = await login(normalizedEmail, password);
       setSession(data.token, data.user);
-
-      const nextRoute = getCustomerNextRoute(data.user);
-      if (nextRoute === "/gst-details") {
-        router.push(buildGstDetailsHref(data.user.id, data.user.email));
-      } else {
-        router.push(nextRoute);
-      }
     } catch (err) {
       if (err instanceof LoginRejectedError) {
         router.push(
