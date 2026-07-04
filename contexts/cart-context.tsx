@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import {
+  bulkUpsertCartLines,
   clearServerCart,
   fetchCart,
   removeCartLine,
@@ -46,6 +47,9 @@ type CartContextValue = {
     delta: number,
     mode: OrderQuantityMode
   ) => void;
+  bulkSetCartQuantities: (
+    lines: Array<{ item: LensItem; quantity: number }>
+  ) => Promise<{ savedCount: number; message?: string }>;
   clearCart: () => Promise<void>;
 };
 
@@ -384,6 +388,54 @@ export function CartProvider({ children }: { children: ReactNode }) {
     applyItems(() => []);
   }, [applyItems, authHeaders, useServerCart]);
 
+  const bulkSetCartQuantities = useCallback(
+    async (lines: Array<{ item: LensItem; quantity: number }>) => {
+      if (lines.length === 0) {
+        return { savedCount: 0 };
+      }
+
+      const optimisticItems: CartItem[] = lines.map(({ item, quantity }) => {
+        const cartLineId = buildCartLineId(item);
+        const safeQuantity = Math.max(1, Math.floor(quantity));
+        return {
+          ...item,
+          cartLineId,
+          cartLineKey: cartLineId,
+          cartQuantity: safeQuantity,
+          reservedQuantity: 0,
+          isBackorder: false,
+        };
+      });
+
+      const optimisticIds = new Set(
+        optimisticItems.map((entry) => entry.cartLineId)
+      );
+      let mergedSnapshot: CartItem[] = [];
+
+      applyItems((current) => {
+        const kept = current.filter((entry) => !optimisticIds.has(entry.cartLineId));
+        mergedSnapshot = [...kept, ...optimisticItems];
+        return mergedSnapshot;
+      });
+
+      if (!useServerCart || !authHeaders) {
+        return { savedCount: optimisticItems.length };
+      }
+
+      try {
+        const { count, message } = await bulkUpsertCartLines(lines, authHeaders);
+        await refreshCart();
+        return { savedCount: count, message };
+      } catch (err) {
+        applyItems(() =>
+          itemsRef.current.filter((entry) => !optimisticIds.has(entry.cartLineId))
+        );
+        throw err;
+      }
+    },
+    [applyItems, authHeaders, refreshCart, useServerCart]
+  );
+
   const itemCount = useMemo(
     () => items.reduce((sum, entry) => sum + entry.cartQuantity, 0),
     [items]
@@ -411,6 +463,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeLinesFromCart,
       updateQuantity,
       adjustQuantity,
+      bulkSetCartQuantities,
       clearCart,
     }),
     [
@@ -424,6 +477,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeLinesFromCart,
       updateQuantity,
       adjustQuantity,
+      bulkSetCartQuantities,
       clearCart,
     ]
   );

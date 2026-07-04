@@ -311,6 +311,7 @@ export function CustomerDashboard() {
 
           <Button
             size="lg"
+            asChild
             className={cn(
               "h-14 w-full rounded-2xl text-base font-extrabold shadow-lg",
               "bg-gradient-to-b from-[#f5ad42] to-[#e8941f] text-[var(--brand-primary-text)]",
@@ -318,8 +319,10 @@ export function CustomerDashboard() {
               "shadow-[0_4px_20px_rgba(240,161,50,0.35)]"
             )}
           >
-            <Store className="size-5" />
-            Place wholesale order
+            <Link href="/wholesale">
+              <Store className="size-5" />
+              Place wholesale order
+            </Link>
           </Button>
         </section>
 
