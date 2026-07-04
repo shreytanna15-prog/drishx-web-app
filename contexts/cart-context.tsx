@@ -424,7 +424,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       try {
         const { count, message } = await bulkUpsertCartLines(lines, authHeaders);
-        await refreshCart();
         return { savedCount: count, message };
       } catch (err) {
         applyItems(() =>
@@ -433,7 +432,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     },
-    [applyItems, authHeaders, refreshCart, useServerCart]
+    [applyItems, authHeaders, useServerCart]
   );
 
   const itemCount = useMemo(

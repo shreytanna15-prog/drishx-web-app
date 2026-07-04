@@ -625,6 +625,31 @@ export function countVisibleMatrixCells(
 
 const QTY_MAP_CHUNK_SIZE = 250;
 
+/** Build qty map from rendered matrix cells so every visible cell defaults to the same pair count. */
+export async function buildQtyMapFromMatrixSpec(
+  spec: WholesaleMatrixSpec,
+  defaultPairs: number
+): Promise<Record<string, string>> {
+  const pairsText = String(defaultPairs);
+  const next: Record<string, string> = {};
+  let pending = 0;
+
+  for (const row of spec.rows) {
+    for (const col of spec.cols) {
+      for (const cell of spec.cellsAt(row, col)) {
+        next[cell.key] = pairsText;
+        pending += 1;
+        if (pending >= QTY_MAP_CHUNK_SIZE) {
+          pending = 0;
+          await yieldToUi();
+        }
+      }
+    }
+  }
+
+  return next;
+}
+
 /** Build qty map in chunks so the UI stays responsive on large ranges. */
 export async function buildWholesaleQtyMap(
   params: BuildMatrixParams,

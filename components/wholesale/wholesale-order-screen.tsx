@@ -32,8 +32,8 @@ import { piecesFromDisplayQuantity } from "@/lib/order-quantity";
 import { resolveSelectableRange } from "@/lib/prescription-range";
 import type { LensItem } from "@/lib/types/lens";
 import {
+  buildQtyMapFromMatrixSpec,
   buildWholesaleMatrixSpec,
-  buildWholesaleQtyMap,
   collectQtyEntriesFromSpec,
   countMatrixCells,
   countVisibleMatrixCells,
@@ -234,13 +234,8 @@ export function WholesaleOrderScreen() {
   );
 
   const totalMatrixCells = useMemo(
-    () =>
-      hasGeneratedGrid
-        ? Object.keys(qtyMap).length
-        : matrixSpec
-          ? countMatrixCells(matrixSpec)
-          : 0,
-    [hasGeneratedGrid, matrixSpec, qtyMap]
+    () => (matrixSpec ? countMatrixCells(matrixSpec) : 0),
+    [matrixSpec]
   );
 
   const visibleMatrixCells = useMemo(
@@ -295,7 +290,14 @@ export function WholesaleOrderScreen() {
 
     await yieldToUi();
 
-    const next = await buildWholesaleQtyMap(matrixParams, defaultPairs);
+    const spec = buildWholesaleMatrixSpec(matrixParams);
+    if (!spec || countMatrixCells(spec) === 0) {
+      setError("No valid combinations for the selected ranges.");
+      setGenerating(false);
+      return;
+    }
+
+    const next = await buildQtyMapFromMatrixSpec(spec, defaultPairs);
     if (Object.keys(next).length === 0) {
       setError("No valid combinations for the selected ranges.");
       setGenerating(false);
@@ -588,6 +590,7 @@ export function WholesaleOrderScreen() {
                 visibleRows={visibleMatrixRows}
                 visibleCols={visibleMatrixCols}
                 qtyMap={qtyMap}
+                defaultPairs={pairsDefault.trim() || "1"}
                 onQtyChange={handleMatrixQtyChange}
               />
               <p className="text-xs font-medium text-[var(--brand-text-muted)]">

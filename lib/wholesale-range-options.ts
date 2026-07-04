@@ -28,7 +28,7 @@ export function resolveWholesaleBoundOptions(
   return {
     sph: range.sph.options,
     cyl: cylOptions,
-    add: resolveAddOptions(item),
+    add: resolveAddOptions(),
   };
 }
 

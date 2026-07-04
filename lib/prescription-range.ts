@@ -391,10 +391,9 @@ export function resolveFullCrossCylRange(meta: CrossPowerRangeMeta): PowerAxisRa
   };
 }
 
+/** Kryptok / Progressive ADD scroll options (+1.00 → +3.00 in 0.25 steps). */
 export function resolveAddOptions(
-  item?: Pick<LensItem, "add"> | null
+  _item?: Pick<LensItem, "add"> | null
 ): number[] {
-  const addMax =
-    item?.add != null && item.add > 0 ? Math.min(3, item.add) : 3;
-  return generatePowerOptions(1, addMax);
+  return generatePowerOptions(1, 3);
 }

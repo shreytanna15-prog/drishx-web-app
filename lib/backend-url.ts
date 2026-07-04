@@ -1,3 +1,4 @@
 export function getBackendUrl(): string {
-  return process.env.BACKEND_URL ?? "http://127.0.0.1:3000";
+  const raw = process.env.BACKEND_URL?.trim() ?? "http://127.0.0.1:3000";
+  return raw.replace(/\/+$/, "");
 }

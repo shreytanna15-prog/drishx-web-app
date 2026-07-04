@@ -13,6 +13,7 @@ type WholesaleQtyMatrixProps = {
   visibleRows: WholesaleMatrixRow[];
   visibleCols: number[];
   qtyMap: Record<string, string>;
+  defaultPairs?: string;
   onQtyChange: (key: string, value: string) => void;
 };
 
@@ -36,7 +37,7 @@ const MatrixCell = memo(function MatrixCell({
       value={value}
       onChange={(e) => onQtyChange(cellKey, e.target.value.replace(/\D/g, ""))}
       inputMode="numeric"
-      placeholder="0"
+      placeholder="1"
       className="h-9 w-full min-w-[52px] max-w-[72px] rounded-lg border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] text-center text-sm font-bold"
     />
   );
@@ -47,6 +48,7 @@ export function WholesaleQtyMatrix({
   visibleRows,
   visibleCols,
   qtyMap,
+  defaultPairs = "1",
   onQtyChange,
 }: WholesaleQtyMatrixProps) {
   const rowItems = useMemo((): MatrixRowItem[] => {
@@ -59,8 +61,8 @@ export function WholesaleQtyMatrix({
   }, [visibleRows]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)]">
-      <div className="overflow-x-auto">
+    <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)]">
+      <div className="overflow-x-auto overscroll-x-contain rounded-2xl">
         <table className="w-full min-w-max border-collapse text-sm">
           <thead>
             <tr className="border-b border-[var(--brand-card-border)] bg-[color-mix(in_srgb,var(--brand-card)_85%,var(--brand-primary)_15%)]">
@@ -86,11 +88,11 @@ export function WholesaleQtyMatrix({
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="[&_tr:last-child_td]:border-b [&_tr:last-child_td]:border-[var(--brand-card-border)]">
             {rowItems.map((item) => (
               <tr
                 key={item.row.id}
-                className="border-b border-[var(--brand-card-border)] last:border-b-0"
+                className="border-b border-[var(--brand-card-border)]"
               >
                 <td className="min-w-[88px] border-r border-[var(--brand-card-border)] bg-[color-mix(in_srgb,var(--brand-card)_92%,var(--brand-primary)_8%)] px-2 py-2 align-middle">
                   {item.showPrimaryLabel ? (
@@ -102,7 +104,8 @@ export function WholesaleQtyMatrix({
                     <p
                       className={cn(
                         "text-center text-[9px] font-bold text-[var(--brand-text-muted)]",
-                        !item.showPrimaryLabel && "text-[11px] font-extrabold text-[var(--brand-text)]"
+                        !item.showPrimaryLabel &&
+                          "text-[11px] font-extrabold text-[var(--brand-text)]"
                       )}
                     >
                       {item.row.subLabel}
@@ -129,7 +132,7 @@ export function WholesaleQtyMatrix({
                     >
                       <MatrixCell
                         cellKey={cell.key}
-                        value={qtyMap[cell.key] ?? ""}
+                        value={qtyMap[cell.key] ?? defaultPairs}
                         onQtyChange={onQtyChange}
                       />
                     </td>
