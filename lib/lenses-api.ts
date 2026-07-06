@@ -10,7 +10,9 @@ export type LensesPageResponse = {
     costPrice: number | null;
     price: number;
     sph: number | null;
+    sphStartRange?: number | null;
     cyl: number | null;
+    cylStartRange?: number | null;
     crossPower?: number | null;
     axis: number | null;
     add: number | null;
@@ -61,7 +63,15 @@ export function mapApiLens(item: LensesPageResponse["items"][number]): LensItem 
     costPrice: item.costPrice !== null ? Number(item.costPrice) : null,
     price: Number(item.price),
     sph: item.sph !== null && item.sph !== undefined ? Number(item.sph) : null,
+    sphStartRange:
+      item.sphStartRange !== null && item.sphStartRange !== undefined
+        ? Number(item.sphStartRange)
+        : null,
     cyl: item.cyl !== null ? Number(item.cyl) : null,
+    cylStartRange:
+      item.cylStartRange !== null && item.cylStartRange !== undefined
+        ? Number(item.cylStartRange)
+        : null,
     crossPower:
       item.crossPower !== null && item.crossPower !== undefined
         ? Number(item.crossPower)
@@ -143,7 +153,9 @@ type LensDetailResponse = {
   costPrice?: number | string | null;
   price: number | string;
   sph?: number | string | null;
+  sphStartRange?: number | string | null;
   cyl?: number | string | null;
+  cylStartRange?: number | string | null;
   crossPower?: number | string | null;
   axis?: number | string | null;
   add?: number | string | null;
@@ -181,7 +193,15 @@ function mapDetailLens(
     price: Number(data.price),
     sph:
       data.sph !== null && data.sph !== undefined ? Number(data.sph) : null,
+    sphStartRange:
+      data.sphStartRange !== null && data.sphStartRange !== undefined
+        ? Number(data.sphStartRange)
+        : null,
     cyl: data.cyl !== null && data.cyl !== undefined ? Number(data.cyl) : null,
+    cylStartRange:
+      data.cylStartRange !== null && data.cylStartRange !== undefined
+        ? Number(data.cylStartRange)
+        : null,
     crossPower:
       data.crossPower !== null && data.crossPower !== undefined
         ? Number(data.crossPower)

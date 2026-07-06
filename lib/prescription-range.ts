@@ -82,10 +82,24 @@ function normalizeSelectableRange(range: SelectableRange): SelectableRange {
   };
 }
 
-function resolveProductCylRange(cylMax: number): PowerAxisRange {
-  const max = roundQuarter(cylMax);
-  const options = generatePowerOptions(0, max);
-  return normalizePowerAxis({ min: 0, max, options });
+function resolveAxisStart(value: number | null | undefined): number {
+  if (value === null || value === undefined) {
+    return 0;
+  }
+  return roundQuarter(value);
+}
+
+function resolveProductPowerRange(
+  start: number | null | undefined,
+  end: number | null | undefined
+): PowerAxisRange | null {
+  if (end === null || end === undefined) {
+    return null;
+  }
+  const min = resolveAxisStart(start);
+  const max = roundQuarter(end);
+  const options = generatePowerOptions(min, max);
+  return normalizePowerAxis({ min, max, options });
 }
 
 export function dropZeroFromPowerOptions(options: number[]): number[] {
@@ -146,173 +160,6 @@ function withPickerRules(item: LensItem, range: SelectableRange): SelectableRang
   return applyKryptokCompoundPickerRules(item, next);
 }
 
-function isSameProductLine(a: LensItem, b: LensItem): boolean {
-  return (
-    (a.brand ?? "") === (b.brand ?? "") &&
-    (a.item ?? "") === (b.item ?? "") &&
-    (a.coating ?? "") === (b.coating ?? "")
-  );
-}
-
-function isMilderSphSibling(rowSph: number, lensSph: number): boolean {
-  if (rowSph <= lensSph) {
-    return false;
-  }
-  if (lensSph <= 0) {
-    return rowSph <= 0;
-  }
-  return rowSph >= 0;
-}
-
-function resolveSphFloorFromSiblings(
-  item: LensItem,
-  siblings: LensItem[]
-): number | null {
-  if (siblings.length === 0) {
-    return null;
-  }
-
-  const sphMax = roundQuarter(item.sph ?? 0);
-  let nextTierSph: number | null = null;
-
-  for (const row of siblings) {
-    if (row.id === item.id) {
-      continue;
-    }
-    if (!isSameProductLine(item, row)) {
-      continue;
-    }
-
-    const rowSph = roundQuarter(row.sph ?? 0);
-    if (!isMilderSphSibling(rowSph, sphMax)) {
-      continue;
-    }
-
-    nextTierSph =
-      nextTierSph === null ? rowSph : Math.min(nextTierSph, rowSph);
-  }
-
-  if (nextTierSph === null) {
-    return null;
-  }
-
-  const sphFloor = roundQuarter(nextTierSph - POWER_STEP);
-  if (sphFloor <= sphMax + 1e-9) {
-    return null;
-  }
-
-  return sphFloor;
-}
-
-function applySphFloorToRange(
-  range: SelectableRange,
-  sphFloor: number,
-  sphMax: number
-): SelectableRange {
-  const mergedFloor =
-    range.sph.min === 0 ? sphFloor : Math.min(range.sph.min, sphFloor);
-  const options = generatePowerOptions(mergedFloor, sphMax);
-
-  if (options.length === 0) {
-    return range;
-  }
-
-  return {
-    ...range,
-    sph: normalizePowerAxis({
-      min: mergedFloor,
-      max: sphMax,
-      options,
-    }),
-  };
-}
-
-function applySphTierFromSiblings(
-  range: SelectableRange,
-  item: LensItem,
-  siblings: LensItem[]
-): SelectableRange {
-  const sphMax = roundQuarter(item.sph ?? 0);
-  const sphFloor = resolveSphFloorFromSiblings(item, siblings);
-  if (sphFloor === null) {
-    return range;
-  }
-
-  return applySphFloorToRange(range, sphFloor, sphMax);
-}
-
-function applyCylTierFromCheaperSiblings(
-  range: SelectableRange,
-  item: LensItem,
-  siblings: LensItem[]
-): SelectableRange {
-  const lensCyl = item.cyl;
-  if (lensCyl == null || !range.cyl || siblings.length === 0) {
-    return range;
-  }
-
-  const itemPrice = Number(item.price);
-  const lensSph = roundQuarter(item.sph ?? 0);
-  const cylMax = roundQuarter(lensCyl);
-  let floor: number | null = null;
-
-  for (const row of siblings) {
-    if (row.id === item.id) {
-      continue;
-    }
-    if (!isSameProductLine(item, row)) {
-      continue;
-    }
-    if (Number(row.price) >= itemPrice) {
-      continue;
-    }
-    if (roundQuarter(row.sph ?? 0) !== lensSph) {
-      continue;
-    }
-    if (row.cyl == null || row.cyl <= lensCyl) {
-      continue;
-    }
-
-    const rowFloor = roundQuarter(row.cyl - POWER_STEP);
-    floor = floor === null ? rowFloor : Math.max(floor, rowFloor);
-  }
-
-  if (floor === null || floor <= cylMax + 1e-9) {
-    return range;
-  }
-
-  const mergedFloor =
-    range.cyl.min === 0 ? floor : Math.max(range.cyl.min, floor);
-  const options = generatePowerOptions(mergedFloor, cylMax);
-
-  if (options.length === 0) {
-    return range;
-  }
-
-  return {
-    ...range,
-    cyl: normalizePowerAxis({
-      min: mergedFloor,
-      max: cylMax,
-      options,
-    }),
-  };
-}
-
-export function restrictSelectableRangeForCheaperSiblings(
-  range: SelectableRange,
-  item: LensItem,
-  siblings: LensItem[]
-): SelectableRange {
-  let next = applySphTierFromSiblings(range, item, siblings);
-
-  if (item.lensType === "Single Vision") {
-    next = applyCylTierFromCheaperSiblings(next, item, siblings);
-  }
-
-  return next;
-}
-
 export function resolveSelectableRange(item: LensItem): SelectableRange {
   const crossMeta = resolveCrossPowerMeta(item);
   if (crossMeta) {
@@ -341,19 +188,18 @@ export function resolveSelectableRange(item: LensItem): SelectableRange {
     return withPickerRules(item, normalizeSelectableRange(item.selectableRange));
   }
 
-  const sphMin = 0;
-  const sphMax = roundQuarter(item.sph ?? 0);
-  const sphOptions = generatePowerOptions(sphMin, sphMax);
+  const sphRange = resolveProductPowerRange(item.sphStartRange, item.sph);
+  const cylRange = resolveProductPowerRange(item.cylStartRange, item.cyl);
 
-  if (item.cyl != null) {
+  if (sphRange) {
     return withPickerRules(item, {
-      sph: { min: sphMin, max: sphMax, options: sphOptions },
-      cyl: resolveProductCylRange(item.cyl),
+      sph: sphRange,
+      cyl: cylRange,
     });
   }
 
   return withPickerRules(item, {
-    sph: { min: sphMin, max: sphMax, options: sphOptions },
+    sph: { min: 0, max: 0, options: [0] },
     cyl: null,
   });
 }

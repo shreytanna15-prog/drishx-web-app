@@ -32,7 +32,6 @@ import {
 } from "@/lib/lens-display";
 import {
   fetchLensById,
-  fetchProductSiblings,
   fetchRelatedLenses,
 } from "@/lib/lenses-api";
 import {
@@ -48,7 +47,6 @@ import {
   resolveCrossCylRangeForSph,
   resolveCrossSphRangeForMax,
   resolveSelectableRange,
-  restrictSelectableRangeForCheaperSiblings,
 } from "@/lib/prescription-range";
 import {
   PROGRESSIVE_EYE_OPTIONS,
@@ -83,7 +81,6 @@ export function LensProductDetailScreen({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [relatedLenses, setRelatedLenses] = useState<LensItem[]>([]);
-  const [productSiblings, setProductSiblings] = useState<LensItem[]>([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
 
   const lensType = item?.lensType ?? filter;
@@ -94,9 +91,8 @@ export function LensProductDetailScreen({
     if (!item) {
       return null;
     }
-    const base = resolveSelectableRange(item);
-    return restrictSelectableRangeForCheaperSiblings(base, item, productSiblings);
-  }, [item, productSiblings]);
+    return resolveSelectableRange(item);
+  }, [item]);
 
   const crossMeta = useMemo(
     () => (item ? resolveCrossPowerMeta(item) : null),
@@ -187,11 +183,7 @@ export function LensProductDetailScreen({
       return;
     }
 
-    const range = restrictSelectableRangeForCheaperSiblings(
-      resolveSelectableRange(item),
-      item,
-      productSiblings
-    );
+    const range = resolveSelectableRange(item);
     const nextSph = range.sph.options[0] ?? item.sph ?? 0;
     const nextCyl =
       crossMeta && range.cyl
@@ -205,7 +197,7 @@ export function LensProductDetailScreen({
     setQtyUnit(unit);
     setQuantity(String(getDefaultDisplayQuantity(orderMode, unit)));
     setError(null);
-  }, [item, productSiblings, crossMeta, orderMode]);
+  }, [item, crossMeta, orderMode]);
 
   useEffect(() => {
     const unit = getDefaultQuantityUnit(orderMode);
@@ -240,7 +232,6 @@ export function LensProductDetailScreen({
   useEffect(() => {
     if (!item?.id || !item.lensType) {
       setRelatedLenses([]);
-      setProductSiblings([]);
       return;
     }
 
@@ -251,21 +242,16 @@ export function LensProductDetailScreen({
     async function loadRelated() {
       setRelatedLoading(true);
       try {
-        const [relatedItems, siblingItems] = await Promise.all([
-          fetchRelatedLenses(lensIdForFetch, filter),
-          fetchProductSiblings(lensIdForFetch, filter),
-        ]);
+        const relatedItems = await fetchRelatedLenses(lensIdForFetch, filter);
         const filtered = relatedItems.filter(
           (related) => !isSameLensPower(related, currentLens)
         );
         if (!cancelled) {
           setRelatedLenses(filtered);
-          setProductSiblings(siblingItems);
         }
       } catch {
         if (!cancelled) {
           setRelatedLenses([]);
-          setProductSiblings([]);
         }
       } finally {
         if (!cancelled) {

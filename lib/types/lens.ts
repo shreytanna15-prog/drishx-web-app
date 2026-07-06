@@ -23,7 +23,9 @@ export type LensItem = {
   costPrice: number | null;
   price: number;
   sph: number | null;
+  sphStartRange?: number | null;
   cyl: number | null;
+  cylStartRange?: number | null;
   crossPower?: number | null;
   axis: number | null;
   add: number | null;
