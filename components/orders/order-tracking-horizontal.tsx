@@ -14,14 +14,21 @@ import {
   normalizeOrderStatus,
   SPECIAL_STATUS_CONFIG,
   TERMINAL_STATUS_CONFIG,
+  type OrderTrackingStatus,
 } from "@/lib/order-tracking";
 import { cn } from "@/lib/utils";
 
 type OrderTrackingHorizontalProps = {
   status: string;
+  onStepPress?: (step: OrderTrackingStatus) => void;
+  disabled?: boolean;
 };
 
-export function OrderTrackingHorizontal({ status: rawStatus }: OrderTrackingHorizontalProps) {
+export function OrderTrackingHorizontal({
+  status: rawStatus,
+  onStepPress,
+  disabled = false,
+}: OrderTrackingHorizontalProps) {
   const status = normalizeOrderStatus(rawStatus);
   const activeMainIndex = getMainStepIndex(status);
 
@@ -59,20 +66,27 @@ export function OrderTrackingHorizontal({ status: rawStatus }: OrderTrackingHori
           return (
             <div key={step.key} className="flex min-w-0 flex-1 flex-col items-center">
               <div className="relative flex w-full items-center justify-center">
-                <div
+                <button
+                  type="button"
+                  disabled={disabled || !onStepPress}
+                  onClick={() => onStepPress?.(step.key)}
                   className={cn(
-                    "relative z-10 flex size-[22px] items-center justify-center rounded-full border-2 bg-[var(--brand-card)]",
+                    "relative z-10 flex size-[22px] items-center justify-center rounded-full border-2 bg-[var(--brand-card)] transition-opacity",
                     isDone
                       ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]"
                       : isCurrent
                         ? "border-[var(--brand-primary)] border-[3px]"
-                        : "border-[var(--brand-text-muted)]"
+                        : "border-[var(--brand-text-muted)]",
+                    onStepPress && !disabled
+                      ? "cursor-pointer hover:opacity-80"
+                      : "cursor-default"
                   )}
+                  aria-label={step.label}
                 >
                   {isDone ? (
                     <Check className="size-3 text-[var(--brand-primary-text)]" />
                   ) : null}
-                </div>
+                </button>
                 {!isLast ? (
                   <div
                     className={cn(

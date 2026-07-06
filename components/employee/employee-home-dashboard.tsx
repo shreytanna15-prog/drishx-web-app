@@ -168,27 +168,37 @@ export function EmployeeHomeDashboard() {
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError(null);
+
+    let orders: OrderRecord[] = [];
+    let tasks: TaskRecord[] = [];
+    const failures: string[] = [];
+
+    // Load one at a time — parallel calls exhaust the hosted backend DB pool and return 500.
     try {
-      const [orders, tasks] = await Promise.all([
-        fetchOrders(),
-        fetchMyTasks(),
-      ]);
-      setOverview(computeEmployeeHomeOverview(orders, tasks));
-      setPendingTasks(getPendingStaffTasks(tasks).slice(0, 10));
-      setPendingOrders(getPendingStaffOrders(orders).slice(0, 8));
+      orders = await fetchOrders();
     } catch {
-      setOverview({
-        tasksAssigned: "0",
-        tasksCompleted: "0",
-        ordersReceived: 0,
-        ordersPending: 0,
-      });
-      setPendingTasks([]);
-      setPendingOrders([]);
-      setError("Unable to load dashboard data from the backend.");
-    } finally {
-      setLoading(false);
+      failures.push("orders");
     }
+
+    try {
+      tasks = await fetchMyTasks();
+    } catch {
+      failures.push("tasks");
+    }
+
+    setOverview(computeEmployeeHomeOverview(orders, tasks));
+    setPendingTasks(getPendingStaffTasks(tasks).slice(0, 10));
+    setPendingOrders(getPendingStaffOrders(orders).slice(0, 8));
+
+    if (failures.length === 2) {
+      setError("Unable to load dashboard data from the backend.");
+    } else if (failures.length === 1) {
+      setError(
+        `Could not load ${failures[0]}. Showing the data that loaded successfully.`
+      );
+    }
+
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -363,7 +373,7 @@ export function EmployeeHomeDashboard() {
                 {pendingOrders.map((order) => (
                   <li key={order.id}>
                     <Link
-                      href="/employee/orders"
+                      href={`/employee/orders/${encodeURIComponent(order.checkoutBatchId?.trim() || order.id)}`}
                       className="flex items-center justify-between gap-3 rounded-xl border border-[var(--brand-card-border)] px-4 py-3 transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[color-mix(in_srgb,var(--brand-primary)_6%,var(--brand-card))]"
                     >
                       <div className="min-w-0">

@@ -1,4 +1,5 @@
 import { getStoredToken } from "./auth-storage";
+import { fetchWithRetry } from "./fetch-with-retry";
 
 export type TaskStatus = "PENDING" | "COMPLETED";
 
@@ -26,7 +27,7 @@ function authHeaders(): Record<string, string> {
 }
 
 export async function fetchMyTasks(): Promise<TaskRecord[]> {
-  const response = await fetch("/api/tasks", {
+  const response = await fetchWithRetry("/api/tasks", {
     headers: authHeaders(),
     cache: "no-store",
   });
@@ -43,7 +44,7 @@ export async function updateTaskStatus(
   taskId: string,
   status: TaskStatus
 ): Promise<TaskRecord> {
-  const response = await fetch(`/api/tasks/${taskId}`, {
+  const response = await fetchWithRetry(`/api/tasks/${taskId}`, {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify({ status }),

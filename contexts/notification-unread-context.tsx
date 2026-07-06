@@ -36,7 +36,11 @@ export function NotificationUnreadProvider({ children }: { children: ReactNode }
   }, []);
 
   useEffect(() => {
-    void refreshUnreadCount();
+    const timer = window.setTimeout(() => {
+      void refreshUnreadCount();
+    }, 900);
+
+    return () => window.clearTimeout(timer);
   }, [refreshUnreadCount, pathname]);
 
   useEffect(() => {

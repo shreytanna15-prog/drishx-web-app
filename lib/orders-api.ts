@@ -1,4 +1,5 @@
 import { getBackendUrl } from "./backend-url";
+import { fetchWithRetry } from "./fetch-with-retry";
 import type { OrderRecord } from "./types/orders";
 import type { OrderTrackingStatus } from "./order-tracking";
 import type { ApiLensType, CartItem } from "./types/lens";
@@ -65,7 +66,7 @@ export async function createOrder(
         : {}),
     };
 
-    const response = await fetch("/api/orders", {
+    const response = await fetchWithRetry("/api/orders", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -99,7 +100,7 @@ export async function fetchOrders(): Promise<OrderRecord[]> {
     throw new Error("Not authenticated");
   }
 
-  const res = await fetch("/api/orders", {
+  const res = await fetchWithRetry("/api/orders", {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
@@ -115,13 +116,47 @@ export async function fetchOrders(): Promise<OrderRecord[]> {
   return res.json() as Promise<OrderRecord[]>;
 }
 
+export async function updateOrderStatus(
+  orderId: string,
+  status: OrderTrackingStatus,
+  pickedQuantity?: number
+): Promise<OrderRecord> {
+  const token = getStoredToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+
+  const body: { status: OrderTrackingStatus; pickedQuantity?: number } = {
+    status,
+  };
+  if (pickedQuantity !== undefined) {
+    body.pickedQuantity = pickedQuantity;
+  }
+
+  const res = await fetchWithRetry(`/api/orders/${orderId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? "Failed to update order status.");
+  }
+
+  return res.json() as Promise<OrderRecord>;
+}
+
 export async function cancelOrder(orderId: string): Promise<void> {
   const token = getStoredToken();
   if (!token) {
     throw new Error("Not authenticated");
   }
 
-  const res = await fetch(`/api/orders/${orderId}`, {
+  const res = await fetchWithRetry(`/api/orders/${orderId}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

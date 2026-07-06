@@ -104,3 +104,32 @@ const STATUS_LABELS: Record<OrderTrackingStatus, string> = {
 export function formatOrderStatusLabel(status: OrderTrackingStatus): string {
   return STATUS_LABELS[status];
 }
+
+export function getStaffStatusOptions(
+  current: OrderTrackingStatus
+): OrderTrackingStatus[] {
+  switch (current) {
+    case "PENDING":
+      return ["PICKING", "CANCELLED"];
+    case "PICKING":
+      return ["PACKED", "CANCELLED"];
+    case "PACKED":
+      return ["DISPATCHED", "CANCELLED"];
+    case "DISPATCHED":
+      return [
+        "PARTIALLY_FULFILLED",
+        "AWAITING_PROCUREMENT",
+        "COMPLETED",
+        "CANCELLED",
+      ];
+    case "PARTIALLY_FULFILLED":
+      return ["AWAITING_PROCUREMENT", "COMPLETED", "CANCELLED"];
+    case "AWAITING_PROCUREMENT":
+      return ["PARTIALLY_FULFILLED", "PICKING", "COMPLETED", "CANCELLED"];
+    case "COMPLETED":
+    case "CANCELLED":
+      return [];
+    default:
+      return [];
+  }
+}

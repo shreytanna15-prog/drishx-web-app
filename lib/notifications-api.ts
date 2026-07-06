@@ -1,4 +1,5 @@
 import { getStoredToken } from "@/lib/auth-storage";
+import { fetchWithRetry } from "@/lib/fetch-with-retry";
 
 export type NotificationType =
   | "ORDER_STATUS_UPDATED"
@@ -43,7 +44,7 @@ function authHeaders(): Record<string, string> {
 }
 
 export async function fetchNotifications(): Promise<NotificationRecord[]> {
-  const response = await fetch("/api/notifications", {
+  const response = await fetchWithRetry("/api/notifications", {
     headers: authHeaders(),
     cache: "no-store",
   });
@@ -57,7 +58,7 @@ export async function fetchNotifications(): Promise<NotificationRecord[]> {
 }
 
 export async function markAllNotificationsRead(): Promise<void> {
-  const response = await fetch("/api/notifications", {
+  const response = await fetchWithRetry("/api/notifications", {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify({}),
