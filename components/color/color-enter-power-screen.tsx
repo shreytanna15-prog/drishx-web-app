@@ -9,20 +9,28 @@ import {
   ColorPageHeader,
   ColorPrimaryButton,
 } from "@/components/color/color-page-header";
+import { RxAxisField } from "@/components/rx/rx-axis-field";
 import { RxPowerStepper } from "@/components/rx/rx-power-stepper";
 import { formatPowerLabel } from "@/lib/cart-utils";
 import type { ColorLensTypeId } from "@/lib/color-lens";
 import { buildColorLensPath } from "@/lib/color-lens-order";
 import {
+  buildAddOptions,
+  buildCylOptions,
+  buildSphOptions,
   createDefaultPrescription,
-  formatAxisPickerLabel,
-  getAxisOptionsForLensType,
   lensTypeShowsAdd,
   snapPrescriptionToLensType,
+  snapToOption,
   stepEyePower,
   type ColorLensPrescription,
   type EyePowerValues,
 } from "@/lib/color-lens-prescription";
+import {
+  snapToRxAxis,
+  stepRxAxis,
+  stepRxSphCyl,
+} from "@/lib/rx-order";
 
 type EyeSide = "right" | "left";
 type PowerField = keyof EyePowerValues;
@@ -33,31 +41,22 @@ function EyePowerCard({
   badge,
   values,
   showAdd,
-  axisOptions,
-  onFieldChange,
+  onStepField,
+  onAxisChange,
 }: {
   side: EyeSide;
   title: string;
   badge: string;
   values: EyePowerValues;
   showAdd: boolean;
-  axisOptions: number[];
-  onFieldChange: (field: PowerField, value: number) => void;
+  onStepField: (field: PowerField, direction: 1 | -1) => void;
+  onAxisChange: (value: number) => void;
 }) {
-  const stepField = (field: PowerField, direction: 1 | -1) => {
-    onFieldChange(field, stepEyePower(field, values[field], direction));
-  };
-
-  const stepAxis = (direction: 1 | -1) => {
-    const currentIndex = axisOptions.indexOf(values.axis);
-    const nextIndex =
-      currentIndex === -1
-        ? 0
-        : Math.min(
-            axisOptions.length - 1,
-            Math.max(0, currentIndex + direction)
-          );
-    onFieldChange("axis", axisOptions[nextIndex] ?? values.axis);
+  const formatFieldValue = (field: PowerField, value: number) => {
+    if (field === "axis") {
+      return String(Math.round(value));
+    }
+    return formatPowerLabel(value);
   };
 
   return (
@@ -75,9 +74,9 @@ function EyePowerCard({
             SPH
           </p>
           <RxPowerStepper
-            value={formatPowerLabel(values.sph)}
-            onDecrease={() => stepField("sph", -1)}
-            onIncrease={() => stepField("sph", 1)}
+            value={formatFieldValue("sph", values.sph)}
+            onDecrease={() => onStepField("sph", -1)}
+            onIncrease={() => onStepField("sph", 1)}
           />
         </div>
         <div>
@@ -85,19 +84,20 @@ function EyePowerCard({
             CYL
           </p>
           <RxPowerStepper
-            value={formatPowerLabel(values.cyl)}
-            onDecrease={() => stepField("cyl", -1)}
-            onIncrease={() => stepField("cyl", 1)}
+            value={formatFieldValue("cyl", values.cyl)}
+            onDecrease={() => onStepField("cyl", -1)}
+            onIncrease={() => onStepField("cyl", 1)}
           />
         </div>
         <div>
           <p className="mb-2 text-center text-xs font-bold uppercase tracking-wide text-[var(--brand-text-muted)]">
             AXIS
           </p>
-          <RxPowerStepper
-            value={formatAxisPickerLabel(values.axis)}
-            onDecrease={() => stepAxis(-1)}
-            onIncrease={() => stepAxis(1)}
+          <RxAxisField
+            value={values.axis}
+            onDecrease={() => onStepField("axis", -1)}
+            onIncrease={() => onStepField("axis", 1)}
+            onCustomChange={onAxisChange}
           />
         </div>
         {showAdd ? (
@@ -106,9 +106,9 @@ function EyePowerCard({
               ADD
             </p>
             <RxPowerStepper
-              value={formatPowerLabel(values.add)}
-              onDecrease={() => stepField("add", -1)}
-              onIncrease={() => stepField("add", 1)}
+              value={formatFieldValue("add", values.add)}
+              onDecrease={() => onStepField("add", -1)}
+              onIncrease={() => onStepField("add", 1)}
             />
           </div>
         ) : null}
@@ -132,25 +132,91 @@ export function ColorEnterPowerScreen() {
   const [sameForBothEyes, setSameForBothEyes] = useState(true);
 
   const showAdd = lensTypeShowsAdd(lensType);
-  const axisOptions = useMemo(() => getAxisOptionsForLensType(lensType), [lensType]);
+  const sphOptions = useMemo(() => buildSphOptions(), []);
+  const cylOptions = useMemo(() => buildCylOptions(), []);
+  const addOptions = useMemo(() => buildAddOptions(), []);
 
   useEffect(() => {
     setPrescription((current) =>
-      snapPrescriptionToLensType(
-        order.prescription ?? current,
-        lensType
-      )
+      snapPrescriptionToLensType(order.prescription ?? current, lensType)
     );
   }, [lensType, order.prescription]);
 
-  const updateEye = useCallback(
-    (side: EyeSide, field: PowerField, value: number) => {
+  const snapPower = useCallback(
+    (field: PowerField, value: number): number => {
+      if (field === "axis") {
+        return snapToRxAxis(value);
+      }
+      if (field === "sph") {
+        return snapToOption(value, sphOptions);
+      }
+      if (field === "cyl") {
+        return snapToOption(value, cylOptions);
+      }
+      return snapToOption(value, addOptions);
+    },
+    [addOptions, cylOptions, sphOptions]
+  );
+
+  const stepField = useCallback(
+    (field: PowerField, current: number, direction: 1 | -1): number => {
+      if (field === "axis") {
+        return stepRxAxis(current, direction);
+      }
+      if (field === "sph" || field === "cyl") {
+        return stepRxSphCyl(field, current, direction);
+      }
+      return stepEyePower(field, current, direction);
+    },
+    []
+  );
+
+  const updateEyeField = useCallback(
+    (side: EyeSide, field: PowerField, direction: 1 | -1) => {
       setPrescription((current) => {
-        const nextEye = { ...current[side], [field]: value };
+        const updatedEye: EyePowerValues = {
+          ...current[side],
+          [field]: snapPower(
+            field,
+            stepField(field, current[side][field], direction)
+          ),
+        };
+
         if (sameForBothEyes) {
-          return { right: nextEye, left: { ...nextEye } };
+          return {
+            right: { ...updatedEye },
+            left: { ...updatedEye },
+          };
         }
-        return { ...current, [side]: nextEye };
+
+        return {
+          ...current,
+          [side]: updatedEye,
+        };
+      });
+    },
+    [sameForBothEyes, snapPower, stepField]
+  );
+
+  const updateAxisValue = useCallback(
+    (side: EyeSide, value: number) => {
+      setPrescription((current) => {
+        const updatedEye: EyePowerValues = {
+          ...current[side],
+          axis: snapToRxAxis(value),
+        };
+
+        if (sameForBothEyes) {
+          return {
+            right: { ...updatedEye },
+            left: { ...updatedEye },
+          };
+        }
+
+        return {
+          ...current,
+          [side]: updatedEye,
+        };
       });
     },
     [sameForBothEyes]
@@ -202,8 +268,8 @@ export function ColorEnterPowerScreen() {
           badge="R"
           values={prescription.right}
           showAdd={showAdd}
-          axisOptions={axisOptions}
-          onFieldChange={(field, value) => updateEye("right", field, value)}
+          onStepField={(field, direction) => updateEyeField("right", field, direction)}
+          onAxisChange={(value) => updateAxisValue("right", value)}
         />
 
         {!sameForBothEyes ? (
@@ -213,8 +279,8 @@ export function ColorEnterPowerScreen() {
             badge="L"
             values={prescription.left}
             showAdd={showAdd}
-            axisOptions={axisOptions}
-            onFieldChange={(field, value) => updateEye("left", field, value)}
+            onStepField={(field, direction) => updateEyeField("left", field, direction)}
+            onAxisChange={(value) => updateAxisValue("left", value)}
           />
         ) : null}
 

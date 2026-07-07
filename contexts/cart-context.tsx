@@ -245,7 +245,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const removeFromCart = useCallback(
     async (cartLineId: string) => {
-      const snapshot = itemsRef.current;
       const existingTimer = syncTimersRef.current.get(cartLineId);
       if (existingTimer) {
         clearTimeout(existingTimer);
@@ -263,7 +262,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       try {
         await removeCartLine(cartLineId, authHeaders);
       } catch {
-        setItems(snapshot);
+        await refreshCart();
       }
     },
     [applyItems, authHeaders, useServerCart]
@@ -277,7 +276,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
 
       const idSet = new Set(uniqueIds);
-      const snapshot = itemsRef.current;
 
       for (const cartLineId of uniqueIds) {
         const existingTimer = syncTimersRef.current.get(cartLineId);
@@ -302,7 +300,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           )
         );
       } catch {
-        setItems(snapshot);
+        await refreshCart();
       }
     },
     [applyItems, authHeaders, useServerCart]
@@ -387,11 +385,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     syncTimersRef.current.clear();
     syncVersionRef.current.clear();
 
-    if (useServerCart && authHeaders) {
-      await clearServerCart(authHeaders);
-    }
     applyItems(() => []);
-  }, [applyItems, authHeaders, useServerCart]);
+
+    if (!useServerCart || !authHeaders) {
+      return;
+    }
+
+    try {
+      await clearServerCart(authHeaders);
+    } catch {
+      await refreshCart();
+      throw new Error("Failed to clear cart.");
+    }
+  }, [applyItems, authHeaders, refreshCart, useServerCart]);
 
   const bulkSetCartQuantities = useCallback(
     async (lines: Array<{ item: LensItem; quantity: number }>) => {

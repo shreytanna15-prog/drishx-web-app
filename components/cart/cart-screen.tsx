@@ -87,7 +87,14 @@ export function CartScreen() {
       destructive: true,
     });
     if (confirmed) {
-      void clearCart();
+      try {
+        await clearCart();
+      } catch {
+        setOrderMessage({
+          type: "error",
+          text: "Could not clear your cart. Please try again.",
+        });
+      }
     }
   }
 
@@ -100,7 +107,12 @@ export function CartScreen() {
       destructive: true,
     });
     if (confirmed) {
-      void removeFromCart(cartLineId);
+      void removeFromCart(cartLineId).catch(() => {
+        setOrderMessage({
+          type: "error",
+          text: "Could not remove this item. Please try again.",
+        });
+      });
     }
   }
 
@@ -113,7 +125,12 @@ export function CartScreen() {
       destructive: true,
     });
     if (confirmed) {
-      void removeLinesFromCart(cartLineIds);
+      void removeLinesFromCart(cartLineIds).catch(() => {
+        setOrderMessage({
+          type: "error",
+          text: "Could not remove this product. Please try again.",
+        });
+      });
     }
   }
 

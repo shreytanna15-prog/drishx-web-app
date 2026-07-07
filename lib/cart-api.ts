@@ -252,8 +252,25 @@ export async function clearServerCart(
   headers: Record<string, string>
 ): Promise<void> {
   const response = await fetch("/api/cart", { method: "DELETE", headers });
-  if (!response.ok) {
-    const result = await response.json().catch(() => ({}));
+  if (response.ok) {
+    return;
+  }
+
+  const result = await response.json().catch(() => ({}));
+  const items = await fetchCart(headers).catch(() => [] as CartItem[]);
+
+  if (items.length === 0) {
+    return;
+  }
+
+  const results = await Promise.allSettled(
+    items.map((item) =>
+      removeCartLine(item.cartLineKey ?? item.cartLineId, headers)
+    )
+  );
+
+  const failed = results.filter((entry) => entry.status === "rejected");
+  if (failed.length > 0) {
     throw new Error(result?.error || "Failed to clear cart.");
   }
 }

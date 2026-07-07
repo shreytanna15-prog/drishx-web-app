@@ -77,11 +77,19 @@ export function getAxisOptionsForLensType(
   }
 }
 
+function snapAxis(value: number): number {
+  return clampValue(Math.round(value), 0, 180);
+}
+
 export function formatAxisPickerLabel(value: number): string {
   if (value > 0) {
     return `+${value}`;
   }
   return String(value);
+}
+
+function clampValue(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
 export function snapToOption(value: number, options: number[]): number {
@@ -104,13 +112,12 @@ export function snapToOption(value: number, options: number[]): number {
 }
 
 export function createDefaultPrescription(
-  lensType: ColorLensTypeId | string | undefined = "single-vision"
+  _lensType: ColorLensTypeId | string | undefined = "single-vision"
 ): ColorLensPrescription {
-  const axisOptions = getAxisOptionsForLensType(lensType);
   const eye: EyePowerValues = {
     sph: -2,
     cyl: -0.75,
-    axis: axisOptions[axisOptions.length - 1] ?? 180,
+    axis: snapAxis(180),
     add: 1,
   };
 
@@ -132,10 +139,6 @@ export function formatOdOsPowerSummary(
   const od = `${formatPowerLabel(prescription.right.sph)} / ${formatPowerLabel(prescription.right.cyl)}`;
   const os = `${formatPowerLabel(prescription.left.sph)} / ${formatPowerLabel(prescription.left.cyl)}`;
   return `${od} · ${os}`;
-}
-
-function clampValue(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 export function stepEyePower(
@@ -162,14 +165,12 @@ export function formatOdOsAddSummary(
 
 export function snapPrescriptionToLensType(
   prescription: ColorLensPrescription,
-  lensType: ColorLensTypeId | string | undefined
+  _lensType: ColorLensTypeId | string | undefined
 ): ColorLensPrescription {
-  const axisOptions = getAxisOptionsForLensType(lensType);
-
   const snapEye = (eye: EyePowerValues): EyePowerValues => ({
     sph: snapToOption(eye.sph, buildSphOptions()),
     cyl: snapToOption(eye.cyl, buildCylOptions()),
-    axis: snapToOption(eye.axis, axisOptions),
+    axis: snapAxis(eye.axis),
     add: snapToOption(eye.add, buildAddOptions()),
   });
 
