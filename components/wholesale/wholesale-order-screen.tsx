@@ -17,7 +17,6 @@ import { Input } from "@/components/ui/input";
 import { useCart } from "@/contexts/cart-context";
 import { useOrderMode } from "@/contexts/order-mode-context";
 import {
-  buildCartLineId,
   formatPowerLabel,
   sanitizePositiveIntegerInput,
 } from "@/lib/cart-utils";
@@ -30,6 +29,7 @@ import {
 } from "@/lib/lens-display";
 import { piecesFromDisplayQuantity } from "@/lib/order-quantity";
 import { resolveSelectableRange } from "@/lib/prescription-range";
+import { toApiLensType } from "@/lib/types/lens";
 import type { LensItem } from "@/lib/types/lens";
 import {
   buildQtyMapFromMatrixSpec,
@@ -44,6 +44,9 @@ import {
   yieldToUi,
   type BuildMatrixParams,
 } from "@/lib/wholesale-matrix";
+import {
+  buildWholesaleSpecFromOrderState,
+} from "@/lib/wholesale-cart";
 import {
   getDefaultRangeEndpoints,
   resolveWholesaleBoundOptions,
@@ -80,7 +83,7 @@ export function WholesaleOrderScreen() {
     () => parseLensPayload(searchParams.get("payload")),
     [searchParams]
   );
-  const { bulkSetCartQuantities } = useCart();
+  const { addWholesaleBatchToCart } = useCart();
   const { setMode } = useOrderMode();
 
   const selectableRange = useMemo(
@@ -350,49 +353,61 @@ export function WholesaleOrderScreen() {
       return;
     }
 
+    const defaultPairs = Number(pairsDefault);
+    if (!Number.isInteger(defaultPairs) || defaultPairs < 1) {
+      setError("Enter a valid default pairs value.");
+      return;
+    }
+
     setAddingToCart(true);
     setError(null);
 
-    const bulkLines: Array<{ cartItem: LensItem; pieces: number }> = [];
-
-    for (const entry of entries) {
-      const pieces = piecesFromDisplayQuantity(entry.pairs, "pair");
-
-      const cartItem: LensItem = {
-        ...item,
-        sph: entry.sph,
-        cyl: entry.cyl,
-        add: entry.add,
-        cylAdd: entry.cylAdd ?? undefined,
-        axis: productAxis,
-        crossPower: item.crossPower,
-      };
-
-      const lineId = buildCartLineId(cartItem);
-      const existing = bulkLines.find(
-        (line) => buildCartLineId(line.cartItem) === lineId
-      );
-      if (existing) {
-        existing.pieces += pieces;
-      } else {
-        bulkLines.push({ cartItem, pieces });
-      }
-    }
+    const wholesaleSpec = buildWholesaleSpecFromOrderState({
+      sphFrom,
+      sphTo,
+      sphStep,
+      cylFrom,
+      cylTo,
+      cylStep,
+      addFrom,
+      addTo,
+      addStep,
+      gridMode,
+      defaultPairsPerCell: defaultPairs,
+      qtyMap,
+      productAxis,
+      isBifocalLens,
+      isSingleVision,
+      crossPower: item.crossPower ?? null,
+      showSphRange,
+      showCylRange,
+    });
 
     try {
-      const { savedCount } = await bulkSetCartQuantities(
-        bulkLines.map(({ cartItem, pieces }) => ({
-          item: cartItem,
-          quantity: pieces,
-        }))
-      );
+      const { expandedLineCount } = await addWholesaleBatchToCart({
+        lensId: item.id,
+        lensType: toApiLensType(item.lensType ?? "Progressive"),
+        unitPrice: item.price,
+        brand: item.brand,
+        coating: item.coating,
+        item: item.item,
+        lensTypeLabel: item.lensType ?? "Progressive",
+        ranges: wholesaleSpec.ranges,
+        gridMode: wholesaleSpec.gridMode,
+        defaultPairsPerCell: wholesaleSpec.defaultPairsPerCell,
+        qtyOverrides: wholesaleSpec.qtyOverrides,
+        productAxis: wholesaleSpec.productAxis,
+        isBifocalLens: wholesaleSpec.isBifocalLens,
+        isSingleVision: wholesaleSpec.isSingleVision,
+        crossPower: wholesaleSpec.crossPower,
+      });
 
-      if (savedCount > 0) {
+      if (expandedLineCount > 0) {
         router.push("/cart");
         return;
       }
 
-      setError("Could not add items to cart.");
+      setError("Could not add wholesale batch to cart.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add to cart.");
     } finally {

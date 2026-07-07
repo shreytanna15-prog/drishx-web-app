@@ -1,3 +1,4 @@
+import { resolveCrossPowerMeta } from "@/lib/cross-power";
 import type { FilterOption, LensItem, LensType, SelectableRange } from "@/lib/types/lens";
 
 export const PAGE_SIZE = 21;
@@ -58,35 +59,53 @@ export function filterToApiType(filter: FilterOption): string {
 }
 
 export function mapApiLens(item: LensesPageResponse["items"][number]): LensItem {
+  const lensType = toDisplayLensType(item.lensType);
+  const sph =
+    item.sph !== null && item.sph !== undefined ? Number(item.sph) : null;
+  const cyl = item.cyl !== null ? Number(item.cyl) : null;
+  const explicitCrossPower =
+    item.crossPower !== null && item.crossPower !== undefined
+      ? Number(item.crossPower)
+      : null;
+  const selectableRange = item.selectableRange ?? null;
+  const normalizedCrossPower =
+    resolveCrossPowerMeta({
+      crossPower: explicitCrossPower,
+      sph,
+      cyl,
+      cylStartRange:
+        item.cylStartRange !== null && item.cylStartRange !== undefined
+          ? Number(item.cylStartRange)
+          : null,
+      selectableRange,
+    })?.maxCyl ?? null;
+
   return {
     id: item.id,
     costPrice: item.costPrice !== null ? Number(item.costPrice) : null,
     price: Number(item.price),
-    sph: item.sph !== null && item.sph !== undefined ? Number(item.sph) : null,
+    sph,
     sphStartRange:
       item.sphStartRange !== null && item.sphStartRange !== undefined
         ? Number(item.sphStartRange)
         : null,
-    cyl: item.cyl !== null ? Number(item.cyl) : null,
+    cyl,
     cylStartRange:
       item.cylStartRange !== null && item.cylStartRange !== undefined
         ? Number(item.cylStartRange)
         : null,
-    crossPower:
-      item.crossPower !== null && item.crossPower !== undefined
-        ? Number(item.crossPower)
-        : null,
+    crossPower: normalizedCrossPower,
     axis: item.axis,
     add: item.add !== null ? Number(item.add) : null,
     eye: item.eye ?? undefined,
     quantity: item.quantity,
     createdAt: item.createdAt,
-    lensType: toDisplayLensType(item.lensType),
+    lensType,
     brand: item.brand,
     item: item.item,
     coating: item.coating,
     index: item.index ?? null,
-    selectableRange: item.selectableRange ?? null,
+    selectableRange,
   };
 }
 

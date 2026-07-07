@@ -21,12 +21,14 @@ import { useBrandConfirm } from "@/hooks/use-brand-confirm";
 import {
   buildCartProductSections,
   getCartSummary,
+  partitionCartItems,
 } from "@/lib/cart-display";
+import { isWholesaleCartItem } from "@/lib/wholesale-cart";
 import {
   getQuantityStep,
   normalizeQuantityForMode,
 } from "@/lib/order-quantity";
-import { createOrder, ORDER_NOTES_MAX_LENGTH } from "@/lib/orders-api";
+import { createOrder, ORDER_NOTES_MAX_LENGTH, wholesaleCheckout } from "@/lib/orders-api";
 import { cn } from "@/lib/utils";
 
 export function CartScreen() {
@@ -129,7 +131,9 @@ export function CartScreen() {
     setSwitchingOrderMode(true);
     try {
       await Promise.all(
-        items.map(async (item) => {
+        items
+          .filter((item) => !isWholesaleCartItem(item))
+          .map(async (item) => {
           const normalized = normalizeQuantityForMode(
             item.cartQuantity,
             "wholesale"
@@ -165,8 +169,28 @@ export function CartScreen() {
     let successCount = 0;
     let procurementCount = 0;
     const checkoutBatchId = `batch_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const { retailItems, wholesaleItems } = partitionCartItems(items);
 
-    for (const item of items) {
+    if (wholesaleItems.length > 0) {
+      const wholesaleResult = await wholesaleCheckout(
+        wholesaleItems.map((item) => item.cartLineKey),
+        token,
+        trimmedNotes || undefined,
+        checkoutBatchId
+      );
+
+      if (wholesaleResult.success) {
+        successCount += wholesaleResult.successCount;
+        procurementCount += wholesaleResult.procurementCount;
+      } else {
+        failures.push(wholesaleResult.error);
+        if (wholesaleResult.partialFailures?.length) {
+          failures.push(...wholesaleResult.partialFailures);
+        }
+      }
+    }
+
+    for (const item of retailItems) {
       const result = await createOrder(
         item,
         token,

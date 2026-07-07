@@ -107,14 +107,17 @@ export function isAllowedCrossComboForItem(
   item: {
     crossPower?: number | null;
     sph?: number | null;
-    selectableRange?: { crossPower?: { maxCyl: number } | null } | null;
+    cylStartRange?: number | null;
+    selectableRange?: {
+      crossPower?: { maxCyl: number; cylStartRange?: number | null } | null;
+    } | null;
   }
 ): boolean {
   const meta = resolveCrossPowerMeta(item);
   if (!meta) {
     return false;
   }
-  return isAllowedCrossCombo(sph, cyl);
+  return isAllowedCrossCombo(sph, cyl, meta.cylStartRange);
 }
 
 export function countCompoundCombos(

@@ -17,6 +17,8 @@ import {
   fetchCart,
   removeCartLine,
   upsertCartLine,
+  upsertWholesaleCartBatch,
+  type UpsertWholesaleCartInput,
 } from "@/lib/cart-api";
 import { buildCartLineId } from "@/lib/cart-utils";
 import { lineTotalForPieceQuantity } from "@/lib/lens-pricing";
@@ -50,6 +52,9 @@ type CartContextValue = {
   bulkSetCartQuantities: (
     lines: Array<{ item: LensItem; quantity: number }>
   ) => Promise<{ savedCount: number; message?: string }>;
+  addWholesaleBatchToCart: (
+    input: UpsertWholesaleCartInput
+  ) => Promise<{ expandedLineCount: number; message?: string }>;
   clearCart: () => Promise<void>;
 };
 
@@ -435,6 +440,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [applyItems, authHeaders, useServerCart]
   );
 
+  const addWholesaleBatchToCart = useCallback(
+    async (input: UpsertWholesaleCartInput) => {
+      if (!useServerCart || !authHeaders) {
+        throw new Error("Sign in to add wholesale batches to your cart.");
+      }
+
+      const { item, expandedLineCount, message } = await upsertWholesaleCartBatch(
+        input,
+        authHeaders
+      );
+
+      applyItems((current) => {
+        const kept = current.filter((entry) => entry.cartLineId !== item.cartLineId);
+        return [...kept, item];
+      });
+
+      return { expandedLineCount, message };
+    },
+    [applyItems, authHeaders, useServerCart]
+  );
+
   const itemCount = useMemo(
     () => items.reduce((sum, entry) => sum + entry.cartQuantity, 0),
     [items]
@@ -463,6 +489,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       updateQuantity,
       adjustQuantity,
       bulkSetCartQuantities,
+      addWholesaleBatchToCart,
       clearCart,
     }),
     [
@@ -477,6 +504,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       updateQuantity,
       adjustQuantity,
       bulkSetCartQuantities,
+      addWholesaleBatchToCart,
       clearCart,
     ]
   );

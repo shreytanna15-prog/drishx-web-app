@@ -8,8 +8,9 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { CartPowerLine, CartProductSection } from "@/lib/cart-display";
+import { buildWholesalePowerLines } from "@/lib/cart-display";
 import { cn } from "@/lib/utils";
 
 type CartProductSectionCardProps = {
@@ -33,6 +34,8 @@ function CartPowerRow({
   onDecrease: () => void;
   onRemove: () => void;
 }) {
+  const readOnly = line.isVirtual;
+
   return (
     <div className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-[var(--brand-card-border)] py-3 last:border-b-0 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)_minmax(0,0.8fr)]">
       <div className="min-w-0">
@@ -45,39 +48,49 @@ function CartPowerRow({
       </div>
 
       <div className="flex items-center justify-center gap-2">
-        <button
-          type="button"
-          onClick={onDecrease}
-          className="flex size-8 items-center justify-center rounded-lg border border-[var(--brand-primary)]/60 text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10"
-          aria-label="Decrease quantity"
-        >
-          <Minus className="size-4" />
-        </button>
-        <span className="min-w-[2rem] text-center text-sm font-bold text-[var(--brand-text)]">
-          {line.quantity}
-        </span>
-        <button
-          type="button"
-          onClick={onIncrease}
-          className="flex size-8 items-center justify-center rounded-lg border border-[var(--brand-primary)]/60 text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10"
-          aria-label="Increase quantity"
-        >
-          <Plus className="size-4" />
-        </button>
+        {readOnly ? (
+          <span className="min-w-[2rem] text-center text-sm font-bold text-[var(--brand-text)]">
+            {line.quantity}
+          </span>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onDecrease}
+              className="flex size-8 items-center justify-center rounded-lg border border-[var(--brand-primary)]/60 text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10"
+              aria-label="Decrease quantity"
+            >
+              <Minus className="size-4" />
+            </button>
+            <span className="min-w-[2rem] text-center text-sm font-bold text-[var(--brand-text)]">
+              {line.quantity}
+            </span>
+            <button
+              type="button"
+              onClick={onIncrease}
+              className="flex size-8 items-center justify-center rounded-lg border border-[var(--brand-primary)]/60 text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10"
+              aria-label="Increase quantity"
+            >
+              <Plus className="size-4" />
+            </button>
+          </>
+        )}
       </div>
 
       <div className="flex items-center justify-end gap-2">
         <span className="text-sm font-extrabold text-[var(--brand-primary)]">
           ₹{line.lineTotal.toLocaleString("en-IN")}
         </span>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="rounded-lg p-1.5 text-[var(--brand-danger)] transition-colors hover:bg-[var(--brand-danger)]/10"
-          aria-label="Remove line"
-        >
-          <Trash2 className="size-4" />
-        </button>
+        {!readOnly ? (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="rounded-lg p-1.5 text-[var(--brand-danger)] transition-colors hover:bg-[var(--brand-danger)]/10"
+            aria-label="Remove line"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -92,8 +105,18 @@ export function CartProductSectionCard({
   onRemove,
   onRemoveSection,
 }: CartProductSectionCardProps) {
-  const [expanded, setExpanded] = useState(true);
-  const sectionLineIds = section.lines.map((line) => line.cartLineId);
+  const [expanded, setExpanded] = useState(!section.isWholesaleBatch);
+  const sectionLineIds = section.parentCartLineId
+    ? [section.parentCartLineId]
+    : section.lines.map((line) => line.cartLineId);
+  const displayLines = useMemo(() => {
+    if (!section.isWholesaleBatch || expanded) {
+      return section.isWholesaleBatch
+        ? buildWholesalePowerLines(section)
+        : section.lines;
+    }
+    return [];
+  }, [expanded, section]);
 
   return (
     <article className="overflow-hidden rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.35)]">
@@ -143,7 +166,7 @@ export function CartProductSectionCard({
             <span className="text-center">{qtyColumnLabel}</span>
             <span className="text-right">Amt</span>
           </div>
-          {section.lines.map((line) => (
+          {displayLines.map((line) => (
             <CartPowerRow
               key={line.cartLineId}
               line={line}

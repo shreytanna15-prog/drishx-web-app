@@ -48,43 +48,116 @@ function generatePowerOptions(from: number, to: number): number[] {
 
 export type CrossPowerRangeMeta = {
   maxCyl: number;
+  cylStartRange?: number | null;
 };
 
-export function hasCrossPower(item: { crossPower?: unknown | null }): boolean {
+function resolveCylStartRange(value: unknown | null | undefined): number | null {
+  const parsed = toPower(value);
+  if (parsed === null || parsed >= -POWER_EPS) {
+    return null;
+  }
+  return roundQuarter(parsed);
+}
+
+/** Upper CYL bound (least negative) for full catalog scroll. */
+function resolveCrossCylCatalogUpper(cylStartRange?: number | null): number {
+  const start = resolveCylStartRange(cylStartRange);
+  return start ?? -CROSS_MIN_GAP;
+}
+
+/** Upper CYL bound for a selected SPH, respecting DB cylStartRange. */
+function resolveCrossCylUpperForSph(
+  sph: number,
+  cylStartRange?: number | null
+): number {
+  const roundedSph = roundQuarter(sph);
+  const sphUpper = roundQuarter(-(roundedSph + CROSS_MIN_GAP));
+  const start = resolveCylStartRange(cylStartRange);
+  if (start === null) {
+    return sphUpper;
+  }
+  return Math.min(sphUpper, start);
+}
+
+function deriveCrossPowerFromPrescription(item: {
+  sph?: unknown | null;
+  cyl?: unknown | null;
+}): number | null {
+  const sph = toPower(item.sph);
+  const cyl = toPower(item.cyl);
+  if (sph === null || cyl === null) {
+    return null;
+  }
+
+  const roundedSph = roundQuarter(sph);
+  const roundedCyl = roundQuarter(cyl);
+  if (
+    roundedSph < CROSS_MIN_GAP - POWER_EPS ||
+    roundedCyl >= -POWER_EPS ||
+    Math.abs(roundedCyl) - roundedSph < CROSS_MIN_GAP - POWER_EPS
+  ) {
+    return null;
+  }
+
+  return roundedCyl;
+}
+
+export function hasCrossPower(item: {
+  crossPower?: unknown | null;
+  sph?: unknown | null;
+  cyl?: unknown | null;
+}): boolean {
   const crossPower = toPower(item.crossPower);
-  return crossPower !== null && Math.abs(crossPower) > POWER_EPS;
+  if (crossPower !== null && Math.abs(crossPower) > POWER_EPS) {
+    return true;
+  }
+  return deriveCrossPowerFromPrescription(item) !== null;
 }
 
 export function resolveCrossPowerMeta(item: {
   crossPower?: unknown | null;
+  sph?: unknown | null;
+  cyl?: unknown | null;
+  cylStartRange?: unknown | null;
   selectableRange?: { crossPower?: CrossPowerRangeMeta | null } | null;
 }): CrossPowerRangeMeta | null {
   if (item.selectableRange?.crossPower) {
     return item.selectableRange.crossPower;
   }
 
-  const maxCyl = toPower(item.crossPower);
+  const maxCyl = toPower(item.crossPower) ?? deriveCrossPowerFromPrescription(item);
   if (maxCyl === null || Math.abs(maxCyl) <= POWER_EPS) {
     return null;
   }
 
   return {
     maxCyl: roundQuarter(maxCyl),
+    cylStartRange: resolveCylStartRange(item.cylStartRange),
   };
 }
 
-/** Negative CYL catalog bound for cross products: −0.25 → maxCyl in 0.25 steps. */
-export function computeCrossCylOptions(maxCyl: number): number[] {
+/** Negative CYL catalog bound for cross products, from cylStartRange (or −0.25) → maxCyl. */
+export function computeCrossCylOptions(
+  maxCyl: number,
+  cylStartRange?: number | null
+): number[] {
   const cylMax = roundQuarter(maxCyl);
   if (cylMax >= -POWER_EPS) {
     return [];
   }
-  return generatePowerOptions(-CROSS_MIN_GAP, cylMax);
+  const cylUpper = resolveCrossCylCatalogUpper(cylStartRange);
+  if (cylUpper < cylMax - POWER_EPS) {
+    return [];
+  }
+  return generatePowerOptions(cylUpper, cylMax);
 }
 
 /** Full negative CYL catalog bounds for wholesale / static range hints. */
-export function computeFullCrossCylOptions(maxCyl: number): number[] {
-  return computeCrossCylOptions(maxCyl);
+export function computeFullCrossCylOptions(
+  maxCyl: number,
+  cylStartRange?: number | null
+): number[] {
+  return computeCrossCylOptions(maxCyl, cylStartRange);
 }
 
 /**
@@ -104,7 +177,11 @@ export function computeCrossSphOptions(maxCyl: number): number[] {
  * Negative CYL scroll options for the selected SPH on cross products.
  * Range: −0.25 down to maxCyl, filtered so |CYL| − SPH ≥ 0.25.
  */
-export function computeCrossCylOptionsForSph(sph: number, maxCyl: number): number[] {
+export function computeCrossCylOptionsForSph(
+  sph: number,
+  maxCyl: number,
+  cylStartRange?: number | null
+): number[] {
   const roundedSph = roundQuarter(sph);
   if (roundedSph < CROSS_MIN_GAP - POWER_EPS) {
     return [];
@@ -115,8 +192,7 @@ export function computeCrossCylOptionsForSph(sph: number, maxCyl: number): numbe
     return [];
   }
 
-  const minMagnitude = roundQuarter(roundedSph + CROSS_MIN_GAP);
-  const negUpper = roundQuarter(-minMagnitude);
+  const negUpper = resolveCrossCylUpperForSph(roundedSph, cylStartRange);
   const negLower = cylMax;
 
   if (negUpper < negLower - POWER_EPS) {
@@ -127,8 +203,13 @@ export function computeCrossCylOptionsForSph(sph: number, maxCyl: number): numbe
 }
 
 /** Keep CYL valid when SPH changes — always negative, at least |SPH| + 0.25. */
-export function coerceCrossCylForSph(sph: number, cyl: number, maxCyl: number): number {
-  const options = computeCrossCylOptionsForSph(sph, maxCyl);
+export function coerceCrossCylForSph(
+  sph: number,
+  cyl: number,
+  maxCyl: number,
+  cylStartRange?: number | null
+): number {
+  const options = computeCrossCylOptionsForSph(sph, maxCyl, cylStartRange);
   if (options.length === 0) {
     return cyl;
   }
@@ -148,13 +229,22 @@ export function coerceCrossCylForSph(sph: number, cyl: number, maxCyl: number): 
   return options[0]!;
 }
 
-export function isAllowedCrossCombo(sph: number, cyl: number): boolean {
+export function isAllowedCrossCombo(
+  sph: number,
+  cyl: number,
+  cylStartRange?: number | null
+): boolean {
   const roundedSph = roundQuarter(sph);
   const roundedCyl = roundQuarter(cyl);
   if (roundedSph < CROSS_MIN_GAP - POWER_EPS) {
     return false;
   }
   if (roundedCyl >= -POWER_EPS) {
+    return false;
+  }
+
+  const start = resolveCylStartRange(cylStartRange);
+  if (start !== null && roundedCyl > start + POWER_EPS) {
     return false;
   }
 

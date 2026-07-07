@@ -1,5 +1,6 @@
 import { buildCartLineId } from "@/lib/cart-utils";
-import type { CartItem, LensItem } from "@/lib/types/lens";
+import { resolveCrossPowerMeta } from "@/lib/cross-power";
+import type { CartItem, LensItem, WholesaleSpec } from "@/lib/types/lens";
 import { toApiLensType } from "@/lib/types/lens";
 
 export type ServerCartItem = {
@@ -12,6 +13,7 @@ export type ServerCartItem = {
   price: number;
   sph: number;
   cyl: number | null;
+  crossPower?: number | null;
   add: number | null;
   axis: number | null;
   eye: string | null;
@@ -22,10 +24,21 @@ export type ServerCartItem = {
   quantity: number;
   expiresAt: string;
   createdAt: string;
+  lineType?: "RETAIL" | "WHOLESALE";
+  wholesaleSpec?: WholesaleSpec | null;
 };
 
 function mapServerItem(row: ServerCartItem): CartItem {
   const cartLineKey = row.cartLineKey ?? row.cartLineId;
+  const crossPower =
+    resolveCrossPowerMeta({
+      crossPower:
+        row.crossPower !== null && row.crossPower !== undefined
+          ? Number(row.crossPower)
+          : null,
+      sph: row.sph,
+      cyl: row.cyl,
+    })?.maxCyl ?? null;
   return {
     id: row.id,
     cartLineId: cartLineKey,
@@ -38,6 +51,7 @@ function mapServerItem(row: ServerCartItem): CartItem {
     costPrice: null,
     sph: row.sph,
     cyl: row.cyl,
+    crossPower,
     add: row.add,
     axis: row.axis,
     eye: row.eye ?? undefined,
@@ -47,6 +61,8 @@ function mapServerItem(row: ServerCartItem): CartItem {
     brand: row.brand,
     item: row.item,
     coating: row.coating,
+    lineType: row.lineType ?? "RETAIL",
+    wholesaleSpec: row.wholesaleSpec ?? null,
   };
 }
 
@@ -172,6 +188,50 @@ export async function bulkUpsertCartLines(
   }
 
   return { count: totalCount, message };
+}
+
+export type UpsertWholesaleCartInput = {
+  lensId: string;
+  lensType: string;
+  unitPrice: number;
+  brand?: string | null;
+  coating?: string | null;
+  item?: string | null;
+  lensTypeLabel?: string | null;
+  ranges: WholesaleSpec["ranges"];
+  gridMode: WholesaleSpec["gridMode"];
+  defaultPairsPerCell: number;
+  qtyOverrides?: Record<string, number>;
+  productAxis?: number | null;
+  isBifocalLens: boolean;
+  isSingleVision: boolean;
+  crossPower?: number | null;
+};
+
+export async function upsertWholesaleCartBatch(
+  input: UpsertWholesaleCartInput,
+  headers: Record<string, string>
+): Promise<{ item: CartItem; expandedLineCount: number; message?: string }> {
+  const response = await fetch("/api/cart/wholesale", {
+    method: "POST",
+    headers: {
+      ...headers,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result?.error || "Failed to add wholesale batch to cart.");
+  }
+
+  return {
+    item: mapServerItem(result.item as ServerCartItem),
+    expandedLineCount:
+      typeof result.expandedLineCount === "number" ? result.expandedLineCount : 0,
+    message: typeof result.message === "string" ? result.message : undefined,
+  };
 }
 
 export async function removeCartLine(

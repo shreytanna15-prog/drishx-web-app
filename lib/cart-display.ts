@@ -1,5 +1,7 @@
+import { formatPowerLabel } from "@/lib/cart-utils";
 import {
   formatAddValue,
+  formatAxisValue,
   formatLensItemLabel,
   formatSphCylSlash,
 } from "@/lib/lens-display";
@@ -10,6 +12,12 @@ import {
   type OrderQuantityMode,
 } from "@/lib/order-quantity";
 import type { CartItem } from "@/lib/types/lens";
+import {
+  expandWholesaleSpec,
+  isWholesaleCartItem,
+  type WholesaleSpec,
+} from "@/lib/wholesale-cart";
+import type { LensType } from "@/lib/types/lens";
 
 export type CartPowerLine = {
   cartLineId: string;
@@ -17,6 +25,8 @@ export type CartPowerLine = {
   eye?: string;
   quantity: number;
   lineTotal: number;
+  isVirtual?: boolean;
+  parentCartLineId?: string;
 };
 
 export type CartProductSection = {
@@ -25,6 +35,11 @@ export type CartProductSection = {
   subtitle: string;
   totalPairs: number;
   lines: CartPowerLine[];
+  isWholesaleBatch?: boolean;
+  parentCartLineId?: string;
+  wholesaleSpec?: WholesaleSpec | null;
+  unitPrice?: number;
+  lensType?: LensType;
 };
 
 function joinParts(parts: (string | null | undefined)[]): string {
@@ -39,7 +54,9 @@ function getCartProductMeta(item: CartItem): {
   const lensType = item.lensType ?? "Progressive";
 
   return {
-    key: `${lensType}-${item.brand ?? ""}-${item.item ?? ""}-${item.coating ?? ""}`,
+    key: isWholesaleCartItem(item)
+      ? `wholesale-${item.cartLineKey}`
+      : `${lensType}-${item.brand ?? ""}-${item.item ?? ""}-${item.coating ?? ""}`,
     title: item.brand?.trim() || lensType,
     subtitle: joinParts([lensType, formatLensItemLabel(item)]) || lensType,
   };
@@ -55,6 +72,60 @@ function formatSphCyl(item: CartItem): string {
     : sphCyl;
 }
 
+function formatExpandedWholesaleLabel(
+  line: ReturnType<typeof expandWholesaleSpec>[number],
+  lensType: CartItem["lensType"]
+): string {
+  const sphCyl = `${formatPowerLabel(line.sph)} / ${
+    line.cyl != null ? formatPowerLabel(line.cyl) : "—"
+  }`;
+  if (lensType === "Single Vision") {
+    return sphCyl;
+  }
+  const parts = [sphCyl];
+  if (line.add != null) {
+    parts.push(`ADD ${formatAddValue(line.add)}`);
+  }
+  if (line.axis != null) {
+    parts.push(`AXIS ${formatAxisValue(line.axis)}`);
+  }
+  return parts.join(" · ");
+}
+
+function buildWholesaleSection(item: CartItem, spec: WholesaleSpec): CartProductSection {
+  const meta = getCartProductMeta(item);
+  const totalPairs = pairsFromPieces(item.cartQuantity);
+
+  return {
+    key: meta.key,
+    title: meta.title,
+    subtitle: `${meta.subtitle} · Wholesale batch · ${totalPairs} pairs`,
+    totalPairs,
+    lines: [],
+    isWholesaleBatch: true,
+    parentCartLineId: item.cartLineId,
+    wholesaleSpec: spec,
+    unitPrice: item.price,
+    lensType: item.lensType,
+  };
+}
+
+export function buildWholesalePowerLines(section: CartProductSection): CartPowerLine[] {
+  if (!section.isWholesaleBatch || !section.wholesaleSpec || !section.parentCartLineId) {
+    return section.lines;
+  }
+
+  const unitPrice = section.unitPrice ?? 0;
+  return expandWholesaleSpec(section.wholesaleSpec).map((line) => ({
+    cartLineId: `${section.parentCartLineId}:${line.key}`,
+    parentCartLineId: section.parentCartLineId,
+    isVirtual: true,
+    sphCylLabel: formatExpandedWholesaleLabel(line, section.lensType),
+    quantity: line.pairs,
+    lineTotal: lineTotalForPieceQuantity(unitPrice, line.pieces),
+  }));
+}
+
 export function buildCartProductSections(
   items: CartItem[],
   mode: OrderQuantityMode = "wholesale"
@@ -62,6 +133,14 @@ export function buildCartProductSections(
   const sections = new Map<string, CartProductSection>();
 
   for (const item of items) {
+    if (isWholesaleCartItem(item) && item.wholesaleSpec) {
+      sections.set(
+        getCartProductMeta(item).key,
+        buildWholesaleSection(item, item.wholesaleSpec)
+      );
+      continue;
+    }
+
     const meta = getCartProductMeta(item);
     const displayQty = displayQuantityFromPieces(item.cartQuantity, mode);
     const line: CartPowerLine = {
@@ -115,4 +194,22 @@ export function getCartSummary(
 
 export function formatCartPowerLabel(item: CartItem): string {
   return formatSphCyl(item);
+}
+
+export function partitionCartItems(items: CartItem[]): {
+  retailItems: CartItem[];
+  wholesaleItems: CartItem[];
+} {
+  const retailItems: CartItem[] = [];
+  const wholesaleItems: CartItem[] = [];
+
+  for (const item of items) {
+    if (isWholesaleCartItem(item)) {
+      wholesaleItems.push(item);
+    } else {
+      retailItems.push(item);
+    }
+  }
+
+  return { retailItems, wholesaleItems };
 }

@@ -94,6 +94,67 @@ export async function createOrder(
   }
 }
 
+export async function wholesaleCheckout(
+  cartLineKeys: string[],
+  token: string,
+  notes?: string,
+  checkoutBatchId?: string
+): Promise<
+  | {
+      success: true;
+      successCount: number;
+      procurementCount: number;
+    }
+  | {
+      success: false;
+      error: string;
+      partialFailures?: string[];
+      successCount?: number;
+      procurementCount?: number;
+    }
+> {
+  try {
+    const response = await fetchWithRetry("/api/orders/wholesale-checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        cartLineKeys,
+        ...(notes?.trim() ? { notes: notes.trim() } : {}),
+        ...(checkoutBatchId?.trim()
+          ? { checkoutBatchId: checkoutBatchId.trim() }
+          : {}),
+      }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+    const successCount =
+      typeof result.successCount === "number" ? result.successCount : 0;
+    const procurementCount =
+      typeof result.procurementCount === "number" ? result.procurementCount : 0;
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result?.error || "Failed to place wholesale orders.",
+        partialFailures: Array.isArray(result.failures) ? result.failures : undefined,
+        successCount,
+        procurementCount,
+      };
+    }
+
+    return { success: true, successCount, procurementCount };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to place wholesale orders.",
+    };
+  }
+}
+
 export async function fetchOrders(): Promise<OrderRecord[]> {
   const token = getStoredToken();
   if (!token) {

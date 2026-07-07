@@ -1,4 +1,5 @@
 import { formatPowerLabel } from "@/lib/cart-utils";
+import { resolveCrossPowerMeta } from "@/lib/cross-power";
 import type { LensItem } from "@/lib/types/lens";
 
 function formatPower(value: number): string {
@@ -12,13 +13,14 @@ function hasPower(value: number | null | undefined): boolean {
 
 export function formatLensProductDetail(item: LensItem): string {
   const parts: string[] = [];
+  const crossMeta = resolveCrossPowerMeta(item);
 
   if (item.coating?.trim()) {
     parts.push(item.coating.trim());
   }
 
-  if (hasPower(item.crossPower)) {
-    parts.push(`cross ${formatPower(Number(item.crossPower))}`);
+  if (crossMeta) {
+    parts.push(`cross ${formatPower(crossMeta.maxCyl)}`);
   } else {
     const sph = hasPower(item.sph) ? formatPower(Number(item.sph)) : "—";
     const cyl = hasPower(item.cyl) ? formatPower(Number(item.cyl)) : "—";
@@ -79,8 +81,9 @@ export function formatSphCylSlash(item: {
   cyl?: number | null;
   crossPower?: number | null;
 }): string {
-  if (hasMeaningfulPower(item.crossPower)) {
-    const value = Number(item.crossPower);
+  const crossMeta = resolveCrossPowerMeta(item);
+  if (crossMeta) {
+    const value = Number(crossMeta.maxCyl);
     const fixed = value.toFixed(2).replace(/\.?0+$/, "");
     return `cross ${value > 0 ? `+${fixed}` : fixed}`;
   }

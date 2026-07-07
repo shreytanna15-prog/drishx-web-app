@@ -15,6 +15,7 @@ export type SelectableRange = {
   cyl: PowerAxisRange | null;
   crossPower?: {
     maxCyl: number;
+    cylStartRange?: number | null;
   } | null;
 };
 
@@ -41,6 +42,31 @@ export type LensItem = {
   selectableRange?: SelectableRange | null;
 };
 
+export type CartLineType = "RETAIL" | "WHOLESALE";
+
+export type PowerRangeSpec = {
+  from: number;
+  to: number;
+  step: number;
+};
+
+export type WholesaleGridMode = "sph-only" | "cyl-only" | "compound";
+
+export type WholesaleSpec = {
+  ranges: {
+    sph?: PowerRangeSpec;
+    cyl?: PowerRangeSpec;
+    add?: PowerRangeSpec;
+  };
+  gridMode: WholesaleGridMode;
+  defaultPairsPerCell: number;
+  qtyOverrides: Record<string, number>;
+  productAxis: number | null;
+  isBifocalLens: boolean;
+  isSingleVision: boolean;
+  crossPower: number | null;
+};
+
 export type CartItem = LensItem & {
   cartLineId: string;
   cartLineKey: string;
@@ -48,6 +74,8 @@ export type CartItem = LensItem & {
   reservedQuantity?: number;
   isBackorder?: boolean;
   expiresAt?: string;
+  lineType?: CartLineType;
+  wholesaleSpec?: WholesaleSpec | null;
 };
 
 export function toApiLensType(lensType: LensType): ApiLensType {

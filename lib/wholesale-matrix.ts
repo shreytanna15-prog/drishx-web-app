@@ -54,7 +54,7 @@ export type BuildMatrixParams = {
   addList: number[];
   /** Fixed axis from the product card (not user-selectable). */
   productAxis: number | null;
-  crossPowerMeta?: { maxCyl: number } | null;
+  crossPowerMeta?: { maxCyl: number; cylStartRange?: number | null } | null;
 };
 
 export function qtyKeyCompound(sph: number, cyl: number) {
@@ -96,7 +96,7 @@ function isAllowedMatrixCombo(
   params: Pick<BuildMatrixParams, 'isSingleVision' | 'crossPowerMeta'>
 ): boolean {
   if (params.crossPowerMeta) {
-    return isAllowedCrossCombo(sph, cyl);
+    return isAllowedCrossCombo(sph, cyl, params.crossPowerMeta.cylStartRange);
   }
   if (params.isSingleVision) {
     return isAllowedCompoundCombo(sph, cyl);

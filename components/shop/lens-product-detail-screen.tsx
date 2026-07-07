@@ -110,7 +110,8 @@ export function LensProductDetailScreen({
       ? coerceCrossCylForSph(
           initialSph,
           selectableRange.cyl?.options[0] ?? 0,
-          crossMeta.maxCyl
+          crossMeta.maxCyl,
+          crossMeta.cylStartRange
         )
       : (selectableRange?.cyl?.options[0] ?? item?.cyl ?? 0);
   const initialAdd = addOptions[0] ?? 1;
@@ -187,7 +188,12 @@ export function LensProductDetailScreen({
     const nextSph = range.sph.options[0] ?? item.sph ?? 0;
     const nextCyl =
       crossMeta && range.cyl
-        ? coerceCrossCylForSph(nextSph, range.cyl.options[0] ?? 0, crossMeta.maxCyl)
+        ? coerceCrossCylForSph(
+            nextSph,
+            range.cyl.options[0] ?? 0,
+            crossMeta.maxCyl,
+            crossMeta.cylStartRange
+          )
         : (range.cyl?.options[0] ?? item.cyl ?? 0);
     setSph(nextSph);
     setCyl(nextCyl);
@@ -218,7 +224,7 @@ export function LensProductDetailScreen({
     const cylOpts = effectiveSelectableRange.cyl?.options ?? [];
     if (cylOpts.length > 0 && !cylOpts.some((opt) => Math.abs(opt - cyl) < 0.001)) {
       if (crossMeta) {
-        setCyl(coerceCrossCylForSph(sph, cyl, crossMeta.maxCyl));
+        setCyl(coerceCrossCylForSph(sph, cyl, crossMeta.maxCyl, crossMeta.cylStartRange));
       } else {
         setCyl(cylOpts[0]!);
       }
@@ -279,7 +285,7 @@ export function LensProductDetailScreen({
     setSph(value);
     if (crossMeta) {
       setCyl((currentCyl) =>
-        coerceCrossCylForSph(value, currentCyl, crossMeta.maxCyl)
+        coerceCrossCylForSph(value, currentCyl, crossMeta.maxCyl, crossMeta.cylStartRange)
       );
     }
     setError(null);
