@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  ChevronDown,
   Grid3X3,
   Loader2,
   ShoppingCart,
@@ -416,6 +417,16 @@ export function WholesaleOrderScreen() {
   }
 
   const totalPairs = totalPairsSelected();
+  const showLoadMoreBar =
+    hasGeneratedGrid &&
+    matrixSpec != null &&
+    (hasMoreRows || hasMoreCols);
+  const matrixRowProgress = matrixSpec
+    ? Math.round((visibleMatrixRows.length / matrixSpec.rows.length) * 100)
+    : 0;
+  const matrixColProgress = matrixSpec
+    ? Math.round((visibleMatrixCols.length / matrixSpec.cols.length) * 100)
+    : 0;
 
   if (!item) {
     return (
@@ -431,7 +442,7 @@ export function WholesaleOrderScreen() {
   }
 
   return (
-    <div className="relative mx-auto w-full max-w-4xl flex-1 px-4 py-6 pb-32 sm:px-6 sm:py-8">
+    <div className="relative mx-auto w-full max-w-4xl flex-1 px-4 py-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 md:pb-28">
       <div className="mb-6 flex items-center gap-3">
         <Button
           variant="ghost"
@@ -608,24 +619,69 @@ export function WholesaleOrderScreen() {
                 defaultPairs={pairsDefault.trim() || "1"}
                 onQtyChange={handleMatrixQtyChange}
               />
-              <p className="text-xs font-medium text-[var(--brand-text-muted)]">
-                Enter quantities in pairs.
-              </p>
-              {hasMoreRows || hasMoreCols ? (
-                <Button
-                  variant="outline"
-                  onClick={handleLoadMoreMatrix}
-                  className="w-full rounded-xl border-[var(--brand-input-border)] font-semibold"
-                >
-                  Load more
-                  {hasMoreRows
-                    ? ` · ${matrixSpec.rows.length - visibleMatrixRows.length} rows`
-                    : ""}
-                  {hasMoreCols
-                    ? ` · ${matrixSpec.cols.length - visibleMatrixCols.length} cols`
-                    : ""}
-                </Button>
-              ) : null}
+
+              <div className="space-y-3 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-4">
+                <p className="text-center text-xs font-medium text-[var(--brand-text-muted)]">
+                  Enter quantities in pairs.
+                </p>
+
+                {showLoadMoreBar ? (
+                  <div className="space-y-3 border-t border-[var(--brand-card-border)] pt-4">
+                    <div className="flex items-center justify-center gap-3 text-xs font-semibold text-[var(--brand-text-muted)]">
+                      {hasMoreRows ? (
+                        <span>
+                          Rows {visibleMatrixRows.length}/{matrixSpec.rows.length}
+                        </span>
+                      ) : null}
+                      {hasMoreRows && hasMoreCols ? (
+                        <span aria-hidden>·</span>
+                      ) : null}
+                      {hasMoreCols ? (
+                        <span>
+                          Cols {visibleMatrixCols.length}/{matrixSpec.cols.length}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {hasMoreRows ? (
+                      <div className="h-1.5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--brand-card-border)_70%,transparent)]">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-[#f5ad42] to-[#e8941f] transition-all duration-300"
+                          style={{ width: `${matrixRowProgress}%` }}
+                        />
+                      </div>
+                    ) : null}
+
+                    {hasMoreCols && !hasMoreRows ? (
+                      <div className="h-1.5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--brand-card-border)_70%,transparent)]">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-[#f5ad42] to-[#e8941f] transition-all duration-300"
+                          style={{ width: `${matrixColProgress}%` }}
+                        />
+                      </div>
+                    ) : null}
+
+                    <Button
+                      variant="outline"
+                      onClick={handleLoadMoreMatrix}
+                      className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border-[var(--brand-primary)]/30 bg-[color-mix(in_srgb,var(--brand-card)_92%,var(--brand-primary)_8%)] font-extrabold text-[var(--brand-primary)] shadow-sm transition hover:border-[var(--brand-primary)]/50 hover:bg-[var(--brand-primary)]/10"
+                    >
+                      <ChevronDown className="size-4 shrink-0" />
+                      Load more
+                      {hasMoreRows ? (
+                        <span className="ml-1 rounded-full bg-[var(--brand-primary)]/15 px-2 py-0.5 text-[11px] font-extrabold">
+                          {matrixSpec.rows.length - visibleMatrixRows.length} rows
+                        </span>
+                      ) : null}
+                      {hasMoreCols ? (
+                        <span className="ml-1 rounded-full bg-[var(--brand-primary)]/15 px-2 py-0.5 text-[11px] font-extrabold">
+                          {matrixSpec.cols.length - visibleMatrixCols.length} cols
+                        </span>
+                      ) : null}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
             </>
           )}
         </section>
