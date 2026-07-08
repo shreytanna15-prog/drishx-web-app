@@ -1,3 +1,5 @@
+import type { QuantityUnit } from "@/lib/order-quantity";
+
 export type ProgressiveEyeOption = "LEFT" | "RIGHT" | "BOTH";
 
 export const PROGRESSIVE_EYE_OPTIONS: {
@@ -16,4 +18,20 @@ export function progressiveCartEyes(
     return ["LEFT", "RIGHT"];
   }
   return [selected];
+}
+
+export function progressivePairQuantityRequired(
+  selected: ProgressiveEyeOption
+): boolean {
+  return selected === "BOTH";
+}
+
+export function validateProgressiveQuantityUnit(
+  selected: ProgressiveEyeOption,
+  unit: QuantityUnit
+): string | null {
+  if (progressivePairQuantityRequired(selected) && unit === "piece") {
+    return "Both eyes orders must be placed in pairs only.";
+  }
+  return null;
 }

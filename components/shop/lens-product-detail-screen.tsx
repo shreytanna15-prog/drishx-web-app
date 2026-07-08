@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  Loader2,
   ShoppingCart,
 } from "lucide-react";
 import Link from "next/link";
@@ -51,6 +52,8 @@ import {
 import {
   PROGRESSIVE_EYE_OPTIONS,
   progressiveCartEyes,
+  progressivePairQuantityRequired,
+  validateProgressiveQuantityUnit,
   type ProgressiveEyeOption,
 } from "@/lib/progressive-eye";
 import {
@@ -128,6 +131,9 @@ export function LensProductDetailScreen({
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const pairOnlyForBothEyes =
+    showProgressiveEye && progressivePairQuantityRequired(selectedEye);
 
   const effectiveSelectableRange = useMemo(() => {
     if (!selectableRange || !crossMeta) {
@@ -212,6 +218,15 @@ export function LensProductDetailScreen({
   }, [orderMode]);
 
   useEffect(() => {
+    if (!pairOnlyForBothEyes || qtyUnit === "pair") {
+      return;
+    }
+    setQtyUnit("pair");
+    setQuantity(String(getDefaultDisplayQuantity(orderMode, "pair")));
+    setError(null);
+  }, [pairOnlyForBothEyes, orderMode, qtyUnit]);
+
+  useEffect(() => {
     if (!effectiveSelectableRange) {
       return;
     }
@@ -274,6 +289,9 @@ export function LensProductDetailScreen({
 
   function handleQtyUnitChange(nextUnit: QuantityUnit) {
     if (nextUnit === qtyUnit) {
+      return;
+    }
+    if (pairOnlyForBothEyes && nextUnit === "piece") {
       return;
     }
     setQtyUnit(nextUnit);
@@ -417,6 +435,13 @@ export function LensProductDetailScreen({
     }
 
     const parsedDisplayQty = Number(quantity);
+    const progressiveQtyError = showProgressiveEye
+      ? validateProgressiveQuantityUnit(selectedEye, qtyUnit)
+      : null;
+    if (progressiveQtyError) {
+      setError(progressiveQtyError);
+      return;
+    }
     const qtyError = validateDisplayQuantityForMode(
       parsedDisplayQty,
       qtyUnit,
@@ -619,7 +644,7 @@ export function LensProductDetailScreen({
               </div>
               {selectedEye === "BOTH" ? (
                 <p className="text-sm font-medium text-[var(--brand-text-muted)]">
-                  Adds separate LEFT and RIGHT lines to cart.
+                  Adds separate LEFT and RIGHT lines to cart. Order in pairs only.
                 </p>
               ) : null}
             </div>
@@ -631,7 +656,9 @@ export function LensProductDetailScreen({
 
           <div className="mb-4 flex flex-wrap items-center gap-4 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 py-3">
             <span className="text-sm font-bold text-[var(--brand-text)]">Qty</span>
-            {(["piece", "pair"] as const).map((unit) => (
+            {(["piece", "pair"] as const)
+              .filter((unit) => unit !== "piece" || !pairOnlyForBothEyes)
+              .map((unit) => (
               <label
                 key={unit}
                 className="flex cursor-pointer items-center gap-2"
@@ -747,16 +774,23 @@ export function LensProductDetailScreen({
             "h-14 w-full rounded-2xl text-base font-extrabold shadow-[0_8px_24px_-8px_rgba(240,161,50,0.55)]",
             showsAddedState
               ? "bg-[color-mix(in_srgb,var(--brand-primary)_75%,#2d8a4e_25%)] text-[var(--brand-primary-text)]"
-              : "bg-gradient-to-r from-[#f5ad42] to-[#e8941f] text-[var(--brand-primary-text)] hover:opacity-95"
+              : "bg-gradient-to-r from-[#f5ad42] to-[#e8941f] text-[var(--brand-primary-text)] hover:opacity-95",
+            submitting && "opacity-70"
           )}
         >
-          {showsAddedState ? (
+          {submitting ? (
+            <Loader2 className="size-5 animate-spin" />
+          ) : showsAddedState ? (
             <CheckCircle2 className="size-5" />
           ) : (
             <ShoppingCart className="size-5" />
           )}
-          {showsAddedState ? "Added to cart" : "Add to cart"}
-          {!showsAddedState ? <ArrowRight className="size-5" /> : null}
+          {submitting
+            ? "Adding…"
+            : showsAddedState
+              ? "Added to cart"
+              : "Add to cart"}
+          {!submitting && !showsAddedState ? <ArrowRight className="size-5" /> : null}
         </Button>
 
         <section className="border-t border-[var(--brand-card-border)] pt-8">
