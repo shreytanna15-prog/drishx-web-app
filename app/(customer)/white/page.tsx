@@ -1,0 +1,5 @@
+import { WhiteLensHub } from "@/components/white/white-lens-hub";
+
+export default function WhiteLensPage() {
+  return <WhiteLensHub />;
+}

@@ -63,25 +63,28 @@ import {
 } from "@/lib/shop-navigation";
 import type { LensItem } from "@/lib/types/lens";
 import { cn } from "@/lib/utils";
+import { isWhiteCatalogLensId } from "@/lib/white-catalog";
 
 type LensProductDetailScreenProps = {
   lensId: string;
   category: ShopCategoryId;
   catalogItem: string;
+  initialItem?: LensItem | null;
 };
 
 export function LensProductDetailScreen({
   lensId,
   category,
   catalogItem,
+  initialItem = null,
 }: LensProductDetailScreenProps) {
   const { addToCart, updateQuantity, items: cartItems } = useCart();
   const { mode: orderMode, isWholesale } = useOrderMode();
   const filter = shopCategoryToFilter(category);
   const categoryTitle = shopCategoryDisplayTitle(category);
 
-  const [item, setItem] = useState<LensItem | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [item, setItem] = useState<LensItem | null>(initialItem);
+  const [loading, setLoading] = useState(!initialItem);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [relatedLenses, setRelatedLenses] = useState<LensItem[]>([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
@@ -157,6 +160,13 @@ export function LensProductDetailScreen({
       : 0;
 
   useEffect(() => {
+    if (initialItem) {
+      setItem(initialItem);
+      setLoading(false);
+      setLoadError(null);
+      return;
+    }
+
     let cancelled = false;
 
     async function loadLens() {
@@ -183,7 +193,9 @@ export function LensProductDetailScreen({
     return () => {
       cancelled = true;
     };
-  }, [lensId, filter]);
+  }, [lensId, filter, initialItem]);
+
+  const isWhiteCatalogProduct = item ? isWhiteCatalogLensId(item.id) : false;
 
   useEffect(() => {
     if (!item) {
@@ -251,7 +263,7 @@ export function LensProductDetailScreen({
   }, [effectiveSelectableRange, addOptions, showAdd, sph, cyl, add, crossMeta]);
 
   useEffect(() => {
-    if (!item?.id || !item.lensType) {
+    if (!item?.id || !item.lensType || isWhiteCatalogLensId(item.id)) {
       setRelatedLenses([]);
       return;
     }
@@ -566,12 +578,22 @@ export function LensProductDetailScreen({
             {lensType}
           </p>
           <p className="mt-3 text-2xl font-extrabold text-[var(--brand-primary)]">
-            ₹{item.price}
-            <span className="ml-1 text-sm font-bold text-[var(--brand-text-muted)]">
-              {LENS_PRICE_PER_PAIR_LABEL}
-            </span>
+            {isWhiteCatalogProduct ? (
+              "White catalog product"
+            ) : (
+              <>
+                ₹{item.price}
+                <span className="ml-1 text-sm font-bold text-[var(--brand-text-muted)]">
+                  {LENS_PRICE_PER_PAIR_LABEL}
+                </span>
+              </>
+            )}
           </p>
-          {item.quantity > 0 ? (
+          {isWhiteCatalogProduct ? (
+            <p className="mt-2 text-sm text-[var(--brand-text-muted)]">
+              Select power from the white catalog range below.
+            </p>
+          ) : item.quantity > 0 ? (
             <p className="mt-2 text-xs font-semibold text-[var(--brand-success)]">
               {item.quantity} in stock
             </p>
@@ -793,6 +815,7 @@ export function LensProductDetailScreen({
           {!submitting && !showsAddedState ? <ArrowRight className="size-5" /> : null}
         </Button>
 
+        {!isWhiteCatalogProduct ? (
         <section className="border-t border-[var(--brand-card-border)] pt-8">
           <h3 className="mb-4 text-center text-lg font-extrabold text-[var(--brand-text)]">
             Related Products
@@ -819,6 +842,7 @@ export function LensProductDetailScreen({
             </p>
           )}
         </section>
+        ) : null}
       </div>
     </div>
   );
