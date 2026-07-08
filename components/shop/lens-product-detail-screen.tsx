@@ -53,6 +53,7 @@ import {
   PROGRESSIVE_EYE_OPTIONS,
   progressiveCartEyes,
   progressivePairQuantityRequired,
+  piecesPerEyeFromDisplayQuantity,
   validateProgressiveQuantityUnit,
   type ProgressiveEyeOption,
 } from "@/lib/progressive-eye";
@@ -158,6 +159,10 @@ export function LensProductDetailScreen({
     displayQtyNumber > 0
       ? piecesFromDisplayQuantity(displayQtyNumber, qtyUnit)
       : 0;
+  const piecesPerEye =
+    showProgressiveEye && displayQtyNumber > 0
+      ? piecesPerEyeFromDisplayQuantity(displayQtyNumber, qtyUnit, selectedEye)
+      : totalPieces;
 
   useEffect(() => {
     if (initialItem) {
@@ -363,13 +368,13 @@ export function LensProductDetailScreen({
     if (!cartLinesForSelection || !formQuantityText) {
       return false;
     }
-    if (totalPieces <= 0) {
+    if (piecesPerEye <= 0) {
       return false;
     }
     return cartLinesForSelection.every(
-      (line) => line != null && line.cartQuantity === totalPieces
+      (line) => line != null && line.cartQuantity === piecesPerEye
     );
-  }, [cartLinesForSelection, totalPieces, formQuantityText]);
+  }, [cartLinesForSelection, piecesPerEye, formQuantityText]);
 
   const prescriptionHint = effectiveSelectableRange
     ? (() => {
@@ -463,7 +468,11 @@ export function LensProductDetailScreen({
       setError(qtyError);
       return;
     }
-    const parsedQty = piecesFromDisplayQuantity(parsedDisplayQty, qtyUnit);
+    const parsedQty = piecesPerEyeFromDisplayQuantity(
+      parsedDisplayQty,
+      qtyUnit,
+      showProgressiveEye ? selectedEye : "LEFT"
+    );
     const eyesToAdd = showProgressiveEye
       ? progressiveCartEyes(selectedEye)
       : [undefined];
