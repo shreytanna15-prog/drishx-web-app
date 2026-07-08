@@ -5,9 +5,11 @@ import {
   ArrowRight,
   CheckCircle2,
   Loader2,
+  ShoppingBag,
   ShoppingCart,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { PrescriptionWheelPicker } from "@/components/shop/prescription-wheel-picker";
 import { RelatedLensCard } from "@/components/shop/related-lens-card";
@@ -62,6 +64,7 @@ import {
   shopCategoryToFilter,
   type ShopCategoryId,
 } from "@/lib/shop-navigation";
+import { setPendingOnBehalfSelection } from "@/lib/on-behalf-selection";
 import type { LensItem } from "@/lib/types/lens";
 import { cn } from "@/lib/utils";
 import { isWhiteCatalogLensId } from "@/lib/white-catalog";
@@ -71,6 +74,8 @@ type LensProductDetailScreenProps = {
   category: ShopCategoryId;
   catalogItem: string;
   initialItem?: LensItem | null;
+  mode?: "default" | "on-behalf-select";
+  backHref?: string;
 };
 
 export function LensProductDetailScreen({
@@ -78,7 +83,11 @@ export function LensProductDetailScreen({
   category,
   catalogItem,
   initialItem = null,
+  mode = "default",
+  backHref,
 }: LensProductDetailScreenProps) {
+  const router = useRouter();
+  const isOnBehalfSelectMode = mode === "on-behalf-select";
   const { addToCart, updateQuantity, items: cartItems } = useCart();
   const { mode: orderMode, isWholesale } = useOrderMode();
   const filter = shopCategoryToFilter(category);
@@ -477,6 +486,35 @@ export function LensProductDetailScreen({
       ? progressiveCartEyes(selectedEye)
       : [undefined];
 
+    if (isOnBehalfSelectMode) {
+      const eye = eyesToAdd[0];
+      const updatedItem: LensItem = {
+        id: currentItem.id,
+        costPrice: currentItem.costPrice,
+        price: currentItem.price,
+        sph,
+        cyl: parsedCyl,
+        crossPower: currentItem.crossPower,
+        axis: currentItem.axis,
+        add: showAdd ? parsedAdd : null,
+        eye,
+        quantity: currentItem.quantity,
+        createdAt: currentItem.createdAt,
+        lensType: currentItem.lensType,
+        brand: currentItem.brand,
+        item: currentItem.item,
+        coating: currentItem.coating,
+        index: currentItem.index,
+        selectableRange: currentItem.selectableRange,
+      };
+      setPendingOnBehalfSelection({
+        lens: updatedItem,
+        quantity: parsedQty,
+      });
+      router.push(backHref ?? "/employee/orders/on-behalf");
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {
@@ -525,7 +563,8 @@ export function LensProductDetailScreen({
     }
   }
 
-  const backHref = `/shop/products?category=${category}&item=${encodeURIComponent(catalogItem)}`;
+  const resolvedBackHref =
+    backHref ?? `/shop/products?category=${category}&item=${encodeURIComponent(catalogItem)}`;
 
   if (loading) {
     return (
@@ -545,7 +584,7 @@ export function LensProductDetailScreen({
           {loadError ?? "Unable to load product details."}
         </p>
         <Button asChild className="rounded-xl bg-[var(--brand-primary)] font-bold">
-          <Link href={backHref}>Back to products</Link>
+          <Link href={resolvedBackHref}>Back to products</Link>
         </Button>
       </div>
     );
@@ -560,9 +599,9 @@ export function LensProductDetailScreen({
             asChild
             className="w-fit rounded-xl px-0 font-semibold text-[var(--brand-link)] hover:bg-[var(--brand-primary)]/10"
           >
-            <Link href={backHref}>
+            <Link href={resolvedBackHref}>
               <ArrowLeft className="size-4" />
-              Back to {catalogItem}
+              {isOnBehalfSelectMode ? "Back to order" : `Back to ${catalogItem}`}
             </Link>
           </Button>
 
@@ -803,7 +842,7 @@ export function LensProductDetailScreen({
           disabled={submitting}
           className={cn(
             "h-14 w-full rounded-2xl text-base font-extrabold shadow-[0_8px_24px_-8px_rgba(240,161,50,0.55)]",
-            showsAddedState
+            !isOnBehalfSelectMode && showsAddedState
               ? "bg-[color-mix(in_srgb,var(--brand-primary)_75%,#2d8a4e_25%)] text-[var(--brand-primary-text)]"
               : "bg-gradient-to-r from-[#f5ad42] to-[#e8941f] text-[var(--brand-primary-text)] hover:opacity-95",
             submitting && "opacity-70"
@@ -811,20 +850,28 @@ export function LensProductDetailScreen({
         >
           {submitting ? (
             <Loader2 className="size-5 animate-spin" />
-          ) : showsAddedState ? (
+          ) : !isOnBehalfSelectMode && showsAddedState ? (
             <CheckCircle2 className="size-5" />
+          ) : isOnBehalfSelectMode ? (
+            <ShoppingBag className="size-5" />
           ) : (
             <ShoppingCart className="size-5" />
           )}
           {submitting
-            ? "Adding…"
-            : showsAddedState
-              ? "Added to cart"
-              : "Add to cart"}
-          {!submitting && !showsAddedState ? <ArrowRight className="size-5" /> : null}
+            ? isOnBehalfSelectMode
+              ? "Selecting…"
+              : "Adding…"
+            : isOnBehalfSelectMode
+              ? "Select product"
+              : showsAddedState
+                ? "Added to cart"
+                : "Add to cart"}
+          {!submitting && (isOnBehalfSelectMode || !showsAddedState) ? (
+            <ArrowRight className="size-5" />
+          ) : null}
         </Button>
 
-        {!isWhiteCatalogProduct ? (
+        {!isOnBehalfSelectMode && !isWhiteCatalogProduct ? (
         <section className="border-t border-[var(--brand-card-border)] pt-8">
           <h3 className="mb-4 text-center text-lg font-extrabold text-[var(--brand-text)]">
             Related Products

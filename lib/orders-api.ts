@@ -2,7 +2,7 @@ import { getBackendUrl } from "./backend-url";
 import { fetchWithRetry } from "./fetch-with-retry";
 import type { OrderRecord } from "./types/orders";
 import type { OrderTrackingStatus } from "./order-tracking";
-import type { ApiLensType, CartItem } from "./types/lens";
+import type { ApiLensType, CartItem, LensItem } from "./types/lens";
 import { toApiLensType } from "./types/lens";
 import { getStoredToken } from "./auth-storage";
 
@@ -22,6 +22,7 @@ type CreateOrderPayload = {
   add?: number | null;
   eye?: string;
   notes?: string;
+  userId?: string;
 };
 
 function buildOrderPayload(item: CartItem): CreateOrderPayload {
@@ -51,7 +52,8 @@ export async function createOrder(
   item: CartItem,
   token: string,
   notes?: string,
-  checkoutBatchId?: string
+  checkoutBatchId?: string,
+  userId?: string
 ): Promise<
   | { success: true; orderId: string; status?: string }
   | { success: false; error: string }
@@ -64,6 +66,7 @@ export async function createOrder(
       ...(checkoutBatchId?.trim()
         ? { checkoutBatchId: checkoutBatchId.trim() }
         : {}),
+      ...(userId?.trim() ? { userId: userId.trim() } : {}),
     };
 
     const response = await fetchWithRetry("/api/orders", {
@@ -92,6 +95,39 @@ export async function createOrder(
       error: error instanceof Error ? error.message : "Failed to place order.",
     };
   }
+}
+
+export async function createOrderFromLens(
+  lens: LensItem,
+  quantity: number,
+  token: string,
+  options?: {
+    notes?: string;
+    checkoutBatchId?: string;
+    userId?: string;
+  }
+): Promise<
+  | { success: true; orderId: string; status?: string }
+  | { success: false; error: string }
+> {
+  const safeQuantity = Number.isFinite(quantity)
+    ? Math.max(1, Math.floor(quantity))
+    : 1;
+  const cartLikeItem: CartItem = {
+    ...lens,
+    cartLineId: lens.id,
+    cartLineKey: lens.id,
+    cartQuantity: safeQuantity,
+    isBackorder: false,
+  };
+
+  return createOrder(
+    cartLikeItem,
+    token,
+    options?.notes,
+    options?.checkoutBatchId,
+    options?.userId
+  );
 }
 
 export async function wholesaleCheckout(

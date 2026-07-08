@@ -1,0 +1,43 @@
+import {
+  formatLensProductCardDetail,
+  LENS_PRICE_PER_PAIR_LABEL,
+} from "@/lib/lens-display";
+import type { LensItem } from "@/lib/types/lens";
+import { cn } from "@/lib/utils";
+
+type LensProductListCardProps = {
+  item: LensItem;
+  className?: string;
+};
+
+export function LensProductListCard({
+  item,
+  className,
+}: LensProductListCardProps) {
+  const brand = item.brand?.trim() || "Lens";
+  const detailLine = formatLensProductCardDetail(item);
+
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-4",
+        className
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-[var(--brand-text)]">{brand}</p>
+          <p className="mt-0.5 text-sm font-extrabold leading-snug text-[var(--brand-text)]">
+            {detailLine}
+          </p>
+        </div>
+        <p className="shrink-0 text-right text-base font-extrabold leading-tight text-[var(--brand-primary)]">
+          ₹{item.price}
+          <span className="text-[10px] font-bold text-[var(--brand-text-muted)]">
+            {LENS_PRICE_PER_PAIR_LABEL}
+          </span>
+        </p>
+      </div>
+    </div>
+  );
+}

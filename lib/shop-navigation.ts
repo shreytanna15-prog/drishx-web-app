@@ -1,4 +1,4 @@
-import type { FilterOption } from "@/lib/types/lens";
+import type { FilterOption, LensType } from "@/lib/types/lens";
 
 export type ShopCategoryId = "sv" | "kt" | "v2";
 
@@ -68,6 +68,17 @@ export function parseShopCategory(raw: string | null | undefined): ShopCategoryI
     return raw;
   }
   return "sv";
+}
+
+export function lensTypeToShopCategory(lensType?: LensType): ShopCategoryId {
+  switch (lensType) {
+    case "Kryptok":
+      return "kt";
+    case "Progressive":
+      return "v2";
+    default:
+      return "sv";
+  }
 }
 
 export function parseLensDetailSearchParams(searchParams: {

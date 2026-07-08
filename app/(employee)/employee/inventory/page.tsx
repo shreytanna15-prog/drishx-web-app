@@ -1,8 +1,5 @@
-import { EmployeeComingSoonScreen } from "@/components/employee/employee-coming-soon";
-import { getEmployeeNavItemByHref } from "@/lib/employee-dashboard-nav";
+import { EmployeeInventoryScreen } from "@/components/employee/employee-inventory-screen";
 
 export default function EmployeeInventoryPage() {
-  const item = getEmployeeNavItemByHref("/employee/inventory");
-  if (!item) return null;
-  return <EmployeeComingSoonScreen item={item} />;
+  return <EmployeeInventoryScreen />;
 }

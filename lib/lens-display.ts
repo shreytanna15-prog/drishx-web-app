@@ -1,6 +1,7 @@
 import { formatPowerLabel } from "@/lib/cart-utils";
 import { resolveCrossPowerMeta } from "@/lib/cross-power";
-import type { LensItem } from "@/lib/types/lens";
+import type { LensItem, LensType } from "@/lib/types/lens";
+import { resolveWholesalePowerProfile } from "@/lib/wholesale-powers";
 
 function formatPower(value: number): string {
   const fixed = value.toFixed(2).replace(/\.?0+$/, "");
@@ -47,6 +48,83 @@ export function formatLensProductDetail(item: LensItem): string {
 }
 
 export const LENS_PRICE_PER_PAIR_LABEL = "/ pr";
+
+function formatLensTypeAbbrev(lensType?: LensType | string | null): string {
+  switch (lensType) {
+    case "Kryptok":
+      return "KT";
+    case "Progressive":
+      return "V2";
+    case "Single Vision":
+      return "SV";
+    default:
+      return "";
+  }
+}
+
+function formatPowerProfileLabel(
+  profile: ReturnType<typeof resolveWholesalePowerProfile>
+): string {
+  switch (profile) {
+    case "compound":
+      return "Comp";
+    case "sph-only":
+      return "sph";
+    case "cyl-only":
+      return "cyl";
+    case "cross":
+      return "cross";
+  }
+}
+
+export function formatCrossPowerLabel(
+  crossPower: number | null | undefined
+): string {
+  if (crossPower === null || crossPower === undefined) {
+    return "—";
+  }
+  const value = Number(crossPower);
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+  const fixed = value.toFixed(2).replace(/\.?0+$/, "");
+  return `cross ${value > 0 ? `+${fixed}` : fixed}`;
+}
+
+/** Shop / inventory product card detail, e.g. "HC Comp V2 +2.00/-1.00 x 180". */
+export function formatLensProductCardDetail(item: {
+  sph?: number | null;
+  cyl?: number | null;
+  crossPower?: number | null;
+  axis?: number | null;
+  coating?: string | null;
+  lensType?: LensType | string | null;
+}): string {
+  const coating = item.coating?.trim() ?? "";
+  const profileLabel = formatPowerProfileLabel(resolveWholesalePowerProfile(item));
+  const lensAbbrev = formatLensTypeAbbrev(item.lensType);
+
+  const powerPart = hasMeaningfulPower(item.crossPower)
+    ? formatCrossPowerLabel(item.crossPower)
+    : (() => {
+        const sphPart = hasMeaningfulPower(item.sph)
+          ? formatPowerLabel(item.sph!)
+          : "—";
+        const cylPart = hasMeaningfulPower(item.cyl)
+          ? formatPowerLabel(item.cyl!)
+          : "—";
+        return `${sphPart}/${cylPart}`;
+      })();
+
+  const axisPart =
+    item.axis !== null && item.axis !== undefined
+      ? ` x ${formatAxisValue(item.axis)}`
+      : "";
+
+  return [coating, profileLabel, lensAbbrev, `${powerPart}${axisPart}`]
+    .filter(Boolean)
+    .join(" ");
+}
 
 function hasMeaningfulPower(value: number | null | undefined): boolean {
   if (value === null || value === undefined) {

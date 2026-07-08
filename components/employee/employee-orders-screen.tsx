@@ -1,6 +1,7 @@
 "use client";
 
-import { ClipboardList, Loader2, RefreshCw } from "lucide-react";
+import { ClipboardList, Loader2, RefreshCw, ShoppingCart } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmployeeOrderListCard } from "@/components/employee/employee-order-list-card";
 import { Button } from "@/components/ui/button";
@@ -94,23 +95,35 @@ export function EmployeeOrdersScreen() {
               Manage and update customer orders
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            className="size-9 shrink-0 rounded-xl border-[var(--brand-input-border)]"
-            onClick={() => {
-              setRefreshing(true);
-              void loadOrders();
-            }}
-            disabled={loading || refreshing}
-            aria-label="Refresh orders"
-          >
-            {refreshing ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <RefreshCw className="size-4" />
-            )}
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              asChild
+              className="h-9 rounded-xl bg-[var(--brand-primary)] px-3 text-xs font-extrabold text-[var(--brand-primary-text)] hover:opacity-95 sm:px-4 sm:text-sm"
+            >
+              <Link href="/employee/orders/on-behalf">
+                <ShoppingCart className="size-4" />
+                <span className="hidden sm:inline">Order on Behalf</span>
+                <span className="sm:hidden">On Behalf</span>
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-9 shrink-0 rounded-xl border-[var(--brand-input-border)]"
+              onClick={() => {
+                setRefreshing(true);
+                void loadOrders();
+              }}
+              disabled={loading || refreshing}
+              aria-label="Refresh orders"
+            >
+              {refreshing ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RefreshCw className="size-4" />
+              )}
+            </Button>
+          </div>
         </div>
 
         <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-3">
