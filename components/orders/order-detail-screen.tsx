@@ -84,7 +84,7 @@ export function OrderDetailScreen() {
           </Button>
         </div>
       ) : (
-        <OrderGroupDetail group={group} onOrderCancelled={() => void loadOrders()} />
+        <OrderGroupDetail group={group} />
       )}
     </div>
   );

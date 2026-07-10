@@ -92,6 +92,9 @@ export function EmployeeOrderRangeSheet({
         <SheetHeader className="text-left">
           <SheetTitle className="text-xl font-extrabold text-[var(--brand-text)]">
             {line.sphCylLabel}
+            {line.eye ? (
+              <span className="text-[var(--brand-primary)]"> · {line.eye}</span>
+            ) : null}
           </SheetTitle>
           <SheetDescription className="text-sm font-semibold text-[var(--brand-text-muted)]">
             Ordered: {ordered} Pair{ordered === 1 ? "" : "s"} · Picked: {currentPicked}{" "}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ImageOff, Loader2 } from "lucide-react";
+import { ImageOff } from "lucide-react";
 import { OrderProductSectionCard } from "@/components/orders/order-product-section";
 import { OrderStatusPill } from "@/components/orders/order-status-pill";
 import { OrderTrackingHorizontal } from "@/components/orders/order-tracking-horizontal";
@@ -16,19 +16,15 @@ import {
   isRxOrder,
   type OrderListGroup,
 } from "@/lib/order-list-display";
-import { normalizeOrderStatus } from "@/lib/order-tracking";
-import { cancelOrder, resolveOrderImageUrl } from "@/lib/orders-api";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { resolveOrderImageUrl } from "@/lib/orders-api";
 
 import { OrderNotesDisplay } from "@/components/orders/order-notes-display";
 
 type OrderGroupDetailProps = {
   group: OrderListGroup;
-  onOrderCancelled?: () => void;
 };
 
-export function OrderGroupDetail({ group, onOrderCancelled }: OrderGroupDetailProps) {
+export function OrderGroupDetail({ group }: OrderGroupDetailProps) {
   const productSections = useMemo(
     () => buildOrderProductSections(group.orders),
     [group.orders]
@@ -37,7 +33,6 @@ export function OrderGroupDetail({ group, onOrderCancelled }: OrderGroupDetailPr
     () => getBatchTrackingStatus(group.orders),
     [group.orders]
   );
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
   const [referenceLoadFailed, setReferenceLoadFailed] = useState(false);
 
@@ -56,37 +51,10 @@ export function OrderGroupDetail({ group, onOrderCancelled }: OrderGroupDetailPr
     setReferenceLoadFailed(false);
   }, [group.key, group.photoUrl, orderReferenceUrl]);
 
-  const cancellableOrders = group.orders.filter((order) => {
-    const status = normalizeOrderStatus(order.status);
-    return status === "PENDING" || status === "AWAITING_PROCUREMENT";
-  });
-
-  async function handleCancel(orderId: string) {
-    const confirmed = window.confirm(
-      "Cancel this product line from your order?"
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    setCancellingId(orderId);
-    try {
-      await cancelOrder(orderId);
-      onOrderCancelled?.();
-    } catch (error) {
-      window.alert(
-        error instanceof Error ? error.message : "Failed to cancel order."
-      );
-    } finally {
-      setCancellingId(null);
-    }
-  }
-
   if (group.isPhotoOrder) {
     const order = group.orders[0];
     const rawImageUrl = group.photoUrl ?? order.orderImageUrl ?? null;
     const photoUri = rawImageUrl ? resolveOrderImageUrl(rawImageUrl) : null;
-    const canCancel = normalizeOrderStatus(order.status) === "PENDING";
 
     return (
       <div className="space-y-4">
@@ -133,21 +101,6 @@ export function OrderGroupDetail({ group, onOrderCancelled }: OrderGroupDetailPr
         <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-4 sm:p-5">
           <OrderTrackingHorizontal status={trackingStatus} />
         </div>
-
-        {canCancel ? (
-          <Button
-            variant="outline"
-            className="h-12 w-full rounded-xl border-[var(--brand-card-border)] bg-[var(--brand-primary)]/8 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/12"
-            disabled={cancellingId === order.id}
-            onClick={() => void handleCancel(order.id)}
-          >
-            {cancellingId === order.id ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              "Cancel photo order"
-            )}
-          </Button>
-        ) : null}
       </div>
     );
   }
@@ -244,28 +197,6 @@ export function OrderGroupDetail({ group, onOrderCancelled }: OrderGroupDetailPr
       <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-4 sm:p-5">
         <OrderTrackingHorizontal status={trackingStatus} />
       </div>
-
-      {cancellableOrders.length > 0 ? (
-        <div className="space-y-2">
-          {cancellableOrders.map((order) => (
-            <Button
-              key={order.id}
-              variant="outline"
-              className={cn(
-                "h-12 w-full rounded-xl border-[var(--brand-card-border)] bg-[var(--brand-primary)]/8 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/12"
-              )}
-              disabled={cancellingId === order.id}
-              onClick={() => void handleCancel(order.id)}
-            >
-              {cancellingId === order.id ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                `Cancel line · ${order.quantity} pairs`
-              )}
-            </Button>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }

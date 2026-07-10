@@ -21,6 +21,7 @@ import { useOrderMode } from "@/contexts/order-mode-context";
 import {
   buildCartLineId,
   formatPowerLabel,
+  formatPowerRangeLabel,
   powerRangeFromOptions,
   sanitizePositiveIntegerInput,
   validatePrescriptionInOptions,
@@ -390,16 +391,16 @@ export function LensProductDetailScreen({
         const sphOpts = effectiveSelectableRange.sph.options;
         const sphStart = sphOpts[0] ?? effectiveSelectableRange.sph.min;
         const sphEnd = sphOpts[sphOpts.length - 1] ?? effectiveSelectableRange.sph.max;
-        let hint = `Select SPH (${formatPowerLabel(sphStart)} to ${formatPowerLabel(sphEnd)})`;
+        let hint = `Select SPH (${formatPowerRangeLabel(sphStart, sphEnd)})`;
         if (effectiveSelectableRange.cyl?.options.length) {
           const cylOpts = effectiveSelectableRange.cyl.options;
           const cylStart = cylOpts[0] ?? effectiveSelectableRange.cyl.min;
           const cylEnd = cylOpts[cylOpts.length - 1] ?? effectiveSelectableRange.cyl.max;
-          hint += ` and CYL (${formatPowerLabel(cylStart)} to ${formatPowerLabel(cylEnd)})`;
+          hint += ` and CYL (${formatPowerRangeLabel(cylStart, cylEnd)})`;
         }
         if (showAdd && addOptions.length > 0) {
           const addRange = powerRangeFromOptions(addOptions);
-          hint += ` and ADD (${formatPowerLabel(addRange.low)} to ${formatPowerLabel(addRange.high)})`;
+          hint += ` and ADD (${formatPowerRangeLabel(addRange.low, addRange.high)})`;
         }
         return `${hint}.`;
       })()

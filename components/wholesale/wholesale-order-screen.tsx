@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { useCart } from "@/contexts/cart-context";
 import { useOrderMode } from "@/contexts/order-mode-context";
 import {
-  formatPowerLabel,
+  formatPowerRangeLabel,
   sanitizePositiveIntegerInput,
 } from "@/lib/cart-utils";
 import { resolveCrossPowerMeta } from "@/lib/cross-power";
@@ -161,16 +161,12 @@ export function WholesaleOrderScreen() {
       const sphOpts = selectableRange.sph.options;
       const sphStart = sphOpts[0] ?? selectableRange.sph.min;
       const sphEnd = sphOpts[sphOpts.length - 1] ?? selectableRange.sph.max;
-      parts.push(
-        `SPH ${formatPowerLabel(sphStart)} to ${formatPowerLabel(sphEnd)}`
-      );
+      parts.push(`SPH ${formatPowerRangeLabel(sphStart, sphEnd)}`);
     }
     if (powerProfile !== "sph-only" && boundOptions.cyl.length > 0) {
       const cylStart = boundOptions.cyl[0]!;
       const cylEnd = boundOptions.cyl[boundOptions.cyl.length - 1]!;
-      parts.push(
-        `CYL ${formatPowerLabel(cylStart)} to ${formatPowerLabel(cylEnd)}`
-      );
+      parts.push(`CYL ${formatPowerRangeLabel(cylStart, cylEnd)}`);
     }
     return parts.length > 0 ? parts.join(" · ") : null;
   }, [boundOptions.cyl, powerProfile, selectableRange]);

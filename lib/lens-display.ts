@@ -36,10 +36,6 @@ export function formatLensProductDetail(item: LensItem): string {
     parts.push(`ADD ${formatPower(Number(item.add))}`);
   }
 
-  if (item.eye?.trim()) {
-    parts.push(item.eye.trim());
-  }
-
   if (item.index) {
     parts.push(`Index ${item.index}`);
   }
@@ -159,20 +155,25 @@ export function formatSphCylSlash(item: {
   cyl?: number | null;
   crossPower?: number | null;
 }): string {
+  // Cart / order lines always carry the selected SPH and CYL.
+  // Prefer those over catalog crossPower (max CYL), so cross products
+  // show both values like compound lines (e.g. +1.00/-1.25).
+  if (item.sph != null || item.cyl != null) {
+    const sphPart =
+      item.sph != null ? formatPowerLabel(Number(item.sph)) : "—";
+    const cylPart =
+      item.cyl != null ? formatPowerLabel(Number(item.cyl)) : "—";
+    return `${sphPart}/${cylPart}`;
+  }
+
   const crossMeta = resolveCrossPowerMeta(item);
   if (crossMeta) {
     const value = Number(crossMeta.maxCyl);
     const fixed = value.toFixed(2).replace(/\.?0+$/, "");
     return `cross ${value > 0 ? `+${fixed}` : fixed}`;
   }
-  const sphPart = hasMeaningfulPower(item.sph)
-    ? formatPowerLabel(item.sph!)
-    : "—";
-  const cylPart =
-    item.cyl != null && hasMeaningfulPower(item.cyl)
-      ? formatPowerLabel(item.cyl)
-      : "—";
-  return `${sphPart}/${cylPart}`;
+
+  return "—/—";
 }
 
 function isSpecialColorsItem(item: string | null | undefined): boolean {

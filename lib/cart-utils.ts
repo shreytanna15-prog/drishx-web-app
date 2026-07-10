@@ -103,3 +103,25 @@ export function formatPowerLabel(value: number): string {
   const sign = rounded > 0 ? "+" : "";
   return `${sign}${rounded.toFixed(2)}`;
 }
+
+/** Compact bound for range hints (e.g. -8, 0, +1.25). */
+export function formatPowerRangeBound(value: number): string {
+  const rounded = Math.round(value * 100) / 100;
+  if (rounded === 0) {
+    return "0";
+  }
+  const abs = Math.abs(rounded)
+    .toFixed(2)
+    .replace(/\.?0+$/, "");
+  if (rounded < 0) {
+    return `-${abs}`;
+  }
+  return `+${abs}`;
+}
+
+/** Always low → high for prescription range copy (e.g. "-8 to 0"). */
+export function formatPowerRangeLabel(a: number, b: number): string {
+  const low = Math.min(a, b);
+  const high = Math.max(a, b);
+  return `${formatPowerRangeBound(low)} to ${formatPowerRangeBound(high)}`;
+}

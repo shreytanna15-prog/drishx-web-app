@@ -63,13 +63,14 @@ function getCartProductMeta(item: CartItem): {
 }
 
 function formatSphCyl(item: CartItem): string {
-  const sphCyl = formatSphCylSlash(item);
-  if (item.lensType === "Single Vision") {
-    return sphCyl;
+  const parts = [formatSphCylSlash(item)];
+  if (item.lensType !== "Single Vision" && item.add != null) {
+    parts.push(`ADD ${formatAddValue(item.add)}`);
   }
-  return item.add != null
-    ? `${sphCyl} · ADD ${formatAddValue(item.add)}`
-    : sphCyl;
+  if (item.axis != null) {
+    parts.push(`AXIS ${formatAxisValue(item.axis)}`);
+  }
+  return parts.join(" · ");
 }
 
 function formatExpandedWholesaleLabel(

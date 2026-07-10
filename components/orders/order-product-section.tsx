@@ -62,6 +62,9 @@ function PowerTableRow({ line }: { line: PowerLineRow }) {
     <div className="grid grid-cols-[1.5fr_0.7fr_0.75fr_0.75fr_1.1fr] items-center border-b border-[var(--brand-card-border)] py-2 last:border-b-0">
       <p className="text-[11px] font-semibold text-[var(--brand-text)]">
         {line.sphCylLabel}
+        {line.eye ? (
+          <span className="text-[var(--brand-primary)]"> · {line.eye}</span>
+        ) : null}
       </p>
       <p className="text-center text-[11px] font-semibold text-[var(--brand-text)]">
         {line.addLabel}

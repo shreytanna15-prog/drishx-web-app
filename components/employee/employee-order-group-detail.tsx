@@ -209,6 +209,9 @@ function EmployeeProductSectionCard({
               >
                 <p className="text-[11px] font-semibold text-[var(--brand-text)]">
                   {line.sphCylLabel}
+                  {line.eye ? (
+                    <span className="text-[var(--brand-primary)]"> · {line.eye}</span>
+                  ) : null}
                 </p>
                 <p className="text-center text-[11px] font-semibold text-[var(--brand-text)]">
                   {line.addLabel}

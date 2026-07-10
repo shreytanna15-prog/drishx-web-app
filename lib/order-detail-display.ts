@@ -13,6 +13,8 @@ export type PowerLineRow = {
   orderId: string;
   orderIds?: string[];
   sphCylLabel: string;
+  /** Preferred eye when set (e.g. LEFT / RIGHT), shown like cart. */
+  eye?: string;
   addLabel: string;
   axisLabel: string;
   ordered: number;
@@ -171,10 +173,19 @@ function formatAxisLabel(order: OrderRecord): string {
   return formatAxisDisplay(details.axis);
 }
 
+function formatEyeLabel(order: OrderRecord): string | undefined {
+  const details = getOrderLensDetails(order);
+  const eye = details?.eye?.trim();
+  if (!eye) {
+    return undefined;
+  }
+  return eye.toUpperCase();
+}
+
 function powerLineMergeKey(
-  line: Pick<PowerLineRow, "sphCylLabel" | "addLabel" | "axisLabel">
+  line: Pick<PowerLineRow, "sphCylLabel" | "addLabel" | "axisLabel" | "eye">
 ): string {
-  return `${line.sphCylLabel}|${line.addLabel}|${line.axisLabel}`;
+  return `${line.sphCylLabel}|${line.addLabel}|${line.axisLabel}|${line.eye ?? ""}`;
 }
 
 function buildPowerLineRow(
@@ -184,6 +195,7 @@ function buildPowerLineRow(
   return {
     orderId: order.id,
     sphCylLabel: formatSphCylOnly(order),
+    eye: formatEyeLabel(order),
     addLabel: formatAddLabel(order),
     axisLabel: formatAxisLabel(order),
     ordered: pick.ordered,
