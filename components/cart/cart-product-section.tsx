@@ -150,7 +150,7 @@ export function CartProductSectionCard({
           onClick={() => setExpanded((value) => !value)}
           className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
         >
-          {section.totalPairs} {isWholesale ? "pr" : "pc"}
+          {section.totalPairs} pr
           {expanded ? (
             <ChevronUp className="size-4" />
           ) : (

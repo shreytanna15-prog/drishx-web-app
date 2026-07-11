@@ -183,9 +183,7 @@ export function getCartSummary(
   const productCount = buildCartProductSections(items, mode).length;
   const pieceCount = items.reduce((sum, item) => sum + item.cartQuantity, 0);
   const pairCount =
-    mode === "wholesale"
-      ? items.reduce((sum, item) => sum + pairsFromPieces(item.cartQuantity), 0)
-      : pieceCount;
+    items.reduce((sum, item) => sum + pairsFromPieces(item.cartQuantity), 0);
   const totalAmount = items.reduce(
     (sum, item) => sum + lineTotalForPieceQuantity(item.price, item.cartQuantity),
     0

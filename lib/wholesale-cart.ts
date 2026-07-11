@@ -1,4 +1,4 @@
-import { piecesFromDisplayQuantity } from "@/lib/order-quantity";
+import { isValidPairQuantity, piecesFromDisplayQuantity } from "@/lib/order-quantity";
 import {
   buildWholesaleMatrixSpec,
   collectQtyEntriesFromSpec,
@@ -94,7 +94,10 @@ export function buildWholesaleSpecFromInput(
   return {
     ranges: input.ranges,
     gridMode: input.gridMode,
-    defaultPairsPerCell: Math.max(1, Math.floor(input.defaultPairsPerCell)),
+    defaultPairsPerCell: (() => {
+      const pairs = Number(input.defaultPairsPerCell);
+      return isValidPairQuantity(pairs) ? pairs : 1;
+    })(),
     qtyOverrides: input.qtyOverrides ?? {},
     productAxis: input.productAxis ?? null,
     isBifocalLens: input.isBifocalLens,
@@ -258,15 +261,13 @@ export function buildWholesaleSpecFromOrderState(input: {
   showSphRange: boolean;
   showCylRange: boolean;
 }): WholesaleSpec {
-  const defaultPairs = Math.max(
-    1,
-    Math.floor(Number(input.defaultPairsPerCell) || 1)
-  );
+  const parsedDefault = Number(input.defaultPairsPerCell) || 1;
+  const defaultPairs = isValidPairQuantity(parsedDefault) ? parsedDefault : 1;
   const qtyOverrides: Record<string, number> = {};
 
   for (const [key, raw] of Object.entries(input.qtyMap)) {
     const pairs = Number(raw);
-    if (!Number.isInteger(pairs) || pairs < 1) {
+    if (!isValidPairQuantity(pairs)) {
       continue;
     }
     if (pairs !== defaultPairs) {

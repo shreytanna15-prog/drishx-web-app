@@ -20,6 +20,27 @@ export function sanitizePositiveIntegerInput(text: string): string {
   return text.replace(/\D/g, "");
 }
 
+/** Allow 0.5-step pair quantities while typing (0.5, 1, 1.5, …). */
+export function sanitizePairQuantityInput(text: string): string {
+  const cleaned = text.replace(/[^0-9.]/g, "");
+  if (!cleaned) {
+    return "";
+  }
+  const parts = cleaned.split(".");
+  const whole = parts[0] ?? "";
+  if (parts.length === 1) {
+    return whole;
+  }
+  const fraction = (parts[1] ?? "").replace(/\D/g, "").slice(0, 1);
+  if (fraction === "") {
+    return `${whole}.`;
+  }
+  if (fraction === "0" || fraction === "5") {
+    return `${whole}.${fraction}`;
+  }
+  return whole;
+}
+
 const POWER_EPSILON = 0.001;
 
 export function powersEqual(a: number, b: number): boolean {

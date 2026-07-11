@@ -72,11 +72,9 @@ export function CartScreen() {
     [items, orderMode]
   );
 
-  const qtyLabel = isWholesale ? "Pairs" : "Qty";
-  const qtySummaryLabel = isWholesale ? "Pairs" : "Qty";
-  const countLabel = isWholesale
-    ? `${summary.pairCount} pair${summary.pairCount === 1 ? "" : "s"}`
-    : `${summary.pieceCount} pc${summary.pieceCount === 1 ? "" : "s"}`;
+  const qtyLabel = "Pairs";
+  const qtySummaryLabel = "Pairs";
+  const countLabel = `${summary.pairCount} pair${summary.pairCount === 1 ? "" : "s"}`;
 
   async function handleClearCart() {
     const confirmed = await confirm({
@@ -312,9 +310,13 @@ export function CartScreen() {
             </p>
             {isWholesale ? (
               <p className="mt-3 inline-flex rounded-full border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--brand-primary)]">
-                Wholesale orders use even quantities (pairs only)
+                Wholesale orders are in pairs (0.5 steps)
               </p>
-            ) : null}
+            ) : (
+              <p className="mt-3 inline-flex rounded-full border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--brand-primary)]">
+                Orders are in pairs only (0.5, 1, 1.5, …)
+              </p>
+            )}
           </div>
 
           <CartOrderModeToggle
@@ -373,7 +375,7 @@ export function CartScreen() {
             </div>
             <div className="border-x border-[var(--brand-card-border)] text-center">
               <p className="text-xl font-extrabold text-[var(--brand-text)]">
-                {isWholesale ? summary.pairCount : summary.pieceCount}
+                {summary.pairCount}
               </p>
               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text-muted)]">
                 {qtySummaryLabel}

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/contexts/cart-context";
-import { useOrderMode } from "@/contexts/order-mode-context";
 import { DASHBOARD_NAV } from "@/lib/dashboard-nav";
 import {
   pairsFromPieces,
@@ -17,13 +16,8 @@ function isNavActive(pathname: string, href: string) {
 export function MobileBottomNav() {
   const pathname = usePathname();
   const { itemCount } = useCart();
-  const { mode: orderMode } = useOrderMode();
   const cartBadge =
-    itemCount > 0
-      ? orderMode === "wholesale"
-        ? pairsFromPieces(itemCount)
-        : itemCount
-      : 0;
+    itemCount > 0 ? pairsFromPieces(itemCount) : 0;
 
   return (
     <nav

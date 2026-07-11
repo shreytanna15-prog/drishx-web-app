@@ -4,6 +4,7 @@ import {
   type OrderTrackingStatus,
 } from "@/lib/order-tracking";
 import { getOrderLensDetails } from "@/lib/orders-api";
+import { pairsFromPieces } from "@/lib/order-quantity";
 import type { OrderRecord } from "@/lib/types/orders";
 import { formatLensType, type LensItem, type LensType } from "@/lib/types/lens";
 
@@ -220,7 +221,8 @@ export function groupOrdersForList(
       createdAt: primary.createdAt,
       productCount: sorted.length,
       pairCount: sorted.reduce(
-        (sum, order) => sum + Math.max(1, Number(order.quantity) || 1),
+        (sum, order) =>
+          sum + pairsFromPieces(Math.max(1, Number(order.quantity) || 1)),
         0
       ),
       totalAmount: sorted.reduce(

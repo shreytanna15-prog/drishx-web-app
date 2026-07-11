@@ -1,5 +1,6 @@
 import { formatPowerLabel } from '@/lib/cart-utils';
 import { formatAxisValue } from '@/lib/lens-display';
+import { isValidPairQuantity } from '@/lib/order-quantity';
 import { isAllowedCompoundCombo, powerKey, type WholesaleGridMode } from '@/lib/wholesale-powers';
 import { isAllowedCrossCombo } from '@/lib/cross-power';
 
@@ -350,7 +351,7 @@ export function collectQtyEntriesFromSpec(
     for (const col of spec.cols) {
       for (const cell of spec.cellsAt(row, col)) {
         const pairs = Number(qtyMap[cell.key]);
-        if (!Number.isInteger(pairs) || pairs < 1) {
+        if (!isValidPairQuantity(pairs)) {
           continue;
         }
 

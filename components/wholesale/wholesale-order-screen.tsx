@@ -19,7 +19,7 @@ import { useCart } from "@/contexts/cart-context";
 import { useOrderMode } from "@/contexts/order-mode-context";
 import {
   formatPowerRangeLabel,
-  sanitizePositiveIntegerInput,
+  sanitizePairQuantityInput,
 } from "@/lib/cart-utils";
 import { resolveCrossPowerMeta } from "@/lib/cross-power";
 import {
@@ -28,7 +28,7 @@ import {
   formatSphCylSlash,
   LENS_PRICE_PER_PAIR_LABEL,
 } from "@/lib/lens-display";
-import { piecesFromDisplayQuantity } from "@/lib/order-quantity";
+import { isValidPairQuantity, piecesFromDisplayQuantity } from "@/lib/order-quantity";
 import { resolveSelectableRange } from "@/lib/prescription-range";
 import { toApiLensType } from "@/lib/types/lens";
 import type { LensItem } from "@/lib/types/lens";
@@ -70,11 +70,7 @@ function parseLensPayload(raw: string | null): LensItem | null {
 }
 
 function normalizePairsText(text: string): string {
-  const sanitized = sanitizePositiveIntegerInput(text);
-  if (sanitized === "") return "";
-  const n = Number(sanitized);
-  if (!Number.isInteger(n) || n < 1) return "";
-  return String(n);
+  return sanitizePairQuantityInput(text);
 }
 
 export function WholesaleOrderScreen() {
@@ -266,8 +262,8 @@ export function WholesaleOrderScreen() {
     setQtyMap({});
 
     const defaultPairs = Number(pairsDefault.trim());
-    if (!Number.isInteger(defaultPairs) || defaultPairs < 1) {
-      setError("Default pairs must be at least 1.");
+    if (!isValidPairQuantity(defaultPairs)) {
+      setError("Default pairs must be 0.5, 1, 1.5, … (minimum 0.5).");
       setGenerating(false);
       return;
     }
@@ -351,8 +347,8 @@ export function WholesaleOrderScreen() {
     }
 
     const defaultPairs = Number(pairsDefault);
-    if (!Number.isInteger(defaultPairs) || defaultPairs < 1) {
-      setError("Enter a valid default pairs value.");
+    if (!isValidPairQuantity(defaultPairs)) {
+      setError("Enter a valid default pairs value (0.5, 1, 1.5, …).");
       return;
     }
 

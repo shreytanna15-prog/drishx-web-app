@@ -131,7 +131,7 @@ function toBulkLineBody(item: LensItem, quantity: number) {
     lensType: toApiLensType(lensType),
     lensId: item.id,
     cartLineKey,
-    quantity: Math.max(1, Math.floor(quantity)),
+    quantity: Math.max(1, Math.round(quantity)),
     unitPrice: item.price,
     sph: item.sph,
     cyl: item.cyl,

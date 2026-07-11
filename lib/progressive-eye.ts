@@ -1,5 +1,6 @@
 import {
   piecesFromDisplayQuantity,
+  validatePairQuantity,
   type QuantityUnit,
 } from "@/lib/order-quantity";
 
@@ -53,10 +54,16 @@ export function piecesPerEyeFromDisplayQuantity(
 
 export function validateProgressiveQuantityUnit(
   selected: ProgressiveEyeOption,
-  unit: QuantityUnit
+  _unit?: QuantityUnit
 ): string | null {
-  if (progressivePairQuantityRequired(selected) && unit === "piece") {
-    return "Both eyes orders must be placed in pairs only.";
-  }
   return null;
+}
+
+export function validateProgressivePairQuantity(
+  selected: ProgressiveEyeOption,
+  pairs: number
+): string | null {
+  return validatePairQuantity(pairs, {
+    wholePairsOnly: progressivePairQuantityRequired(selected),
+  });
 }

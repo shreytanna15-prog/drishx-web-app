@@ -5,6 +5,8 @@ import {
   ArrowRight,
   CheckCircle2,
   Loader2,
+  Minus,
+  Plus,
   ShoppingBag,
   ShoppingCart,
 } from "lucide-react";
@@ -23,7 +25,7 @@ import {
   formatPowerLabel,
   formatPowerRangeLabel,
   powerRangeFromOptions,
-  sanitizePositiveIntegerInput,
+  sanitizePairQuantityInput,
   validatePrescriptionInOptions,
 } from "@/lib/cart-utils";
 import { coerceCrossCylForSph, resolveCrossPowerMeta } from "@/lib/cross-power";
@@ -40,11 +42,12 @@ import {
 } from "@/lib/lenses-api";
 import {
   coerceDisplayQuantity,
+  formatPairQuantity,
   getDefaultDisplayQuantity,
-  getDefaultQuantityUnit,
+  MIN_PAIR_QUANTITY,
+  PAIR_QUANTITY_STEP,
   piecesFromDisplayQuantity,
   validateDisplayQuantityForMode,
-  type QuantityUnit,
 } from "@/lib/order-quantity";
 import {
   resolveAddOptions,
@@ -57,7 +60,7 @@ import {
   progressiveCartEyes,
   progressivePairQuantityRequired,
   piecesPerEyeFromDisplayQuantity,
-  validateProgressiveQuantityUnit,
+  validateProgressivePairQuantity,
   type ProgressiveEyeOption,
 } from "@/lib/progressive-eye";
 import {
@@ -137,16 +140,13 @@ export function LensProductDetailScreen({
   const [cyl, setCyl] = useState<number>(initialCyl);
   const [add, setAdd] = useState<number>(initialAdd);
   const [selectedEye, setSelectedEye] = useState<ProgressiveEyeOption>("LEFT");
-  const [qtyUnit, setQtyUnit] = useState<QuantityUnit>(() =>
-    getDefaultQuantityUnit(orderMode)
-  );
   const [quantity, setQuantity] = useState(() =>
-    String(getDefaultDisplayQuantity(orderMode, getDefaultQuantityUnit(orderMode)))
+    String(getDefaultDisplayQuantity(orderMode))
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const pairOnlyForBothEyes =
+  const bothEyesSelected =
     showProgressiveEye && progressivePairQuantityRequired(selectedEye);
 
   const effectiveSelectableRange = useMemo(() => {
@@ -167,11 +167,11 @@ export function LensProductDetailScreen({
   const displayQtyNumber = formQuantityText ? Number(formQuantityText) : 0;
   const totalPieces =
     displayQtyNumber > 0
-      ? piecesFromDisplayQuantity(displayQtyNumber, qtyUnit)
+      ? piecesFromDisplayQuantity(displayQtyNumber, "pair")
       : 0;
   const piecesPerEye =
     showProgressiveEye && displayQtyNumber > 0
-      ? piecesPerEyeFromDisplayQuantity(displayQtyNumber, qtyUnit, selectedEye)
+      ? piecesPerEyeFromDisplayQuantity(displayQtyNumber, "pair", selectedEye)
       : totalPieces;
 
   useEffect(() => {
@@ -232,26 +232,26 @@ export function LensProductDetailScreen({
     setCyl(nextCyl);
     setAdd(resolveAddOptions(item)[0] ?? 1);
     setSelectedEye("LEFT");
-    const unit = getDefaultQuantityUnit(orderMode);
-    setQtyUnit(unit);
-    setQuantity(String(getDefaultDisplayQuantity(orderMode, unit)));
+    setQuantity(String(getDefaultDisplayQuantity(orderMode)));
     setError(null);
   }, [item, crossMeta, orderMode]);
 
   useEffect(() => {
-    const unit = getDefaultQuantityUnit(orderMode);
-    setQtyUnit(unit);
-    setQuantity(String(getDefaultDisplayQuantity(orderMode, unit)));
+    setQuantity(String(getDefaultDisplayQuantity(orderMode)));
   }, [orderMode]);
 
   useEffect(() => {
-    if (!pairOnlyForBothEyes || qtyUnit === "pair") {
+    if (!bothEyesSelected) {
       return;
     }
-    setQtyUnit("pair");
-    setQuantity(String(getDefaultDisplayQuantity(orderMode, "pair")));
-    setError(null);
-  }, [pairOnlyForBothEyes, orderMode, qtyUnit]);
+    const parsed = Number(quantity);
+    if (
+      Number.isFinite(parsed) &&
+      Math.abs(parsed - Math.round(parsed)) > 1e-9
+    ) {
+      setQuantity(String(Math.max(1, Math.round(parsed))));
+    }
+  }, [bothEyesSelected, quantity]);
 
   useEffect(() => {
     if (!effectiveSelectableRange) {
@@ -314,18 +314,6 @@ export function LensProductDetailScreen({
     };
   }, [item, filter]);
 
-  function handleQtyUnitChange(nextUnit: QuantityUnit) {
-    if (nextUnit === qtyUnit) {
-      return;
-    }
-    if (pairOnlyForBothEyes && nextUnit === "piece") {
-      return;
-    }
-    setQtyUnit(nextUnit);
-    setQuantity(String(getDefaultDisplayQuantity(orderMode, nextUnit)));
-    setError(null);
-  }
-
   function handleSphChange(value: number) {
     setSph(value);
     if (crossMeta) {
@@ -338,6 +326,20 @@ export function LensProductDetailScreen({
 
   function handleCylChange(value: number) {
     setCyl(value);
+    setError(null);
+  }
+
+  function adjustQuantity(direction: -1 | 1) {
+    const step = bothEyesSelected ? 1 : PAIR_QUANTITY_STEP;
+    const min = bothEyesSelected ? 1 : MIN_PAIR_QUANTITY;
+    const parsed = Number.parseFloat(quantity);
+    const current =
+      Number.isFinite(parsed) && parsed > 0
+        ? parsed
+        : getDefaultDisplayQuantity(orderMode);
+    const snapped = Math.round((current + direction * step) * 2) / 2;
+    const next = Math.max(min, snapped);
+    setQuantity(formatPairQuantity(next));
     setError(null);
   }
 
@@ -463,7 +465,7 @@ export function LensProductDetailScreen({
 
     const parsedDisplayQty = Number(quantity);
     const progressiveQtyError = showProgressiveEye
-      ? validateProgressiveQuantityUnit(selectedEye, qtyUnit)
+      ? validateProgressivePairQuantity(selectedEye, parsedDisplayQty)
       : null;
     if (progressiveQtyError) {
       setError(progressiveQtyError);
@@ -471,8 +473,11 @@ export function LensProductDetailScreen({
     }
     const qtyError = validateDisplayQuantityForMode(
       parsedDisplayQty,
-      qtyUnit,
-      orderMode
+      "pair",
+      orderMode,
+      {
+        wholePairsOnly: bothEyesSelected,
+      }
     );
     if (qtyError) {
       setError(qtyError);
@@ -480,7 +485,7 @@ export function LensProductDetailScreen({
     }
     const parsedQty = piecesPerEyeFromDisplayQuantity(
       parsedDisplayQty,
-      qtyUnit,
+      "pair",
       showProgressiveEye ? selectedEye : "LEFT"
     );
     const eyesToAdd = showProgressiveEye
@@ -725,57 +730,21 @@ export function LensProductDetailScreen({
             {prescriptionHint}
           </p>
 
-          <div className="mb-4 flex flex-wrap items-center gap-4 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 py-3">
-            <span className="text-sm font-bold text-[var(--brand-text)]">Qty</span>
-            {(["piece", "pair"] as const)
-              .filter((unit) => unit !== "piece" || !pairOnlyForBothEyes)
-              .map((unit) => (
-              <label
-                key={unit}
-                className="flex cursor-pointer items-center gap-2"
-              >
-                <input
-                  type="radio"
-                  name="qtyUnit"
-                  checked={qtyUnit === unit}
-                  onChange={() => handleQtyUnitChange(unit)}
-                  className="size-4 accent-[var(--brand-primary)]"
-                />
-                <span
-                  className={cn(
-                    "text-sm font-semibold capitalize",
-                    qtyUnit === unit
-                      ? "text-[var(--brand-text)]"
-                      : "text-[var(--brand-text-muted)]"
-                  )}
-                >
-                  {unit}
-                </span>
-              </label>
-            ))}
-            {totalPieces > 0 ? (
-              <span className="ml-auto text-xs font-bold text-[var(--brand-primary)]">
-                = {totalPieces} pc{totalPieces === 1 ? "" : "s"}
-              </span>
-            ) : null}
-          </div>
-
           <div className="overflow-hidden rounded-2xl border border-[var(--brand-card-border)]">
             <div
               className={cn(
                 "grid bg-[color-mix(in_srgb,var(--brand-card)_85%,var(--brand-primary)_15%)] px-2 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-muted)]",
-                showAdd ? "grid-cols-4" : "grid-cols-3"
+                showAdd ? "grid-cols-3" : "grid-cols-2"
               )}
             >
               <span>SPH</span>
               <span>CYL</span>
               {showAdd ? <span>ADD</span> : null}
-              <span>QTY</span>
             </div>
             <div
               className={cn(
                 "grid items-center bg-[var(--brand-card)] px-2 py-2",
-                showAdd ? "grid-cols-4" : "grid-cols-3"
+                showAdd ? "grid-cols-3" : "grid-cols-2"
               )}
             >
               <PrescriptionWheelPicker
@@ -804,11 +773,25 @@ export function LensProductDetailScreen({
                   }}
                 />
               ) : null}
-              <div className="flex items-center justify-center px-2">
+            </div>
+
+            <div className="flex items-center justify-between gap-4 border-t border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 py-3">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-muted)]">
+                Qty
+              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => adjustQuantity(-1)}
+                  className="flex size-10 items-center justify-center rounded-xl border border-[var(--brand-primary)]/60 text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10 active:scale-95"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus className="size-4" />
+                </button>
                 <Input
                   value={quantity}
                   onChange={(e) => {
-                    const sanitized = sanitizePositiveIntegerInput(
+                    const sanitized = sanitizePairQuantityInput(
                       e.target.value
                     );
                     if (sanitized === "") {
@@ -816,17 +799,30 @@ export function LensProductDetailScreen({
                       setError(null);
                       return;
                     }
-                    setQuantity(
-                      coerceDisplayQuantity(sanitized, qtyUnit, orderMode)
-                    );
+                    setQuantity(coerceDisplayQuantity(sanitized));
                     setError(null);
                   }}
-                  inputMode="numeric"
-                  className="h-11 max-w-[88px] rounded-xl border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] text-center text-base font-bold"
-                  placeholder={String(
-                    getDefaultDisplayQuantity(orderMode, qtyUnit)
-                  )}
+                  onBlur={() => {
+                    const parsed = Number.parseFloat(quantity);
+                    if (!Number.isFinite(parsed) || parsed <= 0) {
+                      return;
+                    }
+                    const min = bothEyesSelected ? 1 : MIN_PAIR_QUANTITY;
+                    const snapped = Math.round(parsed * 2) / 2;
+                    setQuantity(formatPairQuantity(Math.max(min, snapped)));
+                  }}
+                  inputMode="decimal"
+                  className="h-10 w-[72px] rounded-xl border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] px-2 text-center text-base font-bold tabular-nums"
+                  placeholder={String(getDefaultDisplayQuantity(orderMode))}
                 />
+                <button
+                  type="button"
+                  onClick={() => adjustQuantity(1)}
+                  className="flex size-10 items-center justify-center rounded-xl border border-[var(--brand-primary)]/60 text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10 active:scale-95"
+                  aria-label="Increase quantity"
+                >
+                  <Plus className="size-4" />
+                </button>
               </div>
             </div>
           </div>
