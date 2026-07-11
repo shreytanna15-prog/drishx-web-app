@@ -20,6 +20,28 @@ export function sanitizePositiveIntegerInput(text: string): string {
   return text.replace(/\D/g, "");
 }
 
+/** Allow only non-negative decimals for currency fields. */
+export function sanitizePositiveDecimalInput(text: string): string {
+  const cleaned = text.replace(/[^0-9.]/g, "");
+  const parts = cleaned.split(".");
+  if (parts.length <= 1) {
+    return cleaned;
+  }
+  return `${parts[0]}.${parts.slice(1).join("")}`;
+}
+
+export function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+export function formatMoneyInput(value: number): string {
+  const rounded = roundMoney(value);
+  if (!Number.isFinite(rounded)) {
+    return "";
+  }
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+}
+
 /** Allow 0.5-step pair quantities while typing (0.5, 1, 1.5, …). */
 export function sanitizePairQuantityInput(text: string): string {
   const cleaned = text.replace(/[^0-9.]/g, "");

@@ -1,8 +1,5 @@
-import { EmployeeComingSoonScreen } from "@/components/employee/employee-coming-soon";
-import { getEmployeeNavItemByHref } from "@/lib/employee-dashboard-nav";
+import { EmployeeProcurementScreen } from "@/components/employee/employee-procurement-screen";
 
 export default function EmployeeProcurementPage() {
-  const item = getEmployeeNavItemByHref("/employee/procurement");
-  if (!item) return null;
-  return <EmployeeComingSoonScreen item={item} />;
+  return <EmployeeProcurementScreen />;
 }
