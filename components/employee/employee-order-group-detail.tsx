@@ -14,7 +14,9 @@ import { OrderNotesDisplay } from "@/components/orders/order-notes-display";
 import { OrderStatusPill } from "@/components/orders/order-status-pill";
 import { OrderTrackingHorizontal } from "@/components/orders/order-tracking-horizontal";
 import { EmployeeOrderRangeSheet } from "@/components/employee/employee-order-range-sheet";
+import { BrandConfirmDialog } from "@/components/shared/brand-confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { useBrandConfirm } from "@/hooks/use-brand-confirm";
 import {
   buildOrderProductSections,
   getBatchTrackingStatus,
@@ -256,18 +258,29 @@ export function EmployeePhotoOrderDetail({
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
   const trackingStatus = getBatchTrackingStatus(group.orders);
   const customerEmail = order.user?.email;
+  const {
+    confirm,
+    open: confirmOpen,
+    options: confirmOptions,
+    onConfirm: onConfirmDialog,
+    onCancel: onCancelDialog,
+  } = useBrandConfirm();
 
   const handleTrackingStepPress = useCallback(
     (step: OrderTrackingStatus) => {
       if (isUpdating || updatingTracking) return;
       const stepLabel =
         MAIN_TRACKING_STEPS.find((item) => item.key === step)?.label ?? step;
-      const confirmed = window.confirm(
-        `Set this photo order to "${stepLabel}"?`
-      );
-      if (!confirmed) return;
 
       void (async () => {
+        const confirmed = await confirm({
+          title: `Set status to ${stepLabel}?`,
+          description:
+            "This will update the tracking status for this photo order.",
+          confirmLabel: "Update status",
+        });
+        if (!confirmed) return;
+
         setUpdatingTracking(true);
         try {
           await onUpdateStatus(order.id, step);
@@ -276,7 +289,7 @@ export function EmployeePhotoOrderDetail({
         }
       })();
     },
-    [isUpdating, onUpdateStatus, order.id, updatingTracking]
+    [confirm, isUpdating, onUpdateStatus, order.id, updatingTracking]
   );
 
   return (
@@ -352,6 +365,13 @@ export function EmployeePhotoOrderDetail({
           Tap a step to update tracking for this order.
         </p>
       </div>
+
+      <BrandConfirmDialog
+        open={confirmOpen}
+        options={confirmOptions}
+        onConfirm={onConfirmDialog}
+        onCancel={onCancelDialog}
+      />
     </div>
   );
 }
@@ -379,6 +399,13 @@ export function EmployeeOrderGroupDetail({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [updatingLine, setUpdatingLine] = useState(false);
   const [updatingTracking, setUpdatingTracking] = useState(false);
+  const {
+    confirm,
+    open: confirmOpen,
+    options: confirmOptions,
+    onConfirm: onConfirmDialog,
+    onCancel: onCancelDialog,
+  } = useBrandConfirm();
 
   const selectedLineOrders = useMemo(() => {
     if (!selectedLine) return [];
@@ -418,12 +445,23 @@ export function EmployeeOrderGroupDetail({
     async (payload: { pickedQuantity: number; status: OrderTrackingStatus }) => {
       if (!selectedLine || selectedLineOrders.length === 0) return;
 
-      const message =
-        payload.status === "CANCELLED"
-          ? "Cancel this product range? Stock will be restored."
-          : `Update this range to ${payload.pickedQuantity} picked pair${payload.pickedQuantity === 1 ? "" : "s"} with status "${formatOrderStatusLabel(payload.status)}"?`;
-
-      const confirmed = window.confirm(message);
+      const statusLabel = formatOrderStatusLabel(payload.status);
+      const isCancel = payload.status === "CANCELLED";
+      const confirmed = await confirm(
+        isCancel
+          ? {
+              title: "Cancel this product range?",
+              description:
+                "Stock for this prescription line will be restored to inventory.",
+              confirmLabel: "Cancel range",
+              destructive: true,
+            }
+          : {
+              title: "Update picked quantity & status?",
+              description: `Set ${payload.pickedQuantity} picked pair${payload.pickedQuantity === 1 ? "" : "s"} and mark this range as "${statusLabel}".`,
+              confirmLabel: "Update",
+            }
+      );
       if (!confirmed) return;
 
       setUpdatingLine(true);
@@ -443,7 +481,7 @@ export function EmployeeOrderGroupDetail({
         setUpdatingLine(false);
       }
     },
-    [handleCloseSheet, onUpdateLine, selectedLine, selectedLineOrders]
+    [confirm, handleCloseSheet, onUpdateLine, selectedLine, selectedLineOrders]
   );
 
   const handleTrackingStepPress = useCallback(
@@ -458,15 +496,21 @@ export function EmployeeOrderGroupDetail({
       if (allAlreadyAtStep) return;
 
       const lineCount = activeOrders.length;
-      const message =
-        lineCount === 1
-          ? `Set this order to "${stepLabel}"?`
-          : `Set all ${lineCount} active lines in this order to "${stepLabel}"?`;
-
-      const confirmed = window.confirm(message);
-      if (!confirmed) return;
 
       void (async () => {
+        const confirmed = await confirm({
+          title:
+            lineCount === 1
+              ? `Set status to ${stepLabel}?`
+              : `Update all ${lineCount} active lines?`,
+          description:
+            lineCount === 1
+              ? `This order will be marked as "${stepLabel}".`
+              : `All ${lineCount} active lines in this order will be marked as "${stepLabel}".`,
+          confirmLabel: "Update status",
+        });
+        if (!confirmed) return;
+
         setUpdatingTracking(true);
         try {
           for (const order of activeOrders) {
@@ -486,7 +530,14 @@ export function EmployeeOrderGroupDetail({
         }
       })();
     },
-    [activeOrders, canEditTracking, onUpdateLine, updatingOrderId, updatingTracking]
+    [
+      activeOrders,
+      canEditTracking,
+      confirm,
+      onUpdateLine,
+      updatingOrderId,
+      updatingTracking,
+    ]
   );
 
   return (
@@ -581,11 +632,19 @@ export function EmployeeOrderGroupDetail({
 
       <EmployeeOrderRangeSheet
         open={sheetOpen}
+        modal={!confirmOpen}
         line={selectedLine}
         currentStatus={selectedLineStatus}
         onClose={handleCloseSheet}
         onUpdate={handleUpdateLine}
         updating={updatingLine || updatingOrderId != null}
+      />
+
+      <BrandConfirmDialog
+        open={confirmOpen}
+        options={confirmOptions}
+        onConfirm={onConfirmDialog}
+        onCancel={onCancelDialog}
       />
     </div>
   );

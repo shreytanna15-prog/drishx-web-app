@@ -53,11 +53,14 @@ export function BrandConfirmDialog({
   const Icon = options.destructive ? Trash2 : AlertTriangle;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      style={{ pointerEvents: "auto" }}
+    >
       <button
         type="button"
         aria-label="Close dialog"
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/65 backdrop-blur-sm"
         onClick={onCancel}
       />
 
@@ -66,8 +69,10 @@ export function BrandConfirmDialog({
         aria-modal="true"
         aria-labelledby="brand-confirm-title"
         aria-describedby="brand-confirm-description"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
         className={cn(
-          "relative w-full max-w-md overflow-hidden rounded-2xl border shadow-[0_24px_64px_-24px_rgba(0,0,0,0.85)]",
+          "relative z-10 w-full max-w-md overflow-hidden rounded-2xl border shadow-[0_24px_64px_-24px_rgba(0,0,0,0.85)]",
           "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
           "animate-in fade-in-0 zoom-in-95 duration-200"
         )}
@@ -113,20 +118,26 @@ export function BrandConfirmDialog({
             </div>
           </div>
 
-          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <div className="mt-6 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
             <Button
               type="button"
               variant="outline"
-              onClick={onCancel}
-              className="h-11 rounded-xl border-[var(--brand-input-border)] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-primary)]/8"
+              onClick={(event) => {
+                event.stopPropagation();
+                onCancel();
+              }}
+              className="h-11 flex-1 rounded-xl border-[var(--brand-input-border)] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-primary)]/8 sm:flex-none"
             >
               {options.cancelLabel ?? "Cancel"}
             </Button>
             <Button
               type="button"
-              onClick={onConfirm}
+              onClick={(event) => {
+                event.stopPropagation();
+                onConfirm();
+              }}
               className={cn(
-                "h-11 rounded-xl px-6 font-bold",
+                "h-11 flex-1 rounded-xl px-6 font-bold sm:flex-none",
                 options.destructive
                   ? "bg-[var(--brand-danger)] text-white hover:bg-[color-mix(in_srgb,var(--brand-danger)_88%,black_12%)]"
                   : "bg-gradient-to-r from-[#f5ad42] to-[#e8941f] text-[var(--brand-primary-text)] hover:opacity-95"

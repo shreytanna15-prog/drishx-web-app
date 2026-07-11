@@ -15,10 +15,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmployeeProcurementOrderCard } from "@/components/employee/employee-procurement-order-card";
 import { EmployeeProcurementProductSheet } from "@/components/employee/employee-procurement-product-sheet";
 import { InventoryProductCard } from "@/components/employee/inventory-product-card";
+import { BrandConfirmDialog } from "@/components/shared/brand-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
+import { useBrandConfirm } from "@/hooks/use-brand-confirm";
 import {
   formatMoneyInput,
   parseNumericInput,
@@ -155,6 +157,13 @@ export function EmployeeProcurementScreen() {
   const [submittingManual, setSubmittingManual] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
   const [manualSuccess, setManualSuccess] = useState<string | null>(null);
+  const {
+    confirm,
+    open: confirmOpen,
+    options: confirmOptions,
+    onConfirm: onConfirmDialog,
+    onCancel: onCancelDialog,
+  } = useBrandConfirm();
 
   const loadOrders = useCallback(async () => {
     try {
@@ -389,9 +398,11 @@ export function EmployeeProcurementScreen() {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Add stock for ${pendingLines.length} product(s)?\nTotal: ₹${batchTotal} (${batchUnits} units)`
-    );
+    const confirmed = await confirm({
+      title: "Add stock for these products?",
+      description: `Submit ${pendingLines.length} product${pendingLines.length === 1 ? "" : "s"} · ${batchUnits} units · ₹${batchTotal.toLocaleString("en-IN")} total.`,
+      confirmLabel: "Add stock",
+    });
     if (!confirmed) return;
 
     setSubmitting(true);
@@ -595,13 +606,18 @@ export function EmployeeProcurementScreen() {
                     variant="outline"
                     className="rounded-xl border-[var(--brand-danger)]/40 text-[var(--brand-danger)]"
                     onClick={() => {
-                      if (
-                        window.confirm(
-                          "Remove all products from this purchase?"
-                        )
-                      ) {
-                        setPendingLines([]);
-                      }
+                      void (async () => {
+                        const confirmed = await confirm({
+                          title: "Clear purchase list?",
+                          description:
+                            "All products in this batch will be removed. You can add them again before submitting.",
+                          confirmLabel: "Clear all",
+                          destructive: true,
+                        });
+                        if (confirmed) {
+                          setPendingLines([]);
+                        }
+                      })();
                     }}
                   >
                     Clear all
@@ -975,6 +991,13 @@ export function EmployeeProcurementScreen() {
         onSuccess={() => {
           void loadOrders();
         }}
+      />
+
+      <BrandConfirmDialog
+        open={confirmOpen}
+        options={confirmOptions}
+        onConfirm={onConfirmDialog}
+        onCancel={onCancelDialog}
       />
     </div>
   );
