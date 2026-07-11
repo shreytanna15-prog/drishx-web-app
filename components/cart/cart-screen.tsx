@@ -9,24 +9,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { CartCheckoutBar } from "@/components/cart/cart-checkout-bar";
-import { CartOrderModeToggle } from "@/components/cart/cart-order-mode-toggle";
 import { CartProductSectionCard } from "@/components/cart/cart-product-section";
 import { BrandConfirmDialog } from "@/components/shared/brand-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
 import { useCart } from "@/contexts/cart-context";
-import { useOrderMode, type OrderMode } from "@/contexts/order-mode-context";
+import { useOrderMode } from "@/contexts/order-mode-context";
 import { useBrandConfirm } from "@/hooks/use-brand-confirm";
 import {
   buildCartProductSections,
   getCartSummary,
   partitionCartItems,
 } from "@/lib/cart-display";
-import { isWholesaleCartItem } from "@/lib/wholesale-cart";
 import {
   getQuantityStep,
-  normalizeQuantityForMode,
 } from "@/lib/order-quantity";
 import { createOrder, ORDER_NOTES_MAX_LENGTH, wholesaleCheckout } from "@/lib/orders-api";
 import { cn } from "@/lib/utils";
@@ -34,13 +31,12 @@ import { cn } from "@/lib/utils";
 export function CartScreen() {
   const router = useRouter();
   const { user, token } = useAuth();
-  const { mode: orderMode, setMode: setOrderMode, isWholesale } = useOrderMode();
+  const { mode: orderMode, isWholesale } = useOrderMode();
   const {
     items,
     totalPrice,
     loading,
     adjustQuantity,
-    updateQuantity,
     removeFromCart,
     removeLinesFromCart,
     clearCart,
@@ -49,7 +45,6 @@ export function CartScreen() {
 
   const [orderNotes, setOrderNotes] = useState("");
   const [placingOrder, setPlacingOrder] = useState(false);
-  const [switchingOrderMode, setSwitchingOrderMode] = useState(false);
   const [orderMessage, setOrderMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -129,37 +124,6 @@ export function CartScreen() {
           text: "Could not remove this product. Please try again.",
         });
       });
-    }
-  }
-
-  async function handleOrderModeChange(nextMode: OrderMode) {
-    if (nextMode === orderMode || switchingOrderMode) {
-      return;
-    }
-
-    setOrderMode(nextMode);
-
-    if (nextMode !== "wholesale" || items.length === 0) {
-      return;
-    }
-
-    setSwitchingOrderMode(true);
-    try {
-      await Promise.all(
-        items
-          .filter((item) => !isWholesaleCartItem(item))
-          .map(async (item) => {
-          const normalized = normalizeQuantityForMode(
-            item.cartQuantity,
-            "wholesale"
-          );
-          if (normalized !== item.cartQuantity) {
-            await updateQuantity(item.cartLineId, normalized);
-          }
-        })
-      );
-    } finally {
-      setSwitchingOrderMode(false);
     }
   }
 
@@ -300,7 +264,7 @@ export function CartScreen() {
       />
 
       <div className="relative space-y-6 pb-6">
-        <header className="flex flex-col gap-5 border-b border-[var(--brand-card-border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <header className="border-b border-[var(--brand-card-border)] pb-6">
           <div className="min-w-0">
             <h1 className="text-3xl font-extrabold tracking-tight text-[var(--brand-text)] sm:text-4xl">
               Cart
@@ -308,22 +272,10 @@ export function CartScreen() {
             <p className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
               Review your lenses and place your order
             </p>
-            {isWholesale ? (
-              <p className="mt-3 inline-flex rounded-full border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--brand-primary)]">
-                Wholesale orders are in pairs (0.5 steps)
-              </p>
-            ) : (
-              <p className="mt-3 inline-flex rounded-full border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--brand-primary)]">
-                Orders are in pairs only (0.5, 1, 1.5, …)
-              </p>
-            )}
+            <p className="mt-3 inline-flex rounded-full border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--brand-primary)]">
+              Orders are in pairs only (0.5, 1, 1.5, …)
+            </p>
           </div>
-
-          <CartOrderModeToggle
-            disabled={switchingOrderMode}
-            onChange={(mode) => void handleOrderModeChange(mode)}
-            className="sm:min-w-[280px]"
-          />
         </header>
 
         {orderMessage ? (
@@ -468,7 +420,7 @@ export function CartScreen() {
           countLabel={countLabel}
           totalPrice={totalPrice}
           placingOrder={placingOrder}
-          disabled={switchingOrderMode}
+          disabled={false}
           onPlaceOrder={() => void handlePlaceOrder()}
           className={cn(
             "sticky z-20",
