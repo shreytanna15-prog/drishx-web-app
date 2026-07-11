@@ -1,15 +1,10 @@
-import { Bell } from "lucide-react";
-import { EmployeeComingSoonScreen } from "@/components/employee/employee-coming-soon";
+import { NotificationsScreen } from "@/components/notifications/notifications-screen";
 
 export default function EmployeeNotificationsPage() {
   return (
-    <EmployeeComingSoonScreen
-      item={{
-        href: "/employee/notifications",
-        label: "Notifications",
-        icon: Bell,
-        description: "Order and task alerts",
-      }}
+    <NotificationsScreen
+      backHref="/employee/home"
+      subtitle="New orders and task alerts"
     />
   );
 }

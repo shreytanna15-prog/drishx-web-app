@@ -77,7 +77,15 @@ function NotificationRow({ item }: { item: NotificationRecord }) {
   );
 }
 
-export function NotificationsScreen() {
+type NotificationsScreenProps = {
+  backHref?: string;
+  subtitle?: string;
+};
+
+export function NotificationsScreen({
+  backHref = "/home",
+  subtitle = "Order updates and account alerts",
+}: NotificationsScreenProps) {
   const { refreshUnreadCount } = useNotificationUnread();
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,34 +127,60 @@ export function NotificationsScreen() {
 
   return (
     <div className="relative mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-6 flex items-center gap-3">
-        <Button
-          variant="ghost"
-          asChild
-          className="size-10 rounded-xl px-0 text-[var(--brand-link)] hover:bg-[var(--brand-primary)]/10"
-        >
-          <Link href="/home" aria-label="Back to home">
-            <ArrowLeft className="size-5" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[var(--brand-text)]">
-            Notifications
-          </h1>
-          <p className="text-sm text-[var(--brand-text-muted)]">
-            Order updates and account alerts
-          </p>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-24 left-1/2 h-72 w-[min(100%,36rem)] -translate-x-1/2 rounded-full opacity-60 blur-3xl"
+        style={{ background: "var(--brand-background-glow)" }}
+      />
+
+      <div className="relative mb-6 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Button
+            variant="ghost"
+            asChild
+            className="size-10 shrink-0 rounded-xl px-0 text-[var(--brand-link)] hover:bg-[var(--brand-primary)]/10"
+          >
+            <Link href={backHref} aria-label="Back">
+              <ArrowLeft className="size-5" />
+            </Link>
+          </Button>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-extrabold tracking-tight text-[var(--brand-text)]">
+              Notifications
+            </h1>
+            <p className="text-sm text-[var(--brand-text-muted)]">{subtitle}</p>
+          </div>
         </div>
+
+        {!loading && !error ? (
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={refreshing}
+            onClick={() => {
+              setRefreshing(true);
+              void loadNotifications();
+            }}
+            className="size-9 shrink-0 rounded-xl border-[var(--brand-input-border)]"
+            aria-label="Refresh notifications"
+          >
+            {refreshing ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}
+          </Button>
+        ) : null}
       </div>
 
       {loading ? (
-        <div className="space-y-3">
+        <div className="relative space-y-3">
           {Array.from({ length: 4 }).map((_, index) => (
             <Skeleton key={index} className="h-24 rounded-2xl" />
           ))}
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-6 py-12 text-center">
+        <div className="relative flex flex-col items-center gap-4 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-6 py-12 text-center">
           <AlertCircle className="size-10 text-[var(--brand-danger)]" />
           <p className="text-sm font-medium text-[var(--brand-danger)]">
             {error}
@@ -159,38 +193,39 @@ export function NotificationsScreen() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="flex items-center justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={refreshing}
-              onClick={() => {
-                setRefreshing(true);
-                void loadNotifications();
-              }}
-              className="rounded-xl border-[var(--brand-input-border)] font-semibold"
-            >
-              {refreshing ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <RefreshCw className="size-4" />
-              )}
-              Refresh
-            </Button>
-          </div>
-
+        <div className="relative space-y-4">
           {hasNotifications ? (
-            <div className="space-y-3">
-              {notifications.map((item) => (
-                <NotificationRow key={item.id} item={item} />
-              ))}
-            </div>
+            <>
+              <div className="space-y-3">
+                {notifications.map((item) => (
+                  <NotificationRow key={item.id} item={item} />
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setRefreshing(true);
+                  void loadNotifications();
+                }}
+                disabled={refreshing}
+                className="h-11 w-full rounded-xl border-[var(--brand-primary)]/50 font-bold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
+              >
+                {refreshing ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  "View All"
+                )}
+              </Button>
+            </>
           ) : (
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-6 py-16 text-center">
               <Bell className="size-10 text-[var(--brand-text-muted)]" />
               <p className="text-sm font-medium text-[var(--brand-text-muted)]">
                 No notifications yet.
+              </p>
+              <p className="max-w-sm text-xs text-[var(--brand-text-muted)]">
+                When customers place orders, alerts will show up here.
               </p>
             </div>
           )}
