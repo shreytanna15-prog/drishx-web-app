@@ -4,6 +4,7 @@ import {
   normalizeOrderStatus,
   type OrderTrackingStatus,
 } from "@/lib/order-tracking";
+import { formatProgressiveEyeLabel } from "@/lib/progressive-eye";
 import type { OrderRecord } from "@/lib/types/orders";
 import { formatLensType } from "@/lib/types/lens";
 
@@ -175,11 +176,7 @@ function formatAxisLabel(order: OrderRecord): string {
 
 function formatEyeLabel(order: OrderRecord): string | undefined {
   const details = getOrderLensDetails(order);
-  const eye = details?.eye?.trim();
-  if (!eye) {
-    return undefined;
-  }
-  return eye.toUpperCase();
+  return formatProgressiveEyeLabel(details?.eye ?? order.eye);
 }
 
 function powerLineMergeKey(

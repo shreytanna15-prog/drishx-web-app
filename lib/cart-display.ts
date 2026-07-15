@@ -11,6 +11,7 @@ import {
   pairsFromPieces,
   type OrderQuantityMode,
 } from "@/lib/order-quantity";
+import { formatProgressiveEyeLabel } from "@/lib/progressive-eye";
 import type { CartItem } from "@/lib/types/lens";
 import {
   expandWholesaleSpec,
@@ -159,7 +160,7 @@ export function buildCartProductSections(
     const line: CartPowerLine = {
       cartLineId: item.cartLineId,
       sphCylLabel: formatSphCyl(item),
-      eye: item.eye,
+      eye: formatProgressiveEyeLabel(item.eye),
       quantity: displayQty,
       lineTotal: lineTotalForPieceQuantity(item.price, item.cartQuantity),
     };

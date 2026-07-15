@@ -720,7 +720,7 @@ export function LensProductDetailScreen({
               </div>
               {selectedEye === "BOTH" ? (
                 <p className="text-sm font-medium text-[var(--brand-text-muted)]">
-                  Adds separate LEFT and RIGHT lines to cart. Order in pairs only.
+                  Adds one cart line for both eyes. Order in pairs only.
                 </p>
               ) : null}
             </div>

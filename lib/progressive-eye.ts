@@ -15,12 +15,10 @@ export const PROGRESSIVE_EYE_OPTIONS: {
   { id: "BOTH", label: "Both eyes" },
 ];
 
+/** One cart/order line per selection — BOTH stays a single line. */
 export function progressiveCartEyes(
   selected: ProgressiveEyeOption
-): Array<"LEFT" | "RIGHT"> {
-  if (selected === "BOTH") {
-    return ["LEFT", "RIGHT"];
-  }
+): ProgressiveEyeOption[] {
   return [selected];
 }
 
@@ -31,25 +29,15 @@ export function progressivePairQuantityRequired(
 }
 
 /**
- * Pieces to store on each eye cart line.
- * Both eyes + 1 pair → 1 pc LEFT + 1 pc RIGHT (not 2 pcs on each eye).
+ * Pieces to store on the cart line for this eye selection.
+ * Both eyes + 1 pair → one BOTH line with 2 pieces (full pair on a single line).
  */
 export function piecesPerEyeFromDisplayQuantity(
   displayQty: number,
   unit: QuantityUnit,
-  selected: ProgressiveEyeOption
+  _selected: ProgressiveEyeOption
 ): number {
-  const totalPieces = piecesFromDisplayQuantity(displayQty, unit);
-  if (totalPieces < 1) {
-    return 0;
-  }
-  if (progressivePairQuantityRequired(selected)) {
-    return Math.max(
-      1,
-      Math.floor(totalPieces / progressiveCartEyes(selected).length)
-    );
-  }
-  return totalPieces;
+  return piecesFromDisplayQuantity(displayQty, unit);
 }
 
 export function validateProgressiveQuantityUnit(
@@ -66,4 +54,24 @@ export function validateProgressivePairQuantity(
   return validatePairQuantity(pairs, {
     wholePairsOnly: progressivePairQuantityRequired(selected),
   });
+}
+
+/** Cart / order eye label (e.g. BOTH → "Both eyes"). */
+export function formatProgressiveEyeLabel(
+  eye: string | null | undefined
+): string | undefined {
+  const normalized = eye?.trim().toUpperCase();
+  if (!normalized) {
+    return undefined;
+  }
+  switch (normalized) {
+    case "LEFT":
+      return "LEFT";
+    case "RIGHT":
+      return "RIGHT";
+    case "BOTH":
+      return "Both eyes";
+    default:
+      return normalized;
+  }
 }
