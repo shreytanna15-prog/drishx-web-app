@@ -6,11 +6,32 @@ import { OrderStatusPill } from "@/components/orders/order-status-pill";
 import {
   formatOrderAmount,
   formatOrderDateTime,
+  isColorLensOrder,
+  isRxOrder,
   orderToLensItem,
   type OrderListGroup,
 } from "@/lib/order-list-display";
 import { formatPairQuantity, pairsFromPieces } from "@/lib/order-quantity";
 import { cn } from "@/lib/utils";
+
+function OrderTypeBadge({
+  label,
+  className,
+}: {
+  label: string;
+  className: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "rounded-lg border px-2.5 py-1 text-xs font-bold",
+        className
+      )}
+    >
+      {label}
+    </span>
+  );
+}
 
 export function EmployeeOrderListCard({ group }: { group: OrderListGroup }) {
   const href = `/employee/orders/${encodeURIComponent(group.key)}`;
@@ -24,6 +45,8 @@ export function EmployeeOrderListCard({ group }: { group: OrderListGroup }) {
     (sum, order) => sum + Number(order.totalAmount || 0),
     0
   );
+  const hasColorOrder = visibleOrders.some(isColorLensOrder);
+  const hasRxOrder = visibleOrders.some(isRxOrder);
 
   return (
     <Link
@@ -46,6 +69,29 @@ export function EmployeeOrderListCard({ group }: { group: OrderListGroup }) {
       <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
         {formatOrderDateTime(group.createdAt)}
       </p>
+
+      {group.isPhotoOrder || hasColorOrder || hasRxOrder ? (
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          {group.isPhotoOrder ? (
+            <OrderTypeBadge
+              label="Photo order"
+              className="border-[var(--brand-primary)]/35 bg-[var(--brand-primary)]/14 text-[var(--brand-primary)]"
+            />
+          ) : null}
+          {hasColorOrder ? (
+            <OrderTypeBadge
+              label="Color order"
+              className="border-violet-500/35 bg-violet-500/14 text-violet-500"
+            />
+          ) : null}
+          {hasRxOrder ? (
+            <OrderTypeBadge
+              label="RX order"
+              className="border-sky-500/35 bg-sky-500/14 text-sky-500"
+            />
+          ) : null}
+        </div>
+      ) : null}
 
       {group.isPhotoOrder ? (
         <p className="mt-3 text-sm font-semibold text-[var(--brand-text-muted)]">

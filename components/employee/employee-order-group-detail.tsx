@@ -27,6 +27,8 @@ import {
 import {
   formatOrderAmount,
   formatOrderDateTime,
+  isColorLensOrder,
+  isRxOrder,
   type OrderListGroup,
 } from "@/lib/order-list-display";
 import { distributePickedAcrossOrders } from "@/lib/order-line-update";
@@ -394,6 +396,8 @@ export function EmployeeOrderGroupDetail({
     [group.orders]
   );
   const customerEmail = group.orders[0]?.user?.email;
+  const hasColorOrder = group.orders.some(isColorLensOrder);
+  const hasRxOrder = group.orders.some(isRxOrder);
 
   const [selectedLine, setSelectedLine] = useState<PowerLineRow | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -558,6 +562,25 @@ export function EmployeeOrderGroupDetail({
         <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
           {formatOrderDateTime(group.createdAt)}
         </p>
+        {hasColorOrder || hasRxOrder || group.isPhotoOrder ? (
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            {group.isPhotoOrder ? (
+              <span className="rounded-lg border border-[var(--brand-primary)]/35 bg-[var(--brand-primary)]/14 px-2.5 py-1 text-xs font-bold text-[var(--brand-primary)]">
+                Photo order
+              </span>
+            ) : null}
+            {hasColorOrder ? (
+              <span className="rounded-lg border border-violet-500/35 bg-violet-500/14 px-2.5 py-1 text-xs font-bold text-violet-500">
+                Color order
+              </span>
+            ) : null}
+            {hasRxOrder ? (
+              <span className="rounded-lg border border-sky-500/35 bg-sky-500/14 px-2.5 py-1 text-xs font-bold text-sky-500">
+                RX order
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-3 divide-x divide-[var(--brand-card-border)] rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] py-4">
