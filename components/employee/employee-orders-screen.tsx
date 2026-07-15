@@ -7,6 +7,7 @@ import { EmployeeOrderListCard } from "@/components/employee/employee-order-list
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  enrichOrdersWithCatalogStock,
   groupOrdersForList,
   type OrderListGroup,
 } from "@/lib/order-list-display";
@@ -52,7 +53,8 @@ export function EmployeeOrdersScreen() {
     try {
       setError(null);
       const data = await fetchOrders();
-      setOrders(data);
+      const withStock = await enrichOrdersWithCatalogStock(data);
+      setOrders(withStock);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load orders.");
     } finally {

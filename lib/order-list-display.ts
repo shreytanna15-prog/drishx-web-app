@@ -5,8 +5,14 @@ import {
 } from "@/lib/order-tracking";
 import { getOrderLensDetails } from "@/lib/orders-api";
 import { pairsFromPieces } from "@/lib/order-quantity";
+import { fetchLensById } from "@/lib/lenses-api";
 import type { OrderRecord } from "@/lib/types/orders";
-import { formatLensType, type LensItem, type LensType } from "@/lib/types/lens";
+import {
+  formatLensType,
+  type FilterOption,
+  type LensItem,
+  type LensType,
+} from "@/lib/types/lens";
 
 export type OrderCardStatusVariant =
   | "ready"
@@ -63,16 +69,21 @@ export function orderToLensItem(order: OrderRecord): LensItem {
     order.progressiveLens ?? order.kryptokLens ?? order.singleVisionLens;
   const details = getOrderLensDetails(order);
   const lensType = formatLensType(order.lensType) as LensType;
+  const catalogStock =
+    catalog?.quantity != null && Number.isFinite(Number(catalog.quantity))
+      ? Math.max(0, Number(catalog.quantity))
+      : 0;
 
   return {
-    id: order.id,
+    id: catalog?.id ?? order.id,
     costPrice: null,
     price: Number(order.unitPrice || order.totalAmount || 0),
     sph: Number(details?.sph ?? 0),
     cyl: details?.cyl != null ? Number(details.cyl) : null,
     axis: details?.axis ?? null,
     add: details?.add != null ? Number(details.add) : null,
-    quantity: order.quantity,
+    // Inventory stock from catalog lens — never order.quantity (ordered pieces).
+    quantity: catalogStock,
     createdAt: order.createdAt,
     lensType,
     brand: catalog?.brand ?? null,
@@ -114,6 +125,86 @@ export function getOrderLensRef(
     return { lensType: order.lensType, lensId: order.progressiveLens.id };
   }
   return null;
+}
+
+function catalogStockFromOrder(order: OrderRecord): number | null {
+  const catalog =
+    order.progressiveLens ?? order.kryptokLens ?? order.singleVisionLens;
+  if (catalog?.quantity == null || !Number.isFinite(Number(catalog.quantity))) {
+    return null;
+  }
+  return Math.max(0, Number(catalog.quantity));
+}
+
+function withCatalogStock(order: OrderRecord, stock: number): OrderRecord {
+  const ref = getOrderLensRef(order);
+  if (!ref) return order;
+
+  if (order.singleVisionLens?.id === ref.lensId) {
+    return {
+      ...order,
+      singleVisionLens: { ...order.singleVisionLens, quantity: stock },
+    };
+  }
+  if (order.kryptokLens?.id === ref.lensId) {
+    return {
+      ...order,
+      kryptokLens: { ...order.kryptokLens, quantity: stock },
+    };
+  }
+  if (order.progressiveLens?.id === ref.lensId) {
+    return {
+      ...order,
+      progressiveLens: { ...order.progressiveLens, quantity: stock },
+    };
+  }
+  return order;
+}
+
+/** Attach current inventory qty onto nested lens records (never uses order.quantity). */
+export async function enrichOrdersWithCatalogStock(
+  orders: OrderRecord[]
+): Promise<OrderRecord[]> {
+  const missing = new Map<
+    string,
+    { lensType: OrderRecord["lensType"]; lensId: string }
+  >();
+
+  for (const order of orders) {
+    if (catalogStockFromOrder(order) != null) continue;
+    const ref = getOrderLensRef(order);
+    if (!ref) continue;
+    missing.set(`${ref.lensType}:${ref.lensId}`, ref);
+  }
+
+  if (missing.size === 0) {
+    return orders;
+  }
+
+  const stockByKey = new Map<string, number>();
+  await Promise.all(
+    [...missing.values()].map(async (ref) => {
+      const key = `${ref.lensType}:${ref.lensId}`;
+      try {
+        const lens = await fetchLensById(
+          ref.lensId,
+          formatLensType(ref.lensType) as FilterOption
+        );
+        stockByKey.set(key, Math.max(0, Number(lens.quantity) || 0));
+      } catch {
+        stockByKey.set(key, 0);
+      }
+    })
+  );
+
+  return orders.map((order) => {
+    if (catalogStockFromOrder(order) != null) return order;
+    const ref = getOrderLensRef(order);
+    if (!ref) return order;
+    const stock = stockByKey.get(`${ref.lensType}:${ref.lensId}`);
+    if (stock === undefined) return order;
+    return withCatalogStock(order, stock);
+  });
 }
 
 export function isColorLensOrder(order: OrderRecord): boolean {

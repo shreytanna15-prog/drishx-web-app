@@ -9,13 +9,15 @@ import {
   orderToLensItem,
   type OrderListGroup,
 } from "@/lib/order-list-display";
+import { formatPairQuantity, pairsFromPieces } from "@/lib/order-quantity";
 import { cn } from "@/lib/utils";
 
 export function EmployeeOrderListCard({ group }: { group: OrderListGroup }) {
   const href = `/employee/orders/${encodeURIComponent(group.key)}`;
   const visibleOrders = group.orders;
   const pairCount = visibleOrders.reduce(
-    (sum, order) => sum + Math.max(1, Number(order.quantity) || 1),
+    (sum, order) =>
+      sum + pairsFromPieces(Math.max(1, Number(order.quantity) || 1)),
     0
   );
   const totalAmount = visibleOrders.reduce(
@@ -52,19 +54,27 @@ export function EmployeeOrderListCard({ group }: { group: OrderListGroup }) {
       ) : (
         <>
           <div className="mt-3 space-y-2">
-            {visibleOrders.map((order) => (
-              <LensProductCard
-                key={order.id}
-                item={orderToLensItem(order)}
-                className="border-[var(--brand-primary)]/20 bg-[color-mix(in_srgb,var(--brand-card)_94%,var(--brand-primary)_6%)] p-3"
-              />
-            ))}
+            {visibleOrders.map((order) => {
+              const orderedPairs = pairsFromPieces(
+                Math.max(1, Number(order.quantity) || 1)
+              );
+              return (
+                <LensProductCard
+                  key={order.id}
+                  item={orderToLensItem(order)}
+                  quantityHint={`${formatPairQuantity(orderedPairs)} ordered`}
+                  className="border-[var(--brand-primary)]/20 bg-[color-mix(in_srgb,var(--brand-card)_94%,var(--brand-primary)_6%)] p-3"
+                />
+              );
+            })}
           </div>
 
           <div className="mt-3 flex items-center justify-between gap-3">
             <p className="text-sm font-bold text-[var(--brand-text)]">
-              {visibleOrders.length} Product{visibleOrders.length === 1 ? "" : "s"} ·{" "}
-              {pairCount} Pair{pairCount === 1 ? "" : "s"}
+              {visibleOrders.length} Product
+              {visibleOrders.length === 1 ? "" : "s"} ·{" "}
+              {formatPairQuantity(pairCount)} Pair
+              {pairCount === 1 ? "" : "s"}
             </p>
             <p className="text-base font-extrabold text-[var(--brand-text)]">
               ₹{formatOrderAmount(totalAmount)}

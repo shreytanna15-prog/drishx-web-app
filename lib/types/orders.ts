@@ -47,6 +47,8 @@ export type OrderRecord = {
     coating?: string | null;
     sph?: number | string;
     cyl?: number | string | null;
+    /** Current inventory stock (pieces), when included by the API. */
+    quantity?: number | null;
   } | null;
   kryptokLens?: {
     id: string;
@@ -57,6 +59,8 @@ export type OrderRecord = {
     cyl?: number | string | null;
     axis?: number | null;
     add?: number | string;
+    /** Current inventory stock (pieces), when included by the API. */
+    quantity?: number | null;
   } | null;
   progressiveLens?: {
     id: string;
@@ -69,5 +73,7 @@ export type OrderRecord = {
     axis?: number | null;
     add?: number | string;
     eye?: string;
+    /** Current inventory stock (pieces), when included by the API. */
+    quantity?: number | null;
   } | null;
 };

@@ -30,6 +30,7 @@ import {
 } from "@/lib/cart-utils";
 import { fetchLensesPage, mapApiLens } from "@/lib/lenses-api";
 import {
+  enrichOrdersWithCatalogStock,
   filterProcurementOrderGroups,
   groupOrdersForList,
 } from "@/lib/order-list-display";
@@ -169,7 +170,8 @@ export function EmployeeProcurementScreen() {
     try {
       setOrdersError(null);
       const data = await fetchOrders();
-      setOrders(data);
+      const withStock = await enrichOrdersWithCatalogStock(data);
+      setOrders(withStock);
     } catch (err) {
       setOrdersError(
         err instanceof Error ? err.message : "Failed to load procurement orders."

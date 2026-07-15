@@ -12,12 +12,20 @@ type LensProductCardProps = {
   item: LensItem;
   href?: string;
   className?: string;
+  /** Optional line under price (e.g. ordered pairs on employee order cards). */
+  quantityHint?: string;
 };
 
-export function LensProductCard({ item, href, className }: LensProductCardProps) {
+export function LensProductCard({
+  item,
+  href,
+  className,
+  quantityHint,
+}: LensProductCardProps) {
   const brand = item.brand?.trim() || "Lens";
   const detail = formatLensProductDetail(item);
-  const inStock = item.quantity > 0;
+  const stockQty = Math.max(0, Number(item.quantity) || 0);
+  const inStock = stockQty > 0;
 
   const content = (
     <div className="flex items-start justify-between gap-4">
@@ -41,6 +49,11 @@ export function LensProductCard({ item, href, className }: LensProductCardProps)
             {LENS_PRICE_PER_PAIR_LABEL}
           </span>
         </p>
+        {quantityHint ? (
+          <p className="mt-1 text-xs font-semibold text-[var(--brand-text-muted)]">
+            {quantityHint}
+          </p>
+        ) : null}
         <p
           className={cn(
             "mt-1 text-xs font-semibold",
@@ -49,7 +62,7 @@ export function LensProductCard({ item, href, className }: LensProductCardProps)
               : "text-[var(--brand-text-muted)]"
           )}
         >
-          {inStock ? `${item.quantity} in stock` : "Out of stock"}
+          {inStock ? `${stockQty} in stock` : "Out of stock"}
         </p>
       </div>
     </div>

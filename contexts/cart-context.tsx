@@ -24,9 +24,16 @@ import { buildCartLineId } from "@/lib/cart-utils";
 import { lineTotalForPieceQuantity } from "@/lib/lens-pricing";
 import {
   nextQuantityAfterDelta,
+  PAIR_QUANTITY_STEP,
   type OrderQuantityMode,
 } from "@/lib/order-quantity";
 import type { CartItem, LensItem } from "@/lib/types/lens";
+import { toApiLensType } from "@/lib/types/lens";
+import {
+  adjustWholesaleSpecCellPairs,
+  setWholesaleSpecCellPairs,
+  summarizeWholesaleSpec,
+} from "@/lib/wholesale-cart";
 
 const SYNC_DEBOUNCE_MS = 200;
 
@@ -49,6 +56,12 @@ type CartContextValue = {
     delta: number,
     mode: OrderQuantityMode
   ) => void;
+  adjustWholesaleCellQuantity: (
+    parentCartLineId: string,
+    cellKey: string,
+    deltaPairs?: number
+  ) => void;
+  removeWholesaleCell: (parentCartLineId: string, cellKey: string) => void;
   bulkSetCartQuantities: (
     lines: Array<{ item: LensItem; quantity: number }>
   ) => Promise<{ savedCount: number; message?: string }>;
@@ -378,6 +391,166 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [applyItems, authHeaders, refreshCart, scheduleLineSync, useServerCart]
   );
 
+  const flushWholesaleSync = useCallback(
+    async (parentCartLineId: string, version: number) => {
+      if (!useServerCart || !authHeaders) {
+        return;
+      }
+
+      if (syncVersionRef.current.get(parentCartLineId) !== version) {
+        return;
+      }
+
+      const entry = itemsRef.current.find(
+        (item) => item.cartLineId === parentCartLineId
+      );
+      if (!entry) {
+        try {
+          await removeCartLine(parentCartLineId, authHeaders);
+        } catch {
+          await refreshCart();
+        }
+        return;
+      }
+
+      if (!entry.wholesaleSpec) {
+        await refreshCart();
+        return;
+      }
+
+      try {
+        const { item: saved } = await upsertWholesaleCartBatch(
+          {
+            lensId: entry.id,
+            lensType: toApiLensType(entry.lensType ?? "Progressive"),
+            unitPrice: entry.price,
+            brand: entry.brand,
+            coating: entry.coating,
+            item: entry.item,
+            lensTypeLabel: entry.lensType,
+            ranges: entry.wholesaleSpec.ranges,
+            gridMode: entry.wholesaleSpec.gridMode,
+            defaultPairsPerCell: entry.wholesaleSpec.defaultPairsPerCell,
+            qtyOverrides: entry.wholesaleSpec.qtyOverrides,
+            productAxis: entry.wholesaleSpec.productAxis,
+            isBifocalLens: entry.wholesaleSpec.isBifocalLens,
+            isSingleVision: entry.wholesaleSpec.isSingleVision,
+            crossPower: entry.wholesaleSpec.crossPower,
+          },
+          authHeaders
+        );
+        if (syncVersionRef.current.get(parentCartLineId) !== version) {
+          return;
+        }
+        setItems((current) =>
+          current.map((row) =>
+            row.cartLineId === parentCartLineId ? saved : row
+          )
+        );
+      } catch {
+        await refreshCart();
+      }
+    },
+    [authHeaders, refreshCart, useServerCart]
+  );
+
+  const scheduleWholesaleSync = useCallback(
+    (parentCartLineId: string) => {
+      const nextVersion =
+        (syncVersionRef.current.get(parentCartLineId) ?? 0) + 1;
+      syncVersionRef.current.set(parentCartLineId, nextVersion);
+
+      const existingTimer = syncTimersRef.current.get(parentCartLineId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+
+      const timer = setTimeout(() => {
+        syncTimersRef.current.delete(parentCartLineId);
+        void flushWholesaleSync(parentCartLineId, nextVersion);
+      }, SYNC_DEBOUNCE_MS);
+
+      syncTimersRef.current.set(parentCartLineId, timer);
+    },
+    [flushWholesaleSync]
+  );
+
+  const applyWholesaleSpecUpdate = useCallback(
+    (
+      parentCartLineId: string,
+      updater: (
+        spec: NonNullable<CartItem["wholesaleSpec"]>
+      ) => NonNullable<CartItem["wholesaleSpec"]> | null
+    ) => {
+      let shouldRemove = false;
+
+      applyItems((current) => {
+        const entry = current.find((row) => row.cartLineId === parentCartLineId);
+        if (!entry?.wholesaleSpec) {
+          return current;
+        }
+
+        const nextSpec = updater(entry.wholesaleSpec);
+        if (!nextSpec) {
+          shouldRemove = true;
+          return current.filter((row) => row.cartLineId !== parentCartLineId);
+        }
+
+        const { totalPieces } = summarizeWholesaleSpec(nextSpec);
+        return current.map((row) =>
+          row.cartLineId === parentCartLineId
+            ? {
+                ...row,
+                wholesaleSpec: nextSpec,
+                cartQuantity: totalPieces,
+              }
+            : row
+        );
+      });
+
+      if (shouldRemove) {
+        const existingTimer = syncTimersRef.current.get(parentCartLineId);
+        if (existingTimer) {
+          clearTimeout(existingTimer);
+          syncTimersRef.current.delete(parentCartLineId);
+        }
+        if (useServerCart && authHeaders) {
+          void removeCartLine(parentCartLineId, authHeaders).catch(() => {
+            void refreshCart();
+          });
+        }
+        return;
+      }
+
+      scheduleWholesaleSync(parentCartLineId);
+    },
+    [applyItems, authHeaders, refreshCart, scheduleWholesaleSync, useServerCart]
+  );
+
+  const adjustWholesaleCellQuantity = useCallback(
+    (
+      parentCartLineId: string,
+      cellKey: string,
+      deltaPairs: number = PAIR_QUANTITY_STEP
+    ) => {
+      if (!cellKey || !deltaPairs) return;
+      applyWholesaleSpecUpdate(parentCartLineId, (spec) =>
+        adjustWholesaleSpecCellPairs(spec, cellKey, deltaPairs)
+      );
+    },
+    [applyWholesaleSpecUpdate]
+  );
+
+  const removeWholesaleCell = useCallback(
+    (parentCartLineId: string, cellKey: string) => {
+      if (!cellKey) return;
+      applyWholesaleSpecUpdate(parentCartLineId, (spec) =>
+        setWholesaleSpecCellPairs(spec, cellKey, 0)
+      );
+    },
+    [applyWholesaleSpecUpdate]
+  );
+
   const clearCart = useCallback(async () => {
     for (const timer of syncTimersRef.current.values()) {
       clearTimeout(timer);
@@ -494,6 +667,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeLinesFromCart,
       updateQuantity,
       adjustQuantity,
+      adjustWholesaleCellQuantity,
+      removeWholesaleCell,
       bulkSetCartQuantities,
       addWholesaleBatchToCart,
       clearCart,
@@ -509,6 +684,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeLinesFromCart,
       updateQuantity,
       adjustQuantity,
+      adjustWholesaleCellQuantity,
+      removeWholesaleCell,
       bulkSetCartQuantities,
       addWholesaleBatchToCart,
       clearCart,

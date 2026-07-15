@@ -24,19 +24,23 @@ import {
 } from "@/lib/cart-display";
 import {
   getQuantityStep,
+  PAIR_QUANTITY_STEP,
 } from "@/lib/order-quantity";
+import type { CartPowerLine } from "@/lib/cart-display";
 import { createOrder, ORDER_NOTES_MAX_LENGTH, wholesaleCheckout } from "@/lib/orders-api";
 import { cn } from "@/lib/utils";
 
 export function CartScreen() {
   const router = useRouter();
   const { user, token } = useAuth();
-  const { mode: orderMode, isWholesale } = useOrderMode();
+  const { mode: orderMode } = useOrderMode();
   const {
     items,
     totalPrice,
     loading,
     adjustQuantity,
+    adjustWholesaleCellQuantity,
+    removeWholesaleCell,
     removeFromCart,
     removeLinesFromCart,
     clearCart,
@@ -91,7 +95,7 @@ export function CartScreen() {
     }
   }
 
-  async function handleRemoveLine(cartLineId: string) {
+  async function handleRemoveLine(line: CartPowerLine) {
     const confirmed = await confirm({
       title: "Remove this item?",
       description:
@@ -99,14 +103,21 @@ export function CartScreen() {
       confirmLabel: "Remove item",
       destructive: true,
     });
-    if (confirmed) {
-      void removeFromCart(cartLineId).catch(() => {
-        setOrderMessage({
-          type: "error",
-          text: "Could not remove this item. Please try again.",
-        });
-      });
+    if (!confirmed) {
+      return;
     }
+
+    if (line.wholesaleCellKey && line.parentCartLineId) {
+      removeWholesaleCell(line.parentCartLineId, line.wholesaleCellKey);
+      return;
+    }
+
+    void removeFromCart(line.cartLineId).catch(() => {
+      setOrderMessage({
+        type: "error",
+        text: "Could not remove this item. Please try again.",
+      });
+    });
   }
 
   async function handleRemoveSection(cartLineIds: string[]) {
@@ -125,6 +136,30 @@ export function CartScreen() {
         });
       });
     }
+  }
+
+  function handleIncreaseLine(line: CartPowerLine) {
+    if (line.wholesaleCellKey && line.parentCartLineId) {
+      adjustWholesaleCellQuantity(
+        line.parentCartLineId,
+        line.wholesaleCellKey,
+        PAIR_QUANTITY_STEP
+      );
+      return;
+    }
+    adjustQuantity(line.cartLineId, quantityStep, orderMode);
+  }
+
+  function handleDecreaseLine(line: CartPowerLine) {
+    if (line.wholesaleCellKey && line.parentCartLineId) {
+      adjustWholesaleCellQuantity(
+        line.parentCartLineId,
+        line.wholesaleCellKey,
+        -PAIR_QUANTITY_STEP
+      );
+      return;
+    }
+    adjustQuantity(line.cartLineId, -quantityStep, orderMode);
   }
 
   async function handlePlaceOrder() {
@@ -364,16 +399,11 @@ export function CartScreen() {
             <CartProductSectionCard
               key={section.key}
               section={section}
-              isWholesale={isWholesale}
               qtyColumnLabel={qtyLabel}
-              onIncrease={(cartLineId) => {
-                adjustQuantity(cartLineId, quantityStep, orderMode);
-              }}
-              onDecrease={(cartLineId) => {
-                adjustQuantity(cartLineId, -quantityStep, orderMode);
-              }}
-              onRemove={(cartLineId) => {
-                void handleRemoveLine(cartLineId);
+              onIncrease={handleIncreaseLine}
+              onDecrease={handleDecreaseLine}
+              onRemove={(line) => {
+                void handleRemoveLine(line);
               }}
               onRemoveSection={(cartLineIds) => {
                 void handleRemoveSection(cartLineIds);

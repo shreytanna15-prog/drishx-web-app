@@ -27,6 +27,7 @@ export type CartPowerLine = {
   lineTotal: number;
   isVirtual?: boolean;
   parentCartLineId?: string;
+  wholesaleCellKey?: string;
 };
 
 export type CartProductSection = {
@@ -62,35 +63,45 @@ function getCartProductMeta(item: CartItem): {
   };
 }
 
+/** Matches card convention: sph/cyl x axis · ADD */
+function formatPowerLineLabel(parts: {
+  sphCyl: string;
+  axis?: number | null;
+  add?: number | null;
+  includeAdd: boolean;
+}): string {
+  let label = parts.sphCyl;
+  if (parts.axis != null) {
+    label = `${label} x ${formatAxisValue(parts.axis)}`;
+  }
+  if (parts.includeAdd && parts.add != null) {
+    label = `${label} ADD ${formatAddValue(parts.add)}`;
+  }
+  return label;
+}
+
 function formatSphCyl(item: CartItem): string {
-  const parts = [formatSphCylSlash(item)];
-  if (item.lensType !== "Single Vision" && item.add != null) {
-    parts.push(`ADD ${formatAddValue(item.add)}`);
-  }
-  if (item.axis != null) {
-    parts.push(`AXIS ${formatAxisValue(item.axis)}`);
-  }
-  return parts.join(" · ");
+  return formatPowerLineLabel({
+    sphCyl: formatSphCylSlash(item),
+    axis: item.axis,
+    add: item.add,
+    includeAdd: item.lensType !== "Single Vision",
+  });
 }
 
 function formatExpandedWholesaleLabel(
   line: ReturnType<typeof expandWholesaleSpec>[number],
   lensType: CartItem["lensType"]
 ): string {
-  const sphCyl = `${formatPowerLabel(line.sph)} / ${
+  const sphCyl = `${formatPowerLabel(line.sph)}/${
     line.cyl != null ? formatPowerLabel(line.cyl) : "—"
   }`;
-  if (lensType === "Single Vision") {
-    return sphCyl;
-  }
-  const parts = [sphCyl];
-  if (line.add != null) {
-    parts.push(`ADD ${formatAddValue(line.add)}`);
-  }
-  if (line.axis != null) {
-    parts.push(`AXIS ${formatAxisValue(line.axis)}`);
-  }
-  return parts.join(" · ");
+  return formatPowerLineLabel({
+    sphCyl,
+    axis: line.axis,
+    add: line.add,
+    includeAdd: lensType !== "Single Vision",
+  });
 }
 
 function buildWholesaleSection(item: CartItem, spec: WholesaleSpec): CartProductSection {
@@ -120,6 +131,7 @@ export function buildWholesalePowerLines(section: CartProductSection): CartPower
   return expandWholesaleSpec(section.wholesaleSpec).map((line) => ({
     cartLineId: `${section.parentCartLineId}:${line.key}`,
     parentCartLineId: section.parentCartLineId,
+    wholesaleCellKey: line.key,
     isVirtual: true,
     sphCylLabel: formatExpandedWholesaleLabel(line, section.lensType),
     quantity: line.pairs,

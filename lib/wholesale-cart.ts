@@ -1,4 +1,8 @@
-import { isValidPairQuantity, piecesFromDisplayQuantity } from "@/lib/order-quantity";
+import {
+  isValidPairQuantity,
+  MIN_PAIR_QUANTITY,
+  piecesFromDisplayQuantity,
+} from "@/lib/order-quantity";
 import {
   buildWholesaleMatrixSpec,
   collectQtyEntriesFromSpec,
@@ -156,18 +160,17 @@ export function buildQtyMapFromWholesaleSpec(
     return {};
   }
 
-  const defaultPairs = String(Math.max(1, Math.floor(spec.defaultPairsPerCell)));
+  const defaultPairs = resolveDefaultPairs(spec.defaultPairsPerCell);
   const qtyMap: Record<string, string> = {};
 
   for (const row of matrixSpec.rows) {
     for (const col of matrixSpec.cols) {
       for (const cell of matrixSpec.cellsAt(row, col)) {
-        const override = spec.qtyOverrides[cell.key];
-        const pairs =
-          override !== undefined
-            ? Math.max(0, Math.floor(override))
-            : Number(defaultPairs);
-        if (pairs >= 1) {
+        const pairs = resolveCellPairs(
+          spec.qtyOverrides[cell.key],
+          defaultPairs
+        );
+        if (pairs >= MIN_PAIR_QUANTITY) {
           qtyMap[cell.key] = String(pairs);
         }
       }
@@ -175,6 +178,77 @@ export function buildQtyMapFromWholesaleSpec(
   }
 
   return qtyMap;
+}
+
+function resolveDefaultPairs(defaultPairsPerCell: number): number {
+  return isValidPairQuantity(defaultPairsPerCell) ? defaultPairsPerCell : 1;
+}
+
+function resolveCellPairs(
+  override: number | undefined,
+  defaultPairs: number
+): number {
+  if (override !== undefined) {
+    return isValidPairQuantity(override) ? override : 0;
+  }
+  return isValidPairQuantity(defaultPairs) ? defaultPairs : 0;
+}
+
+/**
+ * Adjust a single matrix cell's pair quantity inside a wholesale batch spec.
+ * Returns null when no power lines would remain (caller should remove the cart line).
+ */
+export function adjustWholesaleSpecCellPairs(
+  spec: WholesaleSpec,
+  cellKey: string,
+  deltaPairs: number
+): WholesaleSpec | null {
+  if (!deltaPairs || !Number.isFinite(deltaPairs)) {
+    return spec;
+  }
+
+  const defaultPairs = resolveDefaultPairs(spec.defaultPairsPerCell);
+  const currentPairs = resolveCellPairs(spec.qtyOverrides[cellKey], defaultPairs);
+  const rawNext = Math.round((currentPairs + deltaPairs) * 2) / 2;
+  const nextPairs = rawNext < MIN_PAIR_QUANTITY - 1e-9 ? 0 : rawNext;
+
+  return applyWholesaleCellPairs(spec, cellKey, nextPairs, defaultPairs);
+}
+
+export function setWholesaleSpecCellPairs(
+  spec: WholesaleSpec,
+  cellKey: string,
+  pairs: number
+): WholesaleSpec | null {
+  const defaultPairs = resolveDefaultPairs(spec.defaultPairsPerCell);
+  const nextPairs =
+    !Number.isFinite(pairs) || pairs < MIN_PAIR_QUANTITY - 1e-9
+      ? 0
+      : Math.round(pairs * 2) / 2;
+
+  return applyWholesaleCellPairs(spec, cellKey, nextPairs, defaultPairs);
+}
+
+function applyWholesaleCellPairs(
+  spec: WholesaleSpec,
+  cellKey: string,
+  nextPairs: number,
+  defaultPairs: number
+): WholesaleSpec | null {
+  const qtyOverrides = { ...spec.qtyOverrides };
+  if (nextPairs <= 0) {
+    qtyOverrides[cellKey] = 0;
+  } else if (Math.abs(nextPairs - defaultPairs) < 1e-9) {
+    delete qtyOverrides[cellKey];
+  } else {
+    qtyOverrides[cellKey] = nextPairs;
+  }
+
+  const nextSpec: WholesaleSpec = { ...spec, qtyOverrides };
+  if (expandWholesaleSpec(nextSpec).length === 0) {
+    return null;
+  }
+  return nextSpec;
 }
 
 export function expandWholesaleSpec(
@@ -190,17 +264,16 @@ export function expandWholesaleSpec(
     return [];
   }
 
-  const defaultPairs = Math.max(1, Math.floor(spec.defaultPairsPerCell));
+  const defaultPairs = resolveDefaultPairs(spec.defaultPairsPerCell);
   const qtyMap: Record<string, string> = {};
   for (const row of matrixSpec.rows) {
     for (const col of matrixSpec.cols) {
       for (const cell of matrixSpec.cellsAt(row, col)) {
-        const override = spec.qtyOverrides[cell.key];
-        const pairs =
-          override !== undefined
-            ? Math.max(0, Math.floor(override))
-            : defaultPairs;
-        if (pairs >= 1) {
+        const pairs = resolveCellPairs(
+          spec.qtyOverrides[cell.key],
+          defaultPairs
+        );
+        if (pairs >= MIN_PAIR_QUANTITY) {
           qtyMap[cell.key] = String(pairs);
         }
       }

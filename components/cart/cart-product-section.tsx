@@ -11,15 +11,14 @@ import {
 import { useMemo, useState } from "react";
 import type { CartPowerLine, CartProductSection } from "@/lib/cart-display";
 import { buildWholesalePowerLines } from "@/lib/cart-display";
-import { cn } from "@/lib/utils";
+import { formatPairQuantity } from "@/lib/order-quantity";
 
 type CartProductSectionCardProps = {
   section: CartProductSection;
-  isWholesale: boolean;
   qtyColumnLabel: string;
-  onIncrease: (cartLineId: string) => void;
-  onDecrease: (cartLineId: string) => void;
-  onRemove: (cartLineId: string) => void;
+  onIncrease: (line: CartPowerLine) => void;
+  onDecrease: (line: CartPowerLine) => void;
+  onRemove: (line: CartPowerLine) => void;
   onRemoveSection: (cartLineIds: string[]) => void;
 };
 
@@ -34,8 +33,6 @@ function CartPowerRow({
   onDecrease: () => void;
   onRemove: () => void;
 }) {
-  const readOnly = line.isVirtual;
-
   return (
     <div className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-[var(--brand-card-border)] py-3 last:border-b-0 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)_minmax(0,0.8fr)]">
       <div className="min-w-0">
@@ -48,49 +45,39 @@ function CartPowerRow({
       </div>
 
       <div className="flex items-center justify-center gap-2">
-        {readOnly ? (
-          <span className="min-w-[2rem] text-center text-sm font-bold text-[var(--brand-text)]">
-            {line.quantity}
-          </span>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={onDecrease}
-              className="flex size-8 items-center justify-center rounded-lg border border-[var(--brand-primary)]/60 text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10"
-              aria-label="Decrease quantity"
-            >
-              <Minus className="size-4" />
-            </button>
-            <span className="min-w-[2rem] text-center text-sm font-bold text-[var(--brand-text)]">
-              {line.quantity}
-            </span>
-            <button
-              type="button"
-              onClick={onIncrease}
-              className="flex size-8 items-center justify-center rounded-lg border border-[var(--brand-primary)]/60 text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10"
-              aria-label="Increase quantity"
-            >
-              <Plus className="size-4" />
-            </button>
-          </>
-        )}
+        <button
+          type="button"
+          onClick={onDecrease}
+          className="flex size-8 items-center justify-center rounded-lg border border-[var(--brand-primary)]/60 text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10"
+          aria-label="Decrease quantity"
+        >
+          <Minus className="size-4" />
+        </button>
+        <span className="min-w-[2rem] text-center text-sm font-bold text-[var(--brand-text)]">
+          {formatPairQuantity(line.quantity)}
+        </span>
+        <button
+          type="button"
+          onClick={onIncrease}
+          className="flex size-8 items-center justify-center rounded-lg border border-[var(--brand-primary)]/60 text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10"
+          aria-label="Increase quantity"
+        >
+          <Plus className="size-4" />
+        </button>
       </div>
 
       <div className="flex items-center justify-end gap-2">
         <span className="text-sm font-extrabold text-[var(--brand-primary)]">
           ₹{line.lineTotal.toLocaleString("en-IN")}
         </span>
-        {!readOnly ? (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="rounded-lg p-1.5 text-[var(--brand-danger)] transition-colors hover:bg-[var(--brand-danger)]/10"
-            aria-label="Remove line"
-          >
-            <Trash2 className="size-4" />
-          </button>
-        ) : null}
+        <button
+          type="button"
+          onClick={onRemove}
+          className="rounded-lg p-1.5 text-[var(--brand-danger)] transition-colors hover:bg-[var(--brand-danger)]/10"
+          aria-label="Remove line"
+        >
+          <Trash2 className="size-4" />
+        </button>
       </div>
     </div>
   );
@@ -98,7 +85,6 @@ function CartPowerRow({
 
 export function CartProductSectionCard({
   section,
-  isWholesale,
   qtyColumnLabel,
   onIncrease,
   onDecrease,
@@ -150,7 +136,7 @@ export function CartProductSectionCard({
           onClick={() => setExpanded((value) => !value)}
           className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
         >
-          {section.totalPairs} pr
+          {formatPairQuantity(section.totalPairs)} pr
           {expanded ? (
             <ChevronUp className="size-4" />
           ) : (
@@ -170,9 +156,9 @@ export function CartProductSectionCard({
             <CartPowerRow
               key={line.cartLineId}
               line={line}
-              onIncrease={() => onIncrease(line.cartLineId)}
-              onDecrease={() => onDecrease(line.cartLineId)}
-              onRemove={() => onRemove(line.cartLineId)}
+              onIncrease={() => onIncrease(line)}
+              onDecrease={() => onDecrease(line)}
+              onRemove={() => onRemove(line)}
             />
           ))}
         </div>
