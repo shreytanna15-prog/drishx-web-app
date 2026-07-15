@@ -11,6 +11,8 @@ import {
   parseWhiteProductLine,
   whiteLensTypeDisplayTitle,
 } from "@/lib/white-catalog";
+import { getOnBehalfCustomOrderContext } from "@/lib/on-behalf-custom-order";
+import { useWhiteLensBasePath } from "@/lib/on-behalf-order-hooks";
 import { cn } from "@/lib/utils";
 
 type WhiteLensHubProps = {
@@ -19,6 +21,10 @@ type WhiteLensHubProps = {
 };
 
 export function WhiteLensHub({ lensType: lensTypeParam, line: lineParam }: WhiteLensHubProps) {
+  const basePath = useWhiteLensBasePath();
+  const onBehalf = basePath.startsWith("/employee")
+    ? getOnBehalfCustomOrderContext()
+    : null;
   const lensType = parseWhiteLensType(lensTypeParam);
   const lineId = parseWhiteProductLine(lineParam);
 
@@ -29,7 +35,7 @@ export function WhiteLensHub({ lensType: lensTypeParam, line: lineParam }: White
     return (
       <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-6 sm:px-6">
         <Button variant="ghost" asChild className="mb-4 px-0">
-          <Link href={`/white/${lensType}`}>
+          <Link href={`${basePath}/${lensType}`}>
             <ArrowLeft className="size-4" />
             Back
           </Link>
@@ -40,7 +46,7 @@ export function WhiteLensHub({ lensType: lensTypeParam, line: lineParam }: White
           {variants.map((variant) => (
             <Link
               key={variant.id}
-              href={`/white/product?line=${lineId}&variant=${variant.id}`}
+              href={`${basePath}/product?line=${lineId}&variant=${variant.id}`}
               className="flex items-center justify-between rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 py-4 transition-colors hover:border-[var(--brand-primary)]/40"
             >
               <div>
@@ -60,7 +66,7 @@ export function WhiteLensHub({ lensType: lensTypeParam, line: lineParam }: White
     return (
       <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-6 sm:px-6">
         <Button variant="ghost" asChild className="mb-4 px-0">
-          <Link href="/white">
+          <Link href={basePath}>
             <ArrowLeft className="size-4" />
             Back
           </Link>
@@ -73,7 +79,7 @@ export function WhiteLensHub({ lensType: lensTypeParam, line: lineParam }: White
           {lines.map((line) => (
             <Link
               key={line.id}
-              href={`/white/${lensType}/${line.id}`}
+              href={`${basePath}/${lensType}/${line.id}`}
               className="flex items-center justify-between rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 py-4 transition-colors hover:border-[var(--brand-primary)]/40"
             >
               <div>
@@ -91,18 +97,24 @@ export function WhiteLensHub({ lensType: lensTypeParam, line: lineParam }: White
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-6 sm:px-6">
       <Button variant="ghost" asChild className="mb-4 px-0">
-        <Link href="/">
+        <Link href={onBehalf?.returnTo ?? "/home"}>
           <ArrowLeft className="size-4" />
-          Back to home
+          {onBehalf ? "Back to order on behalf" : "Back to home"}
         </Link>
       </Button>
-      <h1 className="text-2xl font-extrabold text-[var(--brand-text)]">White</h1>
-      <p className="mt-1 text-sm text-[var(--brand-text-muted)]">White lens product catalog</p>
+      <h1 className="text-2xl font-extrabold text-[var(--brand-text)]">
+        {onBehalf ? "White order on behalf" : "White"}
+      </h1>
+      <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
+        {onBehalf
+          ? `For ${onBehalf.customerLabel}`
+          : "White lens product catalog"}
+      </p>
       <div className="mt-6 space-y-3">
         {WHITE_LENS_TYPES.map((option) => (
           <Link
             key={option.id}
-            href={`/white/${option.id}`}
+            href={`${basePath}/${option.id}`}
             className={cn(
               "flex items-center justify-between rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 py-4 transition-colors hover:border-[var(--brand-primary)]/40"
             )}

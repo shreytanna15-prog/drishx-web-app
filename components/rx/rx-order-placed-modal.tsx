@@ -8,10 +8,18 @@ export function RxOrderPlacedModal({
   open,
   message,
   onClose,
+  primaryHref = "/my-orders",
+  primaryLabel = "View orders",
+  secondaryHref = "/home",
+  secondaryLabel = "Continue shopping",
 }: {
   open: boolean;
   message: string;
   onClose: () => void;
+  primaryHref?: string;
+  primaryLabel?: string;
+  secondaryHref?: string;
+  secondaryLabel?: string;
 }) {
   if (!open) {
     return null;
@@ -35,7 +43,7 @@ export function RxOrderPlacedModal({
             asChild
             onClick={onClose}
           >
-            <Link href="/my-orders">View orders</Link>
+            <Link href={primaryHref}>{primaryLabel}</Link>
           </Button>
           <Button
             variant="outline"
@@ -43,7 +51,7 @@ export function RxOrderPlacedModal({
             asChild
             onClick={onClose}
           >
-            <Link href="/home">Continue shopping</Link>
+            <Link href={secondaryHref}>{secondaryLabel}</Link>
           </Button>
         </div>
       </div>

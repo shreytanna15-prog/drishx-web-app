@@ -17,10 +17,12 @@ import {
   getMaterialOptionsForLensType,
   type ColorLensMaterialId,
 } from "@/lib/color-lens-specifications";
+import { useColorLensBasePath } from "@/lib/on-behalf-order-hooks";
 import { cn } from "@/lib/utils";
 
 export function ColorLensSpecificationsScreen() {
   const router = useRouter();
+  const basePath = useColorLensBasePath();
   const order = useColorLensOrder();
 
   const materialOptions = useMemo(
@@ -51,7 +53,7 @@ export function ColorLensSpecificationsScreen() {
 
   const handleContinue = () => {
     router.push(
-      buildColorLensPath("/color/review-confirm", {
+      buildColorLensPath(`${basePath}/review-confirm`, {
         ...order,
         materialId: selectedMaterialId,
       })
@@ -63,7 +65,7 @@ export function ColorLensSpecificationsScreen() {
       <ColorPageHeader
         title="Lens Specifications"
         subtitle={`Configure material and index for ${colorLabel}`}
-        backHref="/color"
+        backHref={basePath}
       />
 
       <div className="space-y-4">

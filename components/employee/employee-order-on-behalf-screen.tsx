@@ -30,6 +30,12 @@ import {
 } from "@/lib/orders-api";
 import type { FilterOption, LensItem } from "@/lib/types/lens";
 import { cn } from "@/lib/utils";
+import {
+  EMPLOYEE_ON_BEHALF_COLOR_PATH,
+  EMPLOYEE_ON_BEHALF_RX_PATH,
+  EMPLOYEE_ON_BEHALF_WHITE_PATH,
+  setOnBehalfCustomOrderContext,
+} from "@/lib/on-behalf-custom-order";
 
 type Step = "customer" | "shop";
 type SelectedLine = { lens: LensItem; quantity: number };
@@ -40,6 +46,27 @@ const FILTER_OPTIONS: FilterOption[] = [
   "Progressive",
   "Single Vision",
 ];
+
+const CUSTOM_ORDER_OPTIONS = [
+  {
+    id: "rx",
+    label: "Rx",
+    description: "Custom prescription order",
+    path: EMPLOYEE_ON_BEHALF_RX_PATH,
+  },
+  {
+    id: "white",
+    label: "White",
+    description: "White lens catalog order",
+    path: EMPLOYEE_ON_BEHALF_WHITE_PATH,
+  },
+  {
+    id: "color",
+    label: "Color orders",
+    description: "Tinted / fashion color lens",
+    path: EMPLOYEE_ON_BEHALF_COLOR_PATH,
+  },
+] as const;
 
 const ON_BEHALF_STORAGE_KEY = "drishx-employee-on-behalf-state";
 
@@ -565,6 +592,35 @@ export function EmployeeOrderOnBehalfScreen() {
                   </button>
                 );
               })}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {CUSTOM_ORDER_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => {
+                    if (!selectedCustomerId) return;
+                    setOnBehalfCustomOrderContext({
+                      userId: selectedCustomerId,
+                      customerLabel: selectedCustomerLabel,
+                      returnTo: "/employee/orders/on-behalf",
+                    });
+                    router.push(option.path);
+                  }}
+                  className={cn(
+                    "rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 py-4 text-left transition-all",
+                    "hover:border-[var(--brand-primary)]/45 hover:bg-[var(--brand-primary)]/8"
+                  )}
+                >
+                  <p className="text-base font-extrabold text-[var(--brand-text)]">
+                    {option.label}
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
+                    {option.description}
+                  </p>
+                </button>
+              ))}
             </div>
 
             <div className="space-y-3">

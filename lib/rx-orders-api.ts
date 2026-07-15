@@ -15,6 +15,8 @@ export type PlaceRxOrderInput = {
   remarks?: string | null;
   remarkTags?: string[];
   prescriptionImageUrl?: string | null;
+  /** When staff places for a customer (order on behalf). */
+  userId?: string;
 };
 
 export type UploadRxPrescriptionResult = {
@@ -45,13 +47,17 @@ export async function placeRxOrder(
   }
 
   try {
+    const { userId, ...orderBody } = input;
     const response = await fetch("/api/orders/rx", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(input),
+      body: JSON.stringify({
+        ...orderBody,
+        ...(userId?.trim() ? { userId: userId.trim() } : {}),
+      }),
     });
 
     const result = await response.json().catch(() => ({}));

@@ -16,6 +16,8 @@ import {
   ColorPageHeader,
 } from "@/components/color/color-page-header";
 import { COLOR_LENS_FEATURES, COLOR_LENS_MODES } from "@/lib/color-lens";
+import { getOnBehalfCustomOrderContext } from "@/lib/on-behalf-custom-order";
+import { useColorLensBasePath } from "@/lib/on-behalf-order-hooks";
 import { cn } from "@/lib/utils";
 
 const MODE_ICONS = {
@@ -32,6 +34,10 @@ const FEATURE_ICONS = {
 
 export function ColorLensHub() {
   const router = useRouter();
+  const basePath = useColorLensBasePath();
+  const onBehalf = basePath.startsWith("/employee")
+    ? getOnBehalfCustomOrderContext()
+    : null;
 
   return (
     <div className="relative mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -43,9 +49,13 @@ export function ColorLensHub() {
 
       <div className="relative space-y-8">
         <ColorPageHeader
-          title="Color Lens"
-          subtitle="Tinted & Fashion Prescription Lens"
-          backHref="/home"
+          title={onBehalf ? "Color order on behalf" : "Color Lens"}
+          subtitle={
+            onBehalf
+              ? `For ${onBehalf.customerLabel}`
+              : "Tinted & Fashion Prescription Lens"
+          }
+          backHref={onBehalf?.returnTo ?? "/home"}
         />
 
         <section className="space-y-4">
@@ -61,7 +71,7 @@ export function ColorLensHub() {
                 <button
                   key={mode.id}
                   type="button"
-                  onClick={() => router.push(`/color/${mode.id}`)}
+                  onClick={() => router.push(`${basePath}/${mode.id}`)}
                   className={cn(
                     "group flex min-h-[11rem] flex-col items-center gap-4 rounded-2xl border p-6 text-center transition-all",
                     "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
@@ -126,7 +136,7 @@ export function ColorLensHub() {
             </p>
           </div>
           <Link
-            href="/color/predefined"
+            href={`${basePath}/predefined`}
             className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-[#f5ad42] to-[#e8941f] px-5 py-3 text-sm font-extrabold text-[var(--brand-primary-text)] shadow-[0_4px_16px_rgba(240,161,50,0.3)] transition-all hover:from-[#f7b84e] hover:to-[#ec9d28]"
           >
             Explore

@@ -15,6 +15,7 @@ import {
   type ColorLensTypeOption,
 } from "@/lib/color-lens";
 import { buildColorLensPath } from "@/lib/color-lens-order";
+import { useColorLensBasePath } from "@/lib/on-behalf-order-hooks";
 import { cn } from "@/lib/utils";
 
 const TYPE_ICONS = {
@@ -65,6 +66,7 @@ function LensTypeCard({
 
 export function ColorLensTypeScreen() {
   const router = useRouter();
+  const basePath = useColorLensBasePath();
   const order = useColorLensOrder();
   const [selectedTypeId, setSelectedTypeId] = useState<ColorLensTypeId>("single-vision");
 
@@ -80,7 +82,7 @@ export function ColorLensTypeScreen() {
 
   const handleContinue = () => {
     router.push(
-      buildColorLensPath("/color/enter-power", {
+      buildColorLensPath(`${basePath}/enter-power`, {
         ...order,
         lensType: selectedTypeId,
       })
@@ -92,7 +94,7 @@ export function ColorLensTypeScreen() {
       <ColorPageHeader
         title="Select Lens Type"
         subtitle="Choose the lens that fits your vision needs"
-        backHref="/color"
+        backHref={basePath}
       />
 
       {colorHex ? (

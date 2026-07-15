@@ -35,6 +35,11 @@ import {
   type ColorLensMaterialId,
 } from "@/lib/color-lens-specifications";
 import { hexToRgba } from "@/lib/color-utils";
+import {
+  clearOnBehalfCustomOrderContext,
+  getOnBehalfCustomOrderContext,
+} from "@/lib/on-behalf-custom-order";
+import { useColorLensBasePath } from "@/lib/on-behalf-order-hooks";
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
@@ -49,6 +54,15 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
 
 export function ColorReviewConfirmScreen() {
   const order = useColorLensOrder();
+  const basePath = useColorLensBasePath();
+  const [onBehalfContext] = useState(() => {
+    if (typeof window === "undefined") return null;
+    if (!window.location.pathname.startsWith("/employee/orders/on-behalf/")) {
+      return null;
+    }
+    return getOnBehalfCustomOrderContext();
+  });
+  const onBehalfUserId = onBehalfContext?.userId;
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderPlacedMessage, setOrderPlacedMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,9 +104,13 @@ export function ColorReviewConfirmScreen() {
         colorHex,
         prescription,
         materialId,
+        ...(onBehalfUserId ? { userId: onBehalfUserId } : {}),
       });
 
       if (result.success) {
+        if (onBehalfUserId) {
+          clearOnBehalfCustomOrderContext();
+        }
         setOrderPlacedMessage(result.message);
         return;
       }
@@ -116,12 +134,18 @@ export function ColorReviewConfirmScreen() {
         open={orderPlacedMessage !== null}
         message={orderPlacedMessage ?? ""}
         onClose={() => setOrderPlacedMessage(null)}
+        primaryHref={onBehalfContext ? "/employee/orders" : "/my-orders"}
+        primaryLabel={onBehalfContext ? "View staff orders" : "View orders"}
+        secondaryHref={onBehalfContext?.returnTo ?? "/home"}
+        secondaryLabel={
+          onBehalfContext ? "Back to order on behalf" : "Continue shopping"
+        }
       />
 
       <ColorPageHeader
         title="Review & Confirm"
         subtitle="Check your color lens order before placing"
-        backHref="/color"
+        backHref={basePath}
       />
 
       <ColorCard className="mb-4 overflow-hidden p-0">
@@ -145,7 +169,7 @@ export function ColorReviewConfirmScreen() {
             ) : null}
           </div>
           <Link
-            href="/color/predefined"
+            href={`${basePath}/predefined`}
             className="text-xs font-bold text-[var(--brand-link)] hover:underline"
           >
             Change

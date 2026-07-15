@@ -50,6 +50,10 @@ import {
   type RxPrescription,
 } from "@/lib/rx-order";
 import { placeRxOrder, uploadRxPrescription } from "@/lib/rx-orders-api";
+import {
+  clearOnBehalfCustomOrderContext,
+  getOnBehalfCustomOrderContext,
+} from "@/lib/on-behalf-custom-order";
 import { cn } from "@/lib/utils";
 
 type EyeSide = "right" | "left";
@@ -64,6 +68,14 @@ const LENS_TYPE_ICONS = {
 export function RxOrderScreen() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [onBehalfContext] = useState(() => {
+    if (typeof window === "undefined") return null;
+    if (!window.location.pathname.startsWith("/employee/orders/on-behalf/")) {
+      return null;
+    }
+    return getOnBehalfCustomOrderContext();
+  });
+  const onBehalfUserId = onBehalfContext?.userId;
 
   const [lensType, setLensType] = useState<RxLensTypeId>("single-vision");
   const [orderFor, setOrderFor] = useState<RxOrderFor>("both");
@@ -278,9 +290,13 @@ export function RxOrderScreen() {
         remarks: remarks.trim() || null,
         remarkTags,
         prescriptionImageUrl,
+        ...(onBehalfUserId ? { userId: onBehalfUserId } : {}),
       });
 
       if (result.success) {
+        if (onBehalfUserId) {
+          clearOnBehalfCustomOrderContext();
+        }
         setOrderPlacedMessage(result.message);
         return;
       }
@@ -335,6 +351,16 @@ export function RxOrderScreen() {
         open={orderPlacedMessage !== null}
         message={orderPlacedMessage ?? ""}
         onClose={() => setOrderPlacedMessage(null)}
+        primaryHref={
+          onBehalfContext ? "/employee/orders" : "/my-orders"
+        }
+        primaryLabel={onBehalfContext ? "View staff orders" : "View orders"}
+        secondaryHref={
+          onBehalfContext?.returnTo ?? "/home"
+        }
+        secondaryLabel={
+          onBehalfContext ? "Back to order on behalf" : "Continue shopping"
+        }
       />
 
       <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
@@ -343,17 +369,25 @@ export function RxOrderScreen() {
             variant="outline"
             size="icon"
             className="size-9 shrink-0 rounded-xl border-[var(--brand-input-border)]"
-            onClick={() => router.back()}
+            onClick={() => {
+              if (onBehalfContext?.returnTo) {
+                router.push(onBehalfContext.returnTo);
+                return;
+              }
+              router.back();
+            }}
             aria-label="Go back"
           >
             <ChevronLeft className="size-5 text-[var(--brand-primary)]" />
           </Button>
           <div className="flex-1 text-center">
             <h1 className="text-xl font-extrabold text-[var(--brand-text)] sm:text-2xl">
-              New RX Order
+              {onBehalfContext ? "RX order on behalf" : "New RX Order"}
             </h1>
             <p className="mt-0.5 text-sm text-[var(--brand-text-muted)]">
-              Create a new prescription order
+              {onBehalfContext
+                ? `For ${onBehalfContext.customerLabel}`
+                : "Create a new prescription order"}
             </p>
           </div>
           <div className="size-9 shrink-0" aria-hidden />

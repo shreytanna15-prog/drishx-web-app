@@ -16,6 +16,7 @@ import {
 } from "@/components/color/color-wheel-picker";
 import { buildColorLensPath } from "@/lib/color-lens-order";
 import { hslToHex, mixHslColors, type HslColor } from "@/lib/color-utils";
+import { useColorLensBasePath } from "@/lib/on-behalf-order-hooks";
 import { cn } from "@/lib/utils";
 
 const MAX_COLORS = 3;
@@ -27,6 +28,7 @@ const DEFAULT_COLORS: WheelColor[] = [
 
 export function ColorCustomMixScreen() {
   const router = useRouter();
+  const basePath = useColorLensBasePath();
   const [selectedColors, setSelectedColors] = useState<WheelColor[]>(DEFAULT_COLORS);
   const [activeColorId, setActiveColorId] = useState(DEFAULT_COLORS[0].id);
   const [tintStrength, setTintStrength] = useState(55);
@@ -77,7 +79,7 @@ export function ColorCustomMixScreen() {
 
   const handleNext = () => {
     router.push(
-      buildColorLensPath("/color/lens-type", {
+      buildColorLensPath(`${basePath}/lens-type`, {
         colorId: "custom-mix",
         colorName: "Custom Mix",
         colorHex: mixedPreview,
@@ -91,7 +93,7 @@ export function ColorCustomMixScreen() {
       <ColorPageHeader
         title="Custom Mix"
         subtitle={`Blend up to ${MAX_COLORS} custom tints`}
-        backHref="/color"
+        backHref={basePath}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_22rem] lg:items-start">

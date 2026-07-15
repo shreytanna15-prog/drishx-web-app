@@ -10,12 +10,14 @@ import {
 } from "@/components/color/color-page-header";
 import { buildColorLensPath } from "@/lib/color-lens-order";
 import { uploadColorReference } from "@/lib/color-reference-api";
+import { useColorLensBasePath } from "@/lib/on-behalf-order-hooks";
 import { cn } from "@/lib/utils";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
 export function ColorUploadReferenceScreen() {
   const router = useRouter();
+  const basePath = useColorLensBasePath();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [pickedFile, setPickedFile] = useState<File | null>(null);
@@ -61,7 +63,7 @@ export function ColorUploadReferenceScreen() {
     try {
       const result = await uploadColorReference(pickedFile);
       router.push(
-        buildColorLensPath("/color/lens-type", {
+        buildColorLensPath(`${basePath}/lens-type`, {
           colorId: "upload-reference",
           colorName: "Color Reference",
           referenceImageUrl: result.storedImageUrl || result.imageUrl,
@@ -76,7 +78,7 @@ export function ColorUploadReferenceScreen() {
 
   return (
     <div className="relative mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <ColorPageHeader title="Upload Reference" backHref="/color" />
+      <ColorPageHeader title="Upload Reference" backHref={basePath} />
 
       <div
         onDragOver={(event) => {

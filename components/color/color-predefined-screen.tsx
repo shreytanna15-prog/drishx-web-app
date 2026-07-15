@@ -16,9 +16,11 @@ import {
   buildColorLensPath,
 } from "@/lib/color-lens-order";
 import { PREDEFINED_LENS_COLORS } from "@/lib/color-lens";
+import { useColorLensBasePath } from "@/lib/on-behalf-order-hooks";
 
 export function ColorPredefinedScreen() {
   const router = useRouter();
+  const basePath = useColorLensBasePath();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tintStrength, setTintStrength] = useState(COLOR_LENS_DEFAULT_TINT_STRENGTH);
 
@@ -30,7 +32,7 @@ export function ColorPredefinedScreen() {
   const handleContinue = () => {
     if (!selectedColor) return;
     router.push(
-      buildColorLensPath("/color/lens-type", {
+      buildColorLensPath(`${basePath}/lens-type`, {
         colorId: selectedColor.id,
         colorName: selectedColor.name,
         colorHex: selectedColor.hex,
@@ -43,7 +45,7 @@ export function ColorPredefinedScreen() {
 
   return (
     <div className="relative mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <ColorPageHeader title="Predefined Colors" backHref="/color" />
+      <ColorPageHeader title="Predefined Colors" backHref={basePath} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_22rem] lg:items-start">
         <ColorCard>

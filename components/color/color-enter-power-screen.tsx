@@ -26,6 +26,7 @@ import {
   type ColorLensPrescription,
   type EyePowerValues,
 } from "@/lib/color-lens-prescription";
+import { useColorLensBasePath } from "@/lib/on-behalf-order-hooks";
 import {
   snapToRxAxis,
   stepRxAxis,
@@ -123,6 +124,7 @@ function EyePowerCard({
 
 export function ColorEnterPowerScreen() {
   const router = useRouter();
+  const basePath = useColorLensBasePath();
   const order = useColorLensOrder();
   const lensType = (order.lensType as ColorLensTypeId | undefined) ?? "single-vision";
 
@@ -225,7 +227,7 @@ export function ColorEnterPowerScreen() {
   const handleContinue = () => {
     const snapped = snapPrescriptionToLensType(prescription, lensType);
     router.push(
-      buildColorLensPath("/color/lens-specifications", {
+      buildColorLensPath(`${basePath}/lens-specifications`, {
         ...order,
         prescription: snapped,
       })
@@ -237,7 +239,7 @@ export function ColorEnterPowerScreen() {
       <ColorPageHeader
         title="Enter Power"
         subtitle="Set prescription values for each eye"
-        backHref="/color"
+        backHref={basePath}
       />
 
       <label className="mb-4 flex cursor-pointer items-center gap-3 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 py-3">
