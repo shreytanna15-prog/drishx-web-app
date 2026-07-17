@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BrandMark } from "@/components/brand-logo";
 import {
   Sidebar,
   SidebarContent,
@@ -39,9 +40,7 @@ export function AppSidebar() {
               className="h-11 rounded-xl hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,var(--brand-card))]"
             >
               <Link href="/home">
-                <span className="dashboard-sidebar__nav-icon flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)] text-sm font-extrabold text-[var(--brand-primary-text)] shadow-[0_2px_8px_rgba(240,161,50,0.35)]">
-                  D
-                </span>
+                <BrandMark className="dashboard-sidebar__nav-icon size-8 shadow-[0_2px_8px_rgba(0,0,0,0.22)]" />
                 <div className="grid flex-1 text-left leading-tight">
                   <span className="truncate text-base font-extrabold tracking-tight text-[var(--brand-text)]">
                     Drishx

@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
 import {
   AuthField,
   AuthFooterLink,
@@ -15,15 +15,22 @@ import {
   getPostLoginRoute,
 } from "@/lib/auth-routing";
 
-function LoginForm() {
+export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user, isLoading, login: setSession } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const emailParam = new URLSearchParams(window.location.search).get("email");
+    if (emailParam) {
+      setEmail(emailParam);
+    }
+  }, []);
 
   useEffect(() => {
     if (isLoading || !user) return;
@@ -37,13 +44,6 @@ function LoginForm() {
       router.replace(nextRoute);
     }
   }, [user, isLoading, router]);
-
-  useEffect(() => {
-    const emailParam = searchParams.get("email");
-    if (emailParam) {
-      setEmail(emailParam);
-    }
-  }, [searchParams]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -77,10 +77,7 @@ function LoginForm() {
   }
 
   return (
-    <AuthLayout
-      title="Login"
-      subtitle="Welcome back to Drishx"
-    >
+    <AuthLayout title="Login" subtitle="Welcome back to Drishx">
       <form onSubmit={handleSubmit}>
         {error && <div className="auth-alert-error">{error}</div>}
 
@@ -121,13 +118,5 @@ function LoginForm() {
         href="/signup"
       />
     </AuthLayout>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
   );
 }

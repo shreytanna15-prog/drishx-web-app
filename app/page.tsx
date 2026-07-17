@@ -102,12 +102,12 @@ function HomeContent() {
             />
 
             <h1 className="landing-hero__title">
-              Precision lenses,
+              One System,
               <br />
               <span className="landing-hero__title-accent">
-                delivered for you
+                Endless Possibilities.
               </span>
-            </h1>
+            </h1> 
 
             <p className="landing-hero__subtitle">
               Sign in to manage your orders, or create a new customer account
@@ -189,7 +189,9 @@ export default function Home() {
       {mounted && !splashDone && (
         <BrandSplash onFinish={handleSplashFinish} />
       )}
-      {!mounted && <div className="brand-splash" aria-hidden />}
+      {!mounted && (
+        <div className="brand-splash brand-splash--pending" aria-hidden />
+      )}
       <div
         className={splashDone ? "flex min-h-full flex-1 flex-col" : "hidden"}
         aria-hidden={!splashDone}

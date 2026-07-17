@@ -19,6 +19,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Drishx",
   description: "Drishx customer portal",
+  icons: {
+    icon: [{ url: "/favicon.ico", sizes: "any" }],
+    apple: "/edited-photo.png",
+  },
 };
 
 export default function RootLayout({
