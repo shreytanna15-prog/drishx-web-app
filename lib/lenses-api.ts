@@ -141,13 +141,19 @@ export async function fetchLensesPage({
   search: string;
   item?: string;
 }): Promise<LensesPageResponse> {
+  const trimmedSearch = search.trim();
+  const planoSearch = isPlanoSearchQuery(trimmedSearch);
+
+  if (planoSearch) {
+    return fetchPlanoLensesPage({ page, limit, type, item });
+  }
+
   const params = new URLSearchParams({
     page: String(page),
     limit: String(limit),
     type: filterToApiType(type),
   });
 
-  const trimmedSearch = search.trim();
   if (trimmedSearch) {
     params.set("search", trimmedSearch);
   }
@@ -165,6 +171,112 @@ export async function fetchLensesPage({
   }
 
   return response.json() as Promise<LensesPageResponse>;
+}
+
+/** True when the user is searching for plano (no SPH/CYL) products. */
+export function isPlanoSearchQuery(search: string): boolean {
+  return search.trim().toLowerCase() === "plano";
+}
+
+function hasMeaningfulPowerValue(value: number | null | undefined): boolean {
+  return value !== null && value !== undefined && Math.abs(Number(value)) > 1e-9;
+}
+
+function isPlanoApiLens(
+  item: LensesPageResponse["items"][number]
+): boolean {
+  return (
+    !hasMeaningfulPowerValue(item.sph) &&
+    !hasMeaningfulPowerValue(item.cyl) &&
+    !hasMeaningfulPowerValue(item.crossPower)
+  );
+}
+
+async function fetchLensesPageRaw({
+  page,
+  limit,
+  type,
+  search,
+  item,
+}: {
+  page: number;
+  limit: number;
+  type: FilterOption;
+  search?: string;
+  item?: string;
+}): Promise<LensesPageResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    type: filterToApiType(type),
+  });
+
+  const trimmedSearch = search?.trim();
+  if (trimmedSearch) {
+    params.set("search", trimmedSearch);
+  }
+
+  const trimmedItem = item?.trim();
+  if (trimmedItem) {
+    params.set("item", trimmedItem);
+  }
+
+  const response = await fetch(`/api/lenses?${params.toString()}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load lenses");
+  }
+
+  return response.json() as Promise<LensesPageResponse>;
+}
+
+/** Frontend-only: load pages until enough plano products are collected. */
+async function fetchPlanoLensesPage({
+  page,
+  limit,
+  type,
+  item,
+}: {
+  page: number;
+  limit: number;
+  type: FilterOption;
+  item?: string;
+}): Promise<LensesPageResponse> {
+  const collected: LensesPageResponse["items"] = [];
+  let apiPage = page;
+  let hasMore = true;
+  let total = 0;
+  let lastLimit = limit;
+
+  while (collected.length < limit && hasMore) {
+    const data = await fetchLensesPageRaw({
+      page: apiPage,
+      limit,
+      type,
+      item,
+    });
+    total = data.total;
+    lastLimit = data.limit;
+    hasMore = data.hasMore;
+    collected.push(...data.items.filter(isPlanoApiLens));
+    if (!data.hasMore) {
+      break;
+    }
+    if (collected.length < limit) {
+      apiPage += 1;
+    } else {
+      break;
+    }
+  }
+
+  return {
+    items: collected.slice(0, limit),
+    total,
+    page: apiPage,
+    limit: lastLimit,
+    hasMore: hasMore || collected.length > limit,
+  };
 }
 
 type LensDetailResponse = {

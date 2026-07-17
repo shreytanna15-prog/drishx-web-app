@@ -695,7 +695,7 @@ export function EmployeeProcurementScreen() {
                     <Input
                       value={lensSearch}
                       onChange={(e) => setLensSearch(e.target.value)}
-                      placeholder="Search lenses…"
+                      placeholder="Search lenses, plano…"
                       className="mb-3 h-10 rounded-xl border-[var(--brand-input-border)]"
                     />
                     <div className="mb-3 flex flex-wrap gap-2">

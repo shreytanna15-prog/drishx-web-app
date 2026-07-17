@@ -175,7 +175,7 @@ export function ShopProductsScreen() {
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search power, coating…"
+                placeholder="Search power, coating, plano…"
                 className="h-11 rounded-xl border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] pl-10"
               />
             </div>

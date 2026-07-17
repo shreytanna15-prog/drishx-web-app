@@ -204,7 +204,7 @@ export function EmployeeInventoryScreen() {
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search SPH, CYL, price, brand, eye..."
+              placeholder="Search SPH, CYL, price, brand, eye, plano..."
               autoFocus
               className="h-11 rounded-xl border-[var(--brand-input-border)] bg-[var(--brand-card)] pr-10 pl-10"
             />

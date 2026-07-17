@@ -156,7 +156,7 @@ export function WholesaleProductsScreen() {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search power, coating…"
+            placeholder="Search power, coating, plano…"
             className="h-11 rounded-xl border-[var(--brand-input-border)] bg-[var(--brand-card)] pl-10"
           />
         </div>

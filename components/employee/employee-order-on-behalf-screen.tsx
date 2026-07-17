@@ -603,7 +603,7 @@ export function EmployeeOrderOnBehalfScreen() {
               <Input
                 value={productSearch}
                 onChange={(e) => setProductSearch(e.target.value)}
-                placeholder="Search SPH, CYL, price, brand, item..."
+                placeholder="Search SPH, CYL, price, brand, item, plano..."
                 className="h-11 rounded-xl border-[var(--brand-input-border)] bg-[var(--brand-card)] pl-10"
               />
             </div>
