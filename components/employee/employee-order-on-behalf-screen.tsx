@@ -19,6 +19,7 @@ import { fetchCustomerCompanies, type CustomerCompany } from "@/lib/customers-ap
 import { getStoredToken } from "@/lib/auth-storage";
 import {
   formatLensProductDetail,
+  formatSphCylSlash,
   LENS_PRICE_PER_PAIR_LABEL,
 } from "@/lib/lens-display";
 import { fetchLensesPage, mapApiLens } from "@/lib/lenses-api";
@@ -786,7 +787,7 @@ export function EmployeeOrderOnBehalfScreen() {
                       <div className="flex items-start justify-between gap-3">
                         <p className="text-sm font-bold text-[var(--brand-text)]">
                           {(lens.brand?.trim() || "Lens").toUpperCase()}{" "}
-                          {lens.sph}/{lens.cyl ?? "—"}
+                          {formatSphCylSlash(lens)}
                         </p>
                         <p className="text-lg font-extrabold text-[var(--brand-primary)]">
                           ₹{lens.price}
