@@ -77,8 +77,14 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthLayout title="Login" subtitle="Welcome back to Drishx">
-      <form onSubmit={handleSubmit}>
+    <AuthLayout
+      title="Welcome back"
+      subtitle="Sign in to continue ordering and tracking with Drishx."
+      panelEyebrow="Customer portal"
+      panelTitle="Your lens workflow, ready when you are."
+      panelDescription="Access orders, inventory-backed fulfillment, and company tools in one place."
+    >
+      <form onSubmit={handleSubmit} className="auth-form">
         {error && <div className="auth-alert-error">{error}</div>}
 
         <AuthField label="Email" htmlFor="email">
@@ -103,12 +109,12 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="auth-input"
-            placeholder="Password"
+            placeholder="Enter your password"
           />
         </AuthField>
 
         <button type="submit" disabled={isSubmitting} className="auth-button">
-          {isSubmitting ? "Signing in..." : "Log in"}
+          {isSubmitting ? "Signing in..." : "Sign in to Drishx"}
         </button>
       </form>
 

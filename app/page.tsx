@@ -93,10 +93,10 @@ function HomeContent() {
             <p className="brand-badge mb-5">Lens ordering portal</p>
 
             <Image
-              src="/edited-photo.png"
+              src="/logo-mark.png"
               alt=""
-              width={120}
-              height={120}
+              width={160}
+              height={160}
               className="landing-hero__logo"
               priority
             />

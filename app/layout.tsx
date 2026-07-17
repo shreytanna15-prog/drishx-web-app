@@ -20,8 +20,13 @@ export const metadata: Metadata = {
   title: "Drishx",
   description: "Drishx customer portal",
   icons: {
-    icon: [{ url: "/favicon.ico", sizes: "any" }],
-    apple: "/edited-photo.png",
+    icon: [
+      { url: "/favicon.ico?v=12", sizes: "any", type: "image/x-icon" },
+      { url: "/icon-32.png?v=12", sizes: "32x32", type: "image/png" },
+      { url: "/icon-48.png?v=12", sizes: "48x48", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico?v=12",
+    apple: "/apple-touch-icon.png?v=12",
   },
 };
 

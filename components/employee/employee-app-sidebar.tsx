@@ -40,7 +40,7 @@ export function EmployeeAppSidebar() {
               className="h-11 rounded-xl hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,var(--brand-card))]"
             >
               <Link href="/employee/home">
-                <BrandMark className="dashboard-sidebar__nav-icon size-8 shadow-[0_2px_8px_rgba(0,0,0,0.22)]" />
+                <BrandMark size="md" className="dashboard-sidebar__nav-icon size-10 shadow-[0_1px_3px_rgba(0,0,0,0.22)]" />
                 <div className="grid flex-1 text-left leading-tight">
                   <span className="truncate text-base font-extrabold tracking-tight text-[var(--brand-text)]">
                     Drishx

@@ -84,7 +84,7 @@ export function BrandSplash({ onFinish }: BrandSplashProps) {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/edited-photo.png"
+            src="/logo-mark.png"
             alt="DrishX logo"
             className="brand-splash__logo"
             draggable={false}
