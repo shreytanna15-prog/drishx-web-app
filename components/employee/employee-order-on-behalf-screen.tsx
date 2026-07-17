@@ -24,6 +24,7 @@ import {
 import { fetchLensesPage, mapApiLens } from "@/lib/lenses-api";
 import { lineTotalForPieceQuantity } from "@/lib/lens-pricing";
 import { consumePendingOnBehalfSelection } from "@/lib/on-behalf-selection";
+import { formatPairQuantity, pairsFromPieces } from "@/lib/order-quantity";
 import {
   createOrderFromLens,
   ORDER_NOTES_MAX_LENGTH,
@@ -659,7 +660,7 @@ export function EmployeeOrderOnBehalfScreen() {
                           <Minus className="size-4" />
                         </Button>
                         <span className="min-w-6 text-center text-sm font-bold text-[var(--brand-text)]">
-                          {line.quantity}
+                          {formatPairQuantity(pairsFromPieces(line.quantity))} pair
                         </span>
                         <Button
                           type="button"
