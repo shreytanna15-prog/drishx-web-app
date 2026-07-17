@@ -70,6 +70,7 @@ const CUSTOM_ORDER_OPTIONS = [
 ] as const;
 
 const ON_BEHALF_STORAGE_KEY = "drishx-employee-on-behalf-state";
+const ON_BEHALF_PRODUCTS_PAGE_SIZE = 20;
 
 type PersistedOnBehalfState = {
   step: Step;
@@ -156,7 +157,15 @@ export function EmployeeOrderOnBehalfScreen() {
   const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
   const productsPageRef = useRef(1);
+  const hasMoreProductsRef = useRef(true);
+  const loadingMoreProductsRef = useRef(false);
+  const productRequestIdRef = useRef(0);
+  const activeFilterRef = useRef(activeFilter);
+  const debouncedProductSearchRef = useRef(debouncedProductSearch);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  activeFilterRef.current = activeFilter;
+  debouncedProductSearchRef.current = debouncedProductSearch;
 
   useEffect(() => {
     if (restoredRef.current) {
@@ -236,63 +245,88 @@ export function EmployeeOrderOnBehalfScreen() {
     return () => clearTimeout(timer);
   }, [productSearch]);
 
-  const loadProducts = useCallback(
-    async (page: number, replace: boolean) => {
-      if (replace) {
-        setLoadingProducts(true);
-      } else {
-        if (loadingMoreProducts || !hasMoreProducts) return;
-        setLoadingMoreProducts(true);
+  const loadProducts = useCallback(async (page: number, replace: boolean) => {
+    if (page > 1) {
+      if (loadingMoreProductsRef.current || !hasMoreProductsRef.current) {
+        return;
       }
-      try {
-        const data = await fetchLensesPage({
-          page,
-          type: activeFilter,
-          search: debouncedProductSearch,
-        });
-        const mapped = data.items.map(mapApiLens);
-        setProducts((current) => {
-          const merged = replace ? mapped : [...current, ...mapped];
-          const deduped = new Map<string, LensItem>();
-          for (const lens of merged) {
-            deduped.set(getLensStableKey(lens), lens);
-          }
-          return [...deduped.values()];
-        });
-        setTotalProducts(data.total);
-        setHasMoreProducts(data.hasMore);
-        productsPageRef.current = data.page;
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load products.");
-      } finally {
-        setLoadingProducts(false);
+      loadingMoreProductsRef.current = true;
+      setLoadingMoreProducts(true);
+    } else {
+      setLoadingProducts(true);
+    }
+
+    const currentRequestId = ++productRequestIdRef.current;
+
+    try {
+      const data = await fetchLensesPage({
+        page,
+        limit: ON_BEHALF_PRODUCTS_PAGE_SIZE,
+        type: activeFilterRef.current,
+        search: debouncedProductSearchRef.current,
+      });
+
+      if (currentRequestId !== productRequestIdRef.current) {
+        return;
+      }
+
+      const mapped = data.items.map(mapApiLens);
+      setProducts((current) => {
+        const merged = replace ? mapped : [...current, ...mapped];
+        const deduped = new Map<string, LensItem>();
+        for (const lens of merged) {
+          deduped.set(getLensStableKey(lens), lens);
+        }
+        return [...deduped.values()];
+      });
+      setTotalProducts(data.total);
+      productsPageRef.current = data.page;
+      hasMoreProductsRef.current = data.hasMore;
+      setHasMoreProducts(data.hasMore);
+    } catch (e) {
+      if (currentRequestId !== productRequestIdRef.current) {
+        return;
+      }
+      setError(e instanceof Error ? e.message : "Failed to load products.");
+    } finally {
+      if (currentRequestId === productRequestIdRef.current) {
+        loadingMoreProductsRef.current = false;
         setLoadingMoreProducts(false);
+        setLoadingProducts(false);
       }
-    },
-    [activeFilter, debouncedProductSearch, hasMoreProducts, loadingMoreProducts]
-  );
+    }
+  }, []);
 
   useEffect(() => {
     if (step !== "shop") return;
     productsPageRef.current = 1;
+    hasMoreProductsRef.current = true;
     setHasMoreProducts(true);
     void loadProducts(1, true);
   }, [step, activeFilter, debouncedProductSearch, loadProducts]);
 
+  const loadNextProductsPage = useCallback(() => {
+    if (
+      !hasMoreProductsRef.current ||
+      loadingMoreProductsRef.current ||
+      loadingProducts
+    ) {
+      return;
+    }
+    void loadProducts(productsPageRef.current + 1, false);
+  }, [loadProducts, loadingProducts]);
+
   useEffect(() => {
     if (step !== "shop") return;
     const sentinel = loadMoreRef.current;
-    if (!sentinel) return;
+    if (!sentinel || loadingProducts || products.length === 0) {
+      return;
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (
-          entries[0]?.isIntersecting &&
-          hasMoreProducts &&
-          !loadingProducts &&
-          !loadingMoreProducts
-        ) {
-          void loadProducts(productsPageRef.current + 1, false);
+        if (entries[0]?.isIntersecting) {
+          loadNextProductsPage();
         }
       },
       { rootMargin: "200px" }
@@ -302,11 +336,10 @@ export function EmployeeOrderOnBehalfScreen() {
     return () => observer.disconnect();
   }, [
     step,
-    hasMoreProducts,
     loadingProducts,
-    loadingMoreProducts,
-    loadProducts,
     products.length,
+    loadNextProductsPage,
+    hasMoreProducts,
   ]);
 
   const totalAmount = useMemo(
@@ -769,16 +802,38 @@ export function EmployeeOrderOnBehalfScreen() {
                       ) : null}
                     </Link>
                   ))}
+
+                  {loadingMoreProducts ? (
+                    <div className="space-y-2.5 pt-1">
+                      <Skeleton className="h-24 rounded-2xl" />
+                      <Skeleton className="h-24 rounded-2xl" />
+                    </div>
+                  ) : null}
+
+                  {hasMoreProducts && !loadingMoreProducts ? (
+                    <div className="flex justify-center pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={loadNextProductsPage}
+                        className="rounded-xl border-[var(--brand-input-border)] font-semibold"
+                      >
+                        Load more products
+                      </Button>
+                    </div>
+                  ) : null}
+
+                  {!hasMoreProducts && products.length > 0 ? (
+                    <p className="py-3 text-center text-sm text-[var(--brand-text-muted)]">
+                      All products loaded
+                    </p>
+                  ) : null}
+
+                  {hasMoreProducts ? (
+                    <div ref={loadMoreRef} className="h-4" aria-hidden />
+                  ) : null}
                 </div>
               )}
-
-              {loadingMoreProducts ? (
-                <div className="flex items-center justify-center gap-2 py-4 text-sm text-[var(--brand-text-muted)]">
-                  <Loader2 className="size-4 animate-spin" />
-                  Loading more lenses...
-                </div>
-              ) : null}
-              <div ref={loadMoreRef} className="h-1" aria-hidden />
             </div>
           </div>
         )}
