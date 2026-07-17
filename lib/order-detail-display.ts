@@ -142,7 +142,12 @@ function formatAxisDisplay(axis: number | null | undefined): string {
 }
 
 function formatSphCylOnly(line: OrderPowerDisplayLine): string {
-  return `${normalizePowerValue(line.sph)} / ${normalizePowerValue(line.cyl)}`;
+  const sph = normalizePowerValue(line.sph);
+  const cyl = normalizePowerValue(line.cyl);
+  if (sph === "—" && cyl === "—") {
+    return "Plano";
+  }
+  return `${sph} / ${cyl}`;
 }
 
 function formatAddLabel(line: OrderPowerDisplayLine): string {

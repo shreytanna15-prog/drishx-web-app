@@ -3,6 +3,9 @@ import { resolveCrossPowerMeta } from "@/lib/cross-power";
 import type { LensItem, LensType } from "@/lib/types/lens";
 import { resolveWholesalePowerProfile } from "@/lib/wholesale-powers";
 
+/** Shown when a product has no SPH/CYL (and no cross power). */
+export const PLANO_POWER_LABEL = "Plano";
+
 function formatPower(value: number): string {
   const fixed = value.toFixed(2).replace(/\.?0+$/, "");
   return value > 0 ? `+${fixed}` : fixed;
@@ -23,11 +26,11 @@ export function formatLensProductDetail(item: LensItem): string {
   if (item.sph != null || item.cyl != null) {
     const sph = hasPower(item.sph) ? formatPower(Number(item.sph)) : "—";
     const cyl = hasPower(item.cyl) ? formatPower(Number(item.cyl)) : "—";
-    parts.push(`${sph}/${cyl}`);
+    parts.push(sph === "—" && cyl === "—" ? PLANO_POWER_LABEL : `${sph}/${cyl}`);
   } else if (crossMeta) {
     parts.push(`cross ${formatPower(crossMeta.maxCyl)}`);
   } else {
-    parts.push("—/—");
+    parts.push(PLANO_POWER_LABEL);
   }
 
   if (item.axis !== null && item.axis !== undefined) {
@@ -110,11 +113,13 @@ export function formatLensProductCardDetail(item: {
         const cylPart = hasMeaningfulPower(item.cyl)
           ? formatPowerLabel(item.cyl!)
           : "—";
-        return `${sphPart}/${cylPart}`;
+        return sphPart === "—" && cylPart === "—"
+          ? PLANO_POWER_LABEL
+          : `${sphPart}/${cylPart}`;
       })()
     : hasMeaningfulPower(item.crossPower)
       ? formatCrossPowerLabel(item.crossPower)
-      : "—/—";
+      : PLANO_POWER_LABEL;
 
   const axisPart =
     item.axis !== null && item.axis !== undefined
@@ -163,10 +168,13 @@ export function formatSphCylSlash(item: {
   // Prefer those over catalog crossPower (max CYL), so cross products
   // show both values like compound lines (e.g. +1.00/-1.25).
   if (item.sph != null || item.cyl != null) {
-    const sphPart =
-      item.sph != null ? formatPowerLabel(Number(item.sph)) : "—";
-    const cylPart =
-      item.cyl != null ? formatPowerLabel(Number(item.cyl)) : "—";
+    const hasSph = hasMeaningfulPower(item.sph);
+    const hasCyl = hasMeaningfulPower(item.cyl);
+    if (!hasSph && !hasCyl) {
+      return PLANO_POWER_LABEL;
+    }
+    const sphPart = hasSph ? formatPowerLabel(Number(item.sph)) : "—";
+    const cylPart = hasCyl ? formatPowerLabel(Number(item.cyl)) : "—";
     return `${sphPart}/${cylPart}`;
   }
 
@@ -177,7 +185,7 @@ export function formatSphCylSlash(item: {
     return `cross ${value > 0 ? `+${fixed}` : fixed}`;
   }
 
-  return "—/—";
+  return PLANO_POWER_LABEL;
 }
 
 function isSpecialColorsItem(item: string | null | undefined): boolean {
