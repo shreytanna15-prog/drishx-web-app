@@ -1,5 +1,9 @@
 import { getOrderLensDetails } from "@/lib/orders-api";
-import { isRxOrder } from "@/lib/order-list-display";
+import {
+  getOrderPowerDisplayLines,
+  isRxOrder,
+  type OrderPowerDisplayLine,
+} from "@/lib/order-list-display";
 import {
   normalizeOrderStatus,
   type OrderTrackingStatus,
@@ -137,41 +141,30 @@ function formatAxisDisplay(axis: number | null | undefined): string {
   return rounded > 0 ? `+${rounded}` : String(rounded);
 }
 
-function formatSphCylOnly(order: OrderRecord): string {
-  const details = getOrderLensDetails(order);
-  if (!details) {
-    return "—";
-  }
-  return `${normalizePowerValue(details.sph)} / ${normalizePowerValue(details.cyl)}`;
+function formatSphCylOnly(line: OrderPowerDisplayLine): string {
+  return `${normalizePowerValue(line.sph)} / ${normalizePowerValue(line.cyl)}`;
 }
 
-function formatAddLabel(order: OrderRecord): string {
+function formatAddLabel(line: OrderPowerDisplayLine): string {
   const showAdd =
-    order.lensType === "KRYPTOK" || order.lensType === "PROGRESSIVE";
+    line.order.lensType === "KRYPTOK" || line.order.lensType === "PROGRESSIVE";
   if (!showAdd) {
     return "—";
   }
 
-  const details = getOrderLensDetails(order);
-  if (
-    !details ||
-    details.add === null ||
-    details.add === undefined ||
-    details.add === ""
-  ) {
+  if (line.add === null || line.add === undefined) {
     return "—";
   }
 
-  return normalizePowerValue(details.add);
+  return normalizePowerValue(line.add);
 }
 
-function formatAxisLabel(order: OrderRecord): string {
-  const details = getOrderLensDetails(order);
-  if (!details || details.axis === null || details.axis === undefined) {
+function formatAxisLabel(line: OrderPowerDisplayLine): string {
+  if (line.axis === null || line.axis === undefined) {
     return "—";
   }
 
-  return formatAxisDisplay(details.axis);
+  return formatAxisDisplay(line.axis);
 }
 
 function formatEyeLabel(order: OrderRecord): string | undefined {
@@ -186,15 +179,15 @@ function powerLineMergeKey(
 }
 
 function buildPowerLineRow(
-  order: OrderRecord,
+  line: OrderPowerDisplayLine,
   pick: { ordered: number; picked: number; pickState: PickState }
 ): PowerLineRow {
   return {
-    orderId: order.id,
-    sphCylLabel: formatSphCylOnly(order),
-    eye: formatEyeLabel(order),
-    addLabel: formatAddLabel(order),
-    axisLabel: formatAxisLabel(order),
+    orderId: line.order.id,
+    sphCylLabel: formatSphCylOnly(line),
+    eye: formatEyeLabel(line.order),
+    addLabel: formatAddLabel(line),
+    axisLabel: formatAxisLabel(line),
     ordered: pick.ordered,
     picked: pick.picked,
     pickState: pick.pickState,
@@ -247,6 +240,37 @@ export function getLinePickInfo(order: OrderRecord): {
   }
 
   return { ordered, picked: 0, pickState: "none" };
+}
+
+function getPowerLinePickInfo(
+  order: OrderRecord,
+  lineQuantity: number
+): { ordered: number; picked: number; pickState: PickState } {
+  const orderPick = getLinePickInfo(order);
+  const ordered = Math.max(1, Number(lineQuantity) || 1);
+
+  // Wholesale parent pick state is order-level; scale proportionally when known.
+  if (orderPick.pickState === "cancelled") {
+    return { ordered, picked: 0, pickState: "cancelled" };
+  }
+  if (orderPick.pickState === "full") {
+    return { ordered, picked: ordered, pickState: "full" };
+  }
+  if (orderPick.pickState === "none") {
+    return { ordered, picked: 0, pickState: "none" };
+  }
+
+  const orderOrdered = Math.max(1, orderPick.ordered);
+  const ratio = orderPick.picked / orderOrdered;
+  const picked = Math.max(
+    0,
+    Math.min(ordered, Math.round(ordered * ratio))
+  );
+  return {
+    ordered,
+    picked,
+    pickState: derivePickState(ordered, picked, false),
+  };
 }
 
 function derivePickState(
@@ -312,25 +336,29 @@ export function buildOrderProductSections(
 
   for (const order of orders) {
     const meta = getProductMeta(order);
-    const pick = getLinePickInfo(order);
-    const line = buildPowerLineRow(order, pick);
+    const powerLines = getOrderPowerDisplayLines(order);
 
-    const existing = sections.get(meta.key);
-    if (existing) {
-      existing.lines.push(line);
-      existing.totalPairs += pick.ordered;
-      existing.pickedPairs += pick.picked;
-      continue;
+    for (const powerLine of powerLines) {
+      const pick = getPowerLinePickInfo(order, powerLine.quantity);
+      const line = buildPowerLineRow(powerLine, pick);
+
+      const existing = sections.get(meta.key);
+      if (existing) {
+        existing.lines.push(line);
+        existing.totalPairs += pick.ordered;
+        existing.pickedPairs += pick.picked;
+        continue;
+      }
+
+      sections.set(meta.key, {
+        key: meta.key,
+        title: meta.title,
+        subtitle: meta.subtitle,
+        totalPairs: pick.ordered,
+        pickedPairs: pick.picked,
+        lines: [line],
+      });
     }
-
-    sections.set(meta.key, {
-      key: meta.key,
-      title: meta.title,
-      subtitle: meta.subtitle,
-      totalPairs: pick.ordered,
-      pickedPairs: pick.picked,
-      lines: [line],
-    });
   }
 
   return [...sections.values()].map((section) => ({

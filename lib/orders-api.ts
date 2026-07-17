@@ -284,6 +284,14 @@ function hasOrderPrescription(order: OrderRecord): boolean {
   return hasSph || hasCyl;
 }
 
+function isWholesaleOrder(order: OrderRecord): boolean {
+  return (
+    order.lineType === "WHOLESALE" ||
+    (Array.isArray(order.wholesaleLineItems) &&
+      order.wholesaleLineItems.length > 0)
+  );
+}
+
 export function getOrderLensDetails(order: OrderRecord) {
   if (hasOrderPrescription(order)) {
     const catalog =
@@ -299,6 +307,13 @@ export function getOrderLensDetails(order: OrderRecord) {
         (order.kryptokLens?.add ?? order.progressiveLens?.add ?? null),
       eye: order.eye ?? order.progressiveLens?.eye ?? undefined,
     };
+  }
+
+  // Wholesale parent rows keep sph/cyl null; powers live on wholesaleLineItems.
+  // Do not fall back to catalog defaults (e.g. cross max CYL) — that hides real
+  // ordered combinations like +0.50/-1.25 behind "--/-2".
+  if (isWholesaleOrder(order)) {
+    return null;
   }
 
   if (order.progressiveLens) {

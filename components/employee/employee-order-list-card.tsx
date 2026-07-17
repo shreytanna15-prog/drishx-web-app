@@ -6,9 +6,11 @@ import { OrderStatusPill } from "@/components/orders/order-status-pill";
 import {
   formatOrderAmount,
   formatOrderDateTime,
+  getOrderPowerDisplayLines,
   isColorLensOrder,
+  isCrossOrder,
   isRxOrder,
-  orderToLensItem,
+  orderPowerLineToLensItem,
   type OrderListGroup,
 } from "@/lib/order-list-display";
 import { formatPairQuantity, pairsFromPieces } from "@/lib/order-quantity";
@@ -47,6 +49,7 @@ export function EmployeeOrderListCard({ group }: { group: OrderListGroup }) {
   );
   const hasColorOrder = visibleOrders.some(isColorLensOrder);
   const hasRxOrder = visibleOrders.some(isRxOrder);
+  const hasCrossOrder = visibleOrders.some(isCrossOrder);
 
   return (
     <Link
@@ -70,12 +73,18 @@ export function EmployeeOrderListCard({ group }: { group: OrderListGroup }) {
         {formatOrderDateTime(group.createdAt)}
       </p>
 
-      {group.isPhotoOrder || hasColorOrder || hasRxOrder ? (
+      {group.isPhotoOrder || hasColorOrder || hasRxOrder || hasCrossOrder ? (
         <div className="mt-2.5 flex flex-wrap gap-2">
           {group.isPhotoOrder ? (
             <OrderTypeBadge
               label="Photo order"
               className="border-[var(--brand-primary)]/35 bg-[var(--brand-primary)]/14 text-[var(--brand-primary)]"
+            />
+          ) : null}
+          {hasCrossOrder ? (
+            <OrderTypeBadge
+              label="Cross order"
+              className="border-amber-500/35 bg-amber-500/14 text-amber-600"
             />
           ) : null}
           {hasColorOrder ? (
@@ -100,19 +109,19 @@ export function EmployeeOrderListCard({ group }: { group: OrderListGroup }) {
       ) : (
         <>
           <div className="mt-3 space-y-2">
-            {visibleOrders.map((order) => {
-              const orderedPairs = pairsFromPieces(
-                Math.max(1, Number(order.quantity) || 1)
-              );
-              return (
-                <LensProductCard
-                  key={order.id}
-                  item={orderToLensItem(order)}
-                  quantityHint={`${formatPairQuantity(orderedPairs)} ordered`}
-                  className="border-[var(--brand-primary)]/20 bg-[color-mix(in_srgb,var(--brand-card)_94%,var(--brand-primary)_6%)] p-3"
-                />
-              );
-            })}
+            {visibleOrders.flatMap((order) =>
+              getOrderPowerDisplayLines(order).map((line) => {
+                const orderedPairs = pairsFromPieces(line.quantity);
+                return (
+                  <LensProductCard
+                    key={line.key}
+                    item={orderPowerLineToLensItem(line)}
+                    quantityHint={`${formatPairQuantity(orderedPairs)} ordered`}
+                    className="border-[var(--brand-primary)]/20 bg-[color-mix(in_srgb,var(--brand-card)_94%,var(--brand-primary)_6%)] p-3"
+                  />
+                );
+              })
+            )}
           </div>
 
           <div className="mt-3 flex items-center justify-between gap-3">

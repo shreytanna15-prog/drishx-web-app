@@ -20,12 +20,14 @@ export function formatLensProductDetail(item: LensItem): string {
     parts.push(item.coating.trim());
   }
 
-  if (crossMeta) {
-    parts.push(`cross ${formatPower(crossMeta.maxCyl)}`);
-  } else {
+  if (item.sph != null || item.cyl != null) {
     const sph = hasPower(item.sph) ? formatPower(Number(item.sph)) : "—";
     const cyl = hasPower(item.cyl) ? formatPower(Number(item.cyl)) : "—";
     parts.push(`${sph}/${cyl}`);
+  } else if (crossMeta) {
+    parts.push(`cross ${formatPower(crossMeta.maxCyl)}`);
+  } else {
+    parts.push("—/—");
   }
 
   if (item.axis !== null && item.axis !== undefined) {
@@ -100,9 +102,8 @@ export function formatLensProductCardDetail(item: {
   const profileLabel = formatPowerProfileLabel(resolveWholesalePowerProfile(item));
   const lensAbbrev = formatLensTypeAbbrev(item.lensType);
 
-  const powerPart = hasMeaningfulPower(item.crossPower)
-    ? formatCrossPowerLabel(item.crossPower)
-    : (() => {
+  const powerPart = (item.sph != null || item.cyl != null)
+    ? (() => {
         const sphPart = hasMeaningfulPower(item.sph)
           ? formatPowerLabel(item.sph!)
           : "—";
@@ -110,7 +111,10 @@ export function formatLensProductCardDetail(item: {
           ? formatPowerLabel(item.cyl!)
           : "—";
         return `${sphPart}/${cylPart}`;
-      })();
+      })()
+    : hasMeaningfulPower(item.crossPower)
+      ? formatCrossPowerLabel(item.crossPower)
+      : "—/—";
 
   const axisPart =
     item.axis !== null && item.axis !== undefined

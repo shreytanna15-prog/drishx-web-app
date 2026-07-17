@@ -7,9 +7,11 @@ import { OrderStatusPill } from "@/components/orders/order-status-pill";
 import {
   formatOrderAmount,
   formatOrderDateTime,
+  getOrderPowerDisplayLines,
   isColorLensOrder,
+  isCrossOrder,
   isRxOrder,
-  orderToLensItem,
+  orderPowerLineToLensItem,
   type OrderListGroup,
 } from "@/lib/order-list-display";
 import { formatPairQuantity, pairsFromPieces } from "@/lib/order-quantity";
@@ -41,6 +43,7 @@ export function EmployeeProcurementOrderCard({
   );
   const hasColorOrder = visibleOrders.some(isColorLensOrder);
   const hasRxOrder = visibleOrders.some(isRxOrder);
+  const hasCrossOrder = visibleOrders.some(isCrossOrder);
 
   if (visibleOrders.length === 0) {
     return null;
@@ -90,8 +93,13 @@ export function EmployeeProcurementOrderCard({
         </div>
       </div>
 
-      {hasColorOrder || hasRxOrder ? (
+      {hasColorOrder || hasRxOrder || hasCrossOrder ? (
         <div className="mt-2.5 flex flex-wrap gap-2">
+          {hasCrossOrder ? (
+            <span className="rounded-lg border border-amber-500/35 bg-amber-500/14 px-2.5 py-1 text-xs font-bold text-amber-600">
+              Cross order
+            </span>
+          ) : null}
           {hasColorOrder ? (
             <span className="rounded-lg border border-violet-500/35 bg-violet-500/14 px-2.5 py-1 text-xs font-bold text-violet-500">
               Color order
@@ -126,25 +134,25 @@ export function EmployeeProcurementOrderCard({
 
       {expanded ? (
         <div className="mt-3 space-y-2 border-t border-[var(--brand-card-border)] pt-3">
-          {visibleOrders.map((order) => {
-            const orderedPairs = pairsFromPieces(
-              Math.max(1, Number(order.quantity) || 1)
-            );
-            return (
-              <button
-                key={order.id}
-                type="button"
-                onClick={() => onProductPress(order)}
-                className="block w-full text-left transition-opacity hover:opacity-90"
-              >
-                <LensProductCard
-                  item={orderToLensItem(order)}
-                  quantityHint={`${formatPairQuantity(orderedPairs)} ordered`}
-                  className="border-[var(--brand-primary)]/20 bg-[color-mix(in_srgb,var(--brand-card)_94%,var(--brand-primary)_6%)] p-3"
-                />
-              </button>
-            );
-          })}
+          {visibleOrders.flatMap((order) =>
+            getOrderPowerDisplayLines(order).map((line) => {
+              const orderedPairs = pairsFromPieces(line.quantity);
+              return (
+                <button
+                  key={line.key}
+                  type="button"
+                  onClick={() => onProductPress(order)}
+                  className="block w-full text-left transition-opacity hover:opacity-90"
+                >
+                  <LensProductCard
+                    item={orderPowerLineToLensItem(line)}
+                    quantityHint={`${formatPairQuantity(orderedPairs)} ordered`}
+                    className="border-[var(--brand-primary)]/20 bg-[color-mix(in_srgb,var(--brand-card)_94%,var(--brand-primary)_6%)] p-3"
+                  />
+                </button>
+              );
+            })
+          )}
         </div>
       ) : null}
     </div>

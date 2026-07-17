@@ -1,3 +1,4 @@
+import { hasCrossPower } from "@/lib/cross-power";
 import {
   formatOrderStatusLabel,
   normalizeOrderStatus,
@@ -6,7 +7,7 @@ import {
 import { getOrderLensDetails } from "@/lib/orders-api";
 import { pairsFromPieces } from "@/lib/order-quantity";
 import { fetchLensById } from "@/lib/lenses-api";
-import type { OrderRecord } from "@/lib/types/orders";
+import type { OrderRecord, WholesaleOrderLineItem } from "@/lib/types/orders";
 import {
   formatLensType,
   type FilterOption,
@@ -64,10 +65,89 @@ export function formatOrderDateTime(value: string): string {
   return `${datePart} · ${timePart}`;
 }
 
-export function orderToLensItem(order: OrderRecord): LensItem {
+export type OrderPowerDisplayLine = {
+  key: string;
+  order: OrderRecord;
+  /** Ordered pieces for this power row. */
+  quantity: number;
+  sph: number | null;
+  cyl: number | null;
+  axis: number | null;
+  add: number | null;
+  crossPower?: number | null;
+};
+
+function catalogCrossPower(order: OrderRecord): number | null {
   const catalog =
     order.progressiveLens ?? order.kryptokLens ?? order.singleVisionLens;
+  if (!catalog || !("crossPower" in catalog)) {
+    return null;
+  }
+  const value = catalog.crossPower;
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function toNullablePower(value: number | string | null | undefined): number | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function lineFromWholesaleItem(
+  order: OrderRecord,
+  line: WholesaleOrderLineItem
+): OrderPowerDisplayLine {
+  return {
+    key: line.id || `${order.id}:${line.powerKey}`,
+    order,
+    quantity: Math.max(1, Number(line.quantity) || 1),
+    sph: toNullablePower(line.sph),
+    cyl: toNullablePower(line.cyl),
+    axis: line.axis ?? null,
+    add: toNullablePower(line.add),
+    crossPower: catalogCrossPower(order),
+  };
+}
+
+/** Expand an order into power rows (wholesale line items, or one retail row). */
+export function getOrderPowerDisplayLines(
+  order: OrderRecord
+): OrderPowerDisplayLine[] {
+  if (order.wholesaleLineItems && order.wholesaleLineItems.length > 0) {
+    return [...order.wholesaleLineItems]
+      .sort((a, b) => {
+        const sphDiff = Number(a.sph) - Number(b.sph);
+        if (sphDiff !== 0) return sphDiff;
+        return Number(a.cyl ?? 0) - Number(b.cyl ?? 0);
+      })
+      .map((line) => lineFromWholesaleItem(order, line));
+  }
+
   const details = getOrderLensDetails(order);
+  return [
+    {
+      key: order.id,
+      order,
+      quantity: Math.max(1, Number(order.quantity) || 1),
+      sph: toNullablePower(details?.sph),
+      cyl: toNullablePower(details?.cyl),
+      axis: details?.axis ?? null,
+      add: toNullablePower(details?.add),
+      crossPower: catalogCrossPower(order),
+    },
+  ];
+}
+
+export function orderPowerLineToLensItem(line: OrderPowerDisplayLine): LensItem {
+  const order = line.order;
+  const catalog =
+    order.progressiveLens ?? order.kryptokLens ?? order.singleVisionLens;
   const lensType = formatLensType(order.lensType) as LensType;
   const catalogStock =
     catalog?.quantity != null && Number.isFinite(Number(catalog.quantity))
@@ -78,10 +158,11 @@ export function orderToLensItem(order: OrderRecord): LensItem {
     id: catalog?.id ?? order.id,
     costPrice: null,
     price: Number(order.unitPrice || order.totalAmount || 0),
-    sph: Number(details?.sph ?? 0),
-    cyl: details?.cyl != null ? Number(details.cyl) : null,
-    axis: details?.axis ?? null,
-    add: details?.add != null ? Number(details.add) : null,
+    sph: line.sph,
+    cyl: line.cyl,
+    crossPower: line.crossPower ?? null,
+    axis: line.axis,
+    add: line.add,
     // Inventory stock from catalog lens — never order.quantity (ordered pieces).
     quantity: catalogStock,
     createdAt: order.createdAt,
@@ -90,6 +171,11 @@ export function orderToLensItem(order: OrderRecord): LensItem {
     coating: catalog?.coating ?? null,
     item: catalog && "item" in catalog ? (catalog.item ?? null) : null,
   };
+}
+
+export function orderToLensItem(order: OrderRecord): LensItem {
+  const lines = getOrderPowerDisplayLines(order);
+  return orderPowerLineToLensItem(lines[0]!);
 }
 
 function isProcurementLine(status: OrderTrackingStatus): boolean {
@@ -213,6 +299,34 @@ export function isColorLensOrder(order: OrderRecord): boolean {
 
 export function isRxOrder(order: OrderRecord): boolean {
   return order.notes?.includes("[RX Order]") ?? false;
+}
+
+/** True when the ordered catalog product (or wholesale batch) is a cross lens. */
+export function isCrossOrder(order: OrderRecord): boolean {
+  const catalog =
+    order.progressiveLens ?? order.kryptokLens ?? order.singleVisionLens;
+
+  if (
+    hasCrossPower({
+      crossPower: catalog && "crossPower" in catalog ? catalog.crossPower : null,
+    })
+  ) {
+    return true;
+  }
+
+  if (hasCrossPower({ crossPower: order.wholesaleSpec?.crossPower })) {
+    return true;
+  }
+
+  const itemLabel =
+    catalog && "item" in catalog
+      ? catalog.item?.trim().toLowerCase() ?? ""
+      : "";
+  if (itemLabel === "cross" || itemLabel.includes("cross")) {
+    return true;
+  }
+
+  return false;
 }
 
 function isPhotoOrder(order: OrderRecord): boolean {

@@ -28,6 +28,7 @@ import {
   formatOrderAmount,
   formatOrderDateTime,
   isColorLensOrder,
+  isCrossOrder,
   isRxOrder,
   type OrderListGroup,
 } from "@/lib/order-list-display";
@@ -398,6 +399,7 @@ export function EmployeeOrderGroupDetail({
   const customerEmail = group.orders[0]?.user?.email;
   const hasColorOrder = group.orders.some(isColorLensOrder);
   const hasRxOrder = group.orders.some(isRxOrder);
+  const hasCrossOrder = group.orders.some(isCrossOrder);
 
   const [selectedLine, setSelectedLine] = useState<PowerLineRow | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -562,11 +564,16 @@ export function EmployeeOrderGroupDetail({
         <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
           {formatOrderDateTime(group.createdAt)}
         </p>
-        {hasColorOrder || hasRxOrder || group.isPhotoOrder ? (
+        {hasColorOrder || hasRxOrder || hasCrossOrder || group.isPhotoOrder ? (
           <div className="mt-2.5 flex flex-wrap gap-2">
             {group.isPhotoOrder ? (
               <span className="rounded-lg border border-[var(--brand-primary)]/35 bg-[var(--brand-primary)]/14 px-2.5 py-1 text-xs font-bold text-[var(--brand-primary)]">
                 Photo order
+              </span>
+            ) : null}
+            {hasCrossOrder ? (
+              <span className="rounded-lg border border-amber-500/35 bg-amber-500/14 px-2.5 py-1 text-xs font-bold text-amber-600">
+                Cross order
               </span>
             ) : null}
             {hasColorOrder ? (

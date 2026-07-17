@@ -19,8 +19,13 @@ import {
   sanitizePositiveDecimalInput,
   sanitizePositiveIntegerInput,
 } from "@/lib/cart-utils";
-import { formatLensProductCardDetail } from "@/lib/lens-display";
-import { getOrderLensRef, orderToLensItem } from "@/lib/order-list-display";
+import { formatSphCylSlash } from "@/lib/lens-display";
+import {
+  getOrderLensRef,
+  getOrderPowerDisplayLines,
+  orderToLensItem,
+} from "@/lib/order-list-display";
+import { formatPairQuantity, pairsFromPieces } from "@/lib/order-quantity";
 import { recordStockIntake } from "@/lib/procurement-api";
 import type { OrderRecord } from "@/lib/types/orders";
 
@@ -51,8 +56,15 @@ export function EmployeeProcurementProductSheet({
     () => (order ? orderToLensItem(order) : null),
     [order]
   );
-  const productDetail = lensItem
-    ? formatLensProductCardDetail(lensItem)
+  const powerLines = useMemo(
+    () => (order ? getOrderPowerDisplayLines(order) : []),
+    [order]
+  );
+  const productLabel = lensItem
+    ? [lensItem.brand, lensItem.coating, lensItem.item]
+        .map((part) => part?.trim())
+        .filter(Boolean)
+        .join(" · ")
     : "";
 
   useEffect(() => {
@@ -165,11 +177,38 @@ export function EmployeeProcurementProductSheet({
             Add purchase
           </SheetTitle>
           <SheetDescription className="text-[var(--brand-text-muted)]">
-            {productDetail || "Record stock intake for this order line."}
+            {productLabel || "Record stock intake for this order line."}
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex flex-1 flex-col gap-4 px-4 pb-2">
+          {powerLines.length > 0 ? (
+            <div className="rounded-xl border border-[var(--brand-card-border)] bg-[var(--brand-background)] p-3">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-muted)]">
+                Ordered powers
+              </p>
+              <ul className="mt-2 max-h-40 space-y-1.5 overflow-y-auto">
+                {powerLines.map((line) => (
+                  <li
+                    key={line.key}
+                    className="flex items-center justify-between gap-3 text-sm"
+                  >
+                    <span className="font-semibold text-[var(--brand-text)]">
+                      {formatSphCylSlash({
+                        sph: line.sph,
+                        cyl: line.cyl,
+                        crossPower: line.crossPower,
+                      })}
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold text-[var(--brand-text-muted)]">
+                      {formatPairQuantity(pairsFromPieces(line.quantity))} pr
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <label className="block space-y-1.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-muted)]">
               Quantity to add
