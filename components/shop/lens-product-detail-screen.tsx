@@ -33,6 +33,7 @@ import {
   formatAddValue,
   formatAxisValue,
   formatLensItemCoatingSummary,
+  formatLensProductCardTitle,
   isSameLensPower,
   LENS_PRICE_PER_PAIR_LABEL,
 } from "@/lib/lens-display";
@@ -623,7 +624,7 @@ export function LensProductDetailScreen({
 
         <section className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-5 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.35)]">
           <h2 className="text-2xl font-extrabold text-[var(--brand-text)]">
-            {item.brand?.trim() || "Lens"}
+            {formatLensProductCardTitle(item)}
           </h2>
           <p className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
             {formatLensItemCoatingSummary(item)}

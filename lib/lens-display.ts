@@ -206,6 +206,36 @@ export function formatLensItemLabel(item: {
   return itemText || coatingText || "Standard Lens";
 }
 
+/**
+ * Product card title — keep a real brand when present.
+ * Only replace the generic "Lens" fallback with item/category name.
+ */
+export function formatLensProductCardTitle(item: {
+  item?: string | null;
+  coating?: string | null;
+  brand?: string | null;
+  lensType?: string | null;
+}): string {
+  const brand = item.brand?.trim() ?? "";
+  if (brand && brand.toLowerCase() !== "lens") {
+    return brand;
+  }
+
+  const itemText = item.item?.trim() ?? "";
+  const coatingText = item.coating?.trim() ?? "";
+
+  if (isSpecialColorsItem(itemText)) {
+    return coatingText || itemText || item.lensType?.trim() || "Product";
+  }
+
+  return (
+    itemText ||
+    coatingText ||
+    item.lensType?.trim() ||
+    "Product"
+  );
+}
+
 export function formatLensItemCoatingSummary(item: {
   item?: string | null;
   coating?: string | null;

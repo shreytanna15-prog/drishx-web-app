@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   formatAddAxisLabel,
   formatLensItemLabel,
+  formatLensProductCardTitle,
   formatSphCylSlash,
   LENS_PRICE_PER_PAIR_LABEL,
 } from "@/lib/lens-display";
@@ -17,12 +18,14 @@ type RelatedLensCardProps = {
 };
 
 export function RelatedLensCard({ item, href, className }: RelatedLensCardProps) {
-  const brand = item.brand?.trim() || "Lens";
+  const title = formatLensProductCardTitle(item);
   const indexLabel =
     item.index != null && item.lensType === "Single Vision"
       ? `${Number(item.index)} `
       : "";
   const itemLabel = formatLensItemLabel(item);
+  const showItemLine =
+    Boolean(itemLabel) && itemLabel.toLowerCase() !== title.toLowerCase();
   const sphCyl = formatSphCylSlash(item);
   const addAxis = formatAddAxisLabel(item);
 
@@ -38,9 +41,9 @@ export function RelatedLensCard({ item, href, className }: RelatedLensCardProps)
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p className="text-base font-bold text-[var(--brand-text)]">
-            {`${indexLabel}${brand}`.trim()}
+            {`${indexLabel}${title}`.trim()}
           </p>
-          {itemLabel ? (
+          {showItemLine ? (
             <p className="mt-0.5 text-xs font-semibold text-[var(--brand-text-muted)]">
               {itemLabel}
             </p>

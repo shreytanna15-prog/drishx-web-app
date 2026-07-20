@@ -25,6 +25,7 @@ import { resolveCrossPowerMeta } from "@/lib/cross-power";
 import {
   formatAddAxisLabel,
   formatLensItemCoatingSummary,
+  formatLensProductCardTitle,
   formatSphCylSlash,
   LENS_PRICE_PER_PAIR_LABEL,
 } from "@/lib/lens-display";
@@ -254,7 +255,9 @@ export function WholesaleOrderScreen() {
     setVisibleColCount(MATRIX_INITIAL_COLS);
   }, [powerProfile]);
 
-  const title = item ? `${item.brand || "Lens"} • Wholesale` : "Wholesale";
+  const title = item
+    ? `${formatLensProductCardTitle(item)} • Wholesale`
+    : "Wholesale";
 
   async function handleGenerate() {
     setGenerating(true);
@@ -454,7 +457,7 @@ export function WholesaleOrderScreen() {
         <Card className="rounded-2xl border-[var(--brand-card-border)] bg-[var(--brand-card)] py-0 shadow-none">
           <CardContent className="p-5">
             <h2 className="text-xl font-extrabold text-[var(--brand-text)]">
-              {item.brand || "Lens"}
+              {formatLensProductCardTitle(item)}
             </h2>
             <p className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
               {formatLensItemCoatingSummary(item)}

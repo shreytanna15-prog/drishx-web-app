@@ -6,6 +6,7 @@ import { LensProductDetailScreen } from "@/components/shop/lens-product-detail-s
 import { CartProvider } from "@/contexts/cart-context";
 import { OrderModeProvider } from "@/contexts/order-mode-context";
 import type { LensItem } from "@/lib/types/lens";
+import { formatLensProductCardTitle } from "@/lib/lens-display";
 import {
   lensTypeToShopCategory,
   type ShopCategoryId,
@@ -28,7 +29,9 @@ export function EmployeeOnBehalfLensClient({ lensId }: { lensId: string }) {
   }, [payload]);
 
   const category: ShopCategoryId = lensTypeToShopCategory(initialItem?.lensType);
-  const catalogItem = initialItem?.item?.trim() || "Lens";
+  const catalogItem = initialItem
+    ? formatLensProductCardTitle(initialItem)
+    : "Product";
   const backHref = "/employee/orders/on-behalf";
 
   useEffect(() => {

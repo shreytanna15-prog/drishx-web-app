@@ -1,5 +1,6 @@
 import {
   formatLensProductCardDetail,
+  formatLensProductCardTitle,
   LENS_PRICE_PER_PAIR_LABEL,
 } from "@/lib/lens-display";
 import type { LensItem } from "@/lib/types/lens";
@@ -14,7 +15,7 @@ export function LensProductListCard({
   item,
   className,
 }: LensProductListCardProps) {
-  const brand = item.brand?.trim() || "Lens";
+  const title = formatLensProductCardTitle(item);
   const detailLine = formatLensProductCardDetail(item);
 
   return (
@@ -26,7 +27,7 @@ export function LensProductListCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-[var(--brand-text)]">{brand}</p>
+          <p className="text-sm font-bold text-[var(--brand-text)]">{title}</p>
           <p className="mt-0.5 text-sm font-extrabold leading-snug text-[var(--brand-text)]">
             {detailLine}
           </p>

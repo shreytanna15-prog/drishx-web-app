@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { fetchCustomerCompanies, type CustomerCompany } from "@/lib/customers-api";
 import { getStoredToken } from "@/lib/auth-storage";
 import {
+  formatLensProductCardTitle,
   formatLensProductDetail,
   formatSphCylSlash,
   LENS_PRICE_PER_PAIR_LABEL,
@@ -112,8 +113,7 @@ function clearPersistedState() {
 }
 
 function formatLensLabel(lens: LensItem): string {
-  const brand = lens.brand?.trim() || "Lens";
-  return `${brand} · ${formatLensProductDetail(lens)}`;
+  return `${formatLensProductCardTitle(lens)} · ${formatLensProductDetail(lens)}`;
 }
 
 function getLensStableKey(lens: LensItem): string {
@@ -786,7 +786,7 @@ export function EmployeeOrderOnBehalfScreen() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <p className="text-sm font-bold text-[var(--brand-text)]">
-                          {(lens.brand?.trim() || "Lens").toUpperCase()}{" "}
+                          {formatLensProductCardTitle(lens).toUpperCase()}{" "}
                           {formatSphCylSlash(lens)}
                         </p>
                         <p className="text-lg font-extrabold text-[var(--brand-primary)]">
@@ -794,7 +794,7 @@ export function EmployeeOrderOnBehalfScreen() {
                         </p>
                       </div>
                       <p className="mt-1 text-sm font-bold text-[var(--brand-text)]">
-                        {lens.lensType ?? "Lens"}
+                        {lens.lensType ?? "Single Vision"}
                       </p>
                       {lens.item?.trim() ? (
                         <p className="mt-0.5 text-xs font-semibold uppercase text-[var(--brand-text-muted)]">

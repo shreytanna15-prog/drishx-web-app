@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import {
+  formatLensItemLabel,
   formatLensProductDetail,
+  formatLensProductCardTitle,
   LENS_PRICE_PER_PAIR_LABEL,
 } from "@/lib/lens-display";
 import type { LensItem } from "@/lib/types/lens";
@@ -22,8 +24,12 @@ export function LensProductCard({
   className,
   quantityHint,
 }: LensProductCardProps) {
-  const brand = item.brand?.trim() || "Lens";
+  const title = formatLensProductCardTitle(item);
   const detail = formatLensProductDetail(item);
+  const itemLabel = formatLensItemLabel(item);
+  const showItemLine =
+    Boolean(item.item?.trim()) &&
+    itemLabel.toLowerCase() !== title.toLowerCase();
   const stockQty = Math.max(0, Number(item.quantity) || 0);
   const inStock = stockQty > 0;
 
@@ -31,16 +37,16 @@ export function LensProductCard({
     <div className="flex items-start justify-between gap-4">
       <div className="min-w-0 flex-1">
         <h3 className="text-base font-bold text-[var(--brand-text)]">
-          {brand}
+          {title}
         </h3>
         <p className="mt-1 text-sm font-semibold leading-snug text-[var(--brand-text)]">
           {detail}
         </p>
-        {item.item?.trim() && (
+        {showItemLine ? (
           <p className="mt-2 text-xs font-medium text-[var(--brand-text-muted)]">
-            {item.item}
+            {itemLabel}
           </p>
-        )}
+        ) : null}
       </div>
       <div className="shrink-0 text-right">
         <p className="text-lg font-extrabold text-[var(--brand-primary)]">
