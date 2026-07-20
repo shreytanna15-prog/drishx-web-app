@@ -14,12 +14,17 @@ import {
 } from "@/components/ui/sheet";
 import {
   formatMoneyInput,
+  formatPowerLabel,
   parseNumericInput,
   roundMoney,
   sanitizePositiveDecimalInput,
   sanitizePositiveIntegerInput,
 } from "@/lib/cart-utils";
-import { formatSphCylSlash } from "@/lib/lens-display";
+import {
+  formatAddValue,
+  formatAxisValue,
+  formatSphCylSlash,
+} from "@/lib/lens-display";
 import {
   getOrderLensRef,
   getOrderPowerDisplayLines,
@@ -28,7 +33,14 @@ import {
 import { formatPairQuantity, pairsFromPieces } from "@/lib/order-quantity";
 import { recordStockIntake } from "@/lib/procurement-api";
 import type { OrderRecord } from "@/lib/types/orders";
+import { formatLensType } from "@/lib/types/lens";
 
+function formatPowerCell(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+  return formatPowerLabel(Number(value));
+}
 type EmployeeProcurementProductSheetProps = {
   open: boolean;
   order: OrderRecord | null;
@@ -181,31 +193,75 @@ export function EmployeeProcurementProductSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex flex-1 flex-col gap-4 px-4 pb-2">
-          {powerLines.length > 0 ? (
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-2">
+          {lensItem ? (
             <div className="rounded-xl border border-[var(--brand-card-border)] bg-[var(--brand-background)] p-3">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-muted)]">
+                Product details
+              </p>
+              <p className="mt-2 text-base font-extrabold text-[var(--brand-text)]">
+                {productLabel || "Lens product"}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--brand-text-muted)]">
+                {formatLensType(order?.lensType ?? "")}
+                {lensItem.index != null ? ` · Index ${lensItem.index}` : ""}
+                {lensItem.eye ? ` · ${lensItem.eye}` : ""}
+              </p>
+              <p className="mt-2 text-sm font-bold text-[var(--brand-primary)]">
+                ₹{lensItem.price}
+                <span className="ml-1 text-xs font-semibold text-[var(--brand-text-muted)]">
+                  / pr
+                </span>
+              </p>
+            </div>
+          ) : null}
+
+          {powerLines.length > 0 ? (
+            <div className="space-y-3">
               <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-muted)]">
                 Ordered powers
               </p>
-              <ul className="mt-2 max-h-40 space-y-1.5 overflow-y-auto">
-                {powerLines.map((line) => (
-                  <li
-                    key={line.key}
-                    className="flex items-center justify-between gap-3 text-sm"
-                  >
-                    <span className="font-semibold text-[var(--brand-text)]">
+              {powerLines.map((line) => (
+                <div
+                  key={line.key}
+                  className="rounded-xl border border-[var(--brand-card-border)] bg-[var(--brand-background)] p-3"
+                >
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-extrabold text-[var(--brand-text)]">
                       {formatSphCylSlash({
                         sph: line.sph,
                         cyl: line.cyl,
                         crossPower: line.crossPower,
                       })}
-                    </span>
-                    <span className="shrink-0 text-xs font-semibold text-[var(--brand-text-muted)]">
+                    </p>
+                    <p className="shrink-0 text-xs font-bold text-[var(--brand-text-muted)]">
                       {formatPairQuantity(pairsFromPieces(line.quantity))} pr
-                    </span>
-                  </li>
-                ))}
-              </ul>
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(
+                      [
+                        ["SPH", formatPowerCell(line.sph)],
+                        ["CYL", formatPowerCell(line.cyl)],
+                        ["ADD", formatAddValue(line.add)],
+                        ["AXIS", formatAxisValue(line.axis)],
+                      ] as const
+                    ).map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="rounded-lg border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-2 py-2 text-center"
+                      >
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text-muted)]">
+                          {label}
+                        </p>
+                        <p className="mt-1 text-sm font-extrabold tabular-nums text-[var(--brand-text)]">
+                          {value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : null}
 
