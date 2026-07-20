@@ -70,17 +70,26 @@ import {
   type ShopCategoryId,
 } from "@/lib/shop-navigation";
 import { setPendingOnBehalfSelection } from "@/lib/on-behalf-selection";
+import { setPendingStockLensSelection } from "@/lib/stock-lens-selection";
 import type { LensItem } from "@/lib/types/lens";
 import { cn } from "@/lib/utils";
 import { isWhiteCatalogLensId } from "@/lib/white-catalog";
+
+export type LensProductDetailSelectResult = {
+  lens: LensItem;
+  quantity: number;
+};
 
 type LensProductDetailScreenProps = {
   lensId: string;
   category: ShopCategoryId;
   catalogItem: string;
   initialItem?: LensItem | null;
-  mode?: "default" | "on-behalf-select";
+  mode?: "default" | "on-behalf-select" | "stock-select";
   backHref?: string;
+  /** When set (e.g. embedded Add Stock), select returns here instead of navigating. */
+  onSelected?: (selection: LensProductDetailSelectResult) => void;
+  onCancel?: () => void;
 };
 
 export function LensProductDetailScreen({
@@ -90,9 +99,13 @@ export function LensProductDetailScreen({
   initialItem = null,
   mode = "default",
   backHref,
+  onSelected,
+  onCancel,
 }: LensProductDetailScreenProps) {
   const router = useRouter();
   const isOnBehalfSelectMode = mode === "on-behalf-select";
+  const isStockSelectMode = mode === "stock-select";
+  const isSelectMode = isOnBehalfSelectMode || isStockSelectMode;
   const { addToCart, updateQuantity, items: cartItems } = useCart();
   const { mode: orderMode, isWholesale } = useOrderMode();
   const filter = shopCategoryToFilter(category);
@@ -410,7 +423,40 @@ export function LensProductDetailScreen({
     : "Select prescription values for this lens.";
 
   function buildRelatedHref(related: LensItem) {
+    if (isStockSelectMode) {
+      return `/employee/procurement/lens/${related.id}?payload=${encodeURIComponent(JSON.stringify(related))}`;
+    }
+    if (isOnBehalfSelectMode) {
+      return `/employee/orders/on-behalf/lens/${related.id}?payload=${encodeURIComponent(JSON.stringify(related))}`;
+    }
     return `/shop/products/${related.id}?category=${category}&item=${encodeURIComponent(catalogItem)}`;
+  }
+
+  function buildSelectedLens(
+    currentItem: LensItem,
+    parsedCyl: number,
+    parsedAdd: number | null,
+    eye: string | undefined
+  ): LensItem {
+    return {
+      id: currentItem.id,
+      costPrice: currentItem.costPrice,
+      price: currentItem.price,
+      sph,
+      cyl: parsedCyl,
+      crossPower: currentItem.crossPower,
+      axis: currentItem.axis,
+      add: showAdd ? parsedAdd : null,
+      eye,
+      quantity: currentItem.quantity,
+      createdAt: currentItem.createdAt,
+      lensType: currentItem.lensType,
+      brand: currentItem.brand,
+      item: currentItem.item,
+      coating: currentItem.coating,
+      index: currentItem.index,
+      selectableRange: currentItem.selectableRange,
+    };
   }
 
   async function handleSubmit() {
@@ -493,31 +539,25 @@ export function LensProductDetailScreen({
       ? progressiveCartEyes(selectedEye)
       : [undefined];
 
-    if (isOnBehalfSelectMode) {
+    if (isSelectMode) {
       const eye = eyesToAdd[0];
-      const updatedItem: LensItem = {
-        id: currentItem.id,
-        costPrice: currentItem.costPrice,
-        price: currentItem.price,
-        sph,
-        cyl: parsedCyl,
-        crossPower: currentItem.crossPower,
-        axis: currentItem.axis,
-        add: showAdd ? parsedAdd : null,
-        eye,
-        quantity: currentItem.quantity,
-        createdAt: currentItem.createdAt,
-        lensType: currentItem.lensType,
-        brand: currentItem.brand,
-        item: currentItem.item,
-        coating: currentItem.coating,
-        index: currentItem.index,
-        selectableRange: currentItem.selectableRange,
-      };
-      setPendingOnBehalfSelection({
-        lens: updatedItem,
-        quantity: parsedQty,
-      });
+      const updatedItem = buildSelectedLens(
+        currentItem,
+        parsedCyl,
+        parsedAdd,
+        eye
+      );
+      const selection = { lens: updatedItem, quantity: parsedQty };
+      if (onSelected) {
+        onSelected(selection);
+        return;
+      }
+      if (isStockSelectMode) {
+        setPendingStockLensSelection(selection);
+        router.push(backHref ?? "/employee/procurement");
+        return;
+      }
+      setPendingOnBehalfSelection(selection);
       router.push(backHref ?? "/employee/orders/on-behalf");
       return;
     }
@@ -526,25 +566,12 @@ export function LensProductDetailScreen({
     setError(null);
     try {
       for (const eye of eyesToAdd) {
-        const updatedItem: LensItem = {
-          id: currentItem.id,
-          costPrice: currentItem.costPrice,
-          price: currentItem.price,
-          sph,
-          cyl: parsedCyl,
-          crossPower: currentItem.crossPower,
-          axis: currentItem.axis,
-          add: showAdd ? parsedAdd : null,
-          eye,
-          quantity: currentItem.quantity,
-          createdAt: currentItem.createdAt,
-          lensType: currentItem.lensType,
-          brand: currentItem.brand,
-          item: currentItem.item,
-          coating: currentItem.coating,
-          index: currentItem.index,
-          selectableRange: currentItem.selectableRange,
-        };
+        const updatedItem = buildSelectedLens(
+          currentItem,
+          parsedCyl,
+          parsedAdd,
+          eye
+        );
 
         const lineId = buildCartLineId({
           id: updatedItem.id,
@@ -603,13 +630,29 @@ export function LensProductDetailScreen({
         <div className="flex flex-col gap-4">
           <Button
             variant="ghost"
-            asChild
+            asChild={!onCancel}
+            onClick={onCancel}
             className="w-fit rounded-xl px-0 font-semibold text-[var(--brand-link)] hover:bg-[var(--brand-primary)]/10"
           >
-            <Link href={resolvedBackHref}>
-              <ArrowLeft className="size-4" />
-              {isOnBehalfSelectMode ? "Back to order" : `Back to ${catalogItem}`}
-            </Link>
+            {onCancel ? (
+              <>
+                <ArrowLeft className="size-4" />
+                {isStockSelectMode
+                  ? "Back to Add stock"
+                  : isOnBehalfSelectMode
+                    ? "Back to order"
+                    : `Back to ${catalogItem}`}
+              </>
+            ) : (
+              <Link href={resolvedBackHref}>
+                <ArrowLeft className="size-4" />
+                {isOnBehalfSelectMode
+                  ? "Back to order"
+                  : isStockSelectMode
+                    ? "Back to Add stock"
+                    : `Back to ${catalogItem}`}
+              </Link>
+            )}
           </Button>
 
           <div>
@@ -840,7 +883,7 @@ export function LensProductDetailScreen({
           disabled={submitting}
           className={cn(
             "h-14 w-full rounded-2xl text-base font-extrabold shadow-[0_8px_24px_-8px_rgba(240,161,50,0.55)]",
-            !isOnBehalfSelectMode && showsAddedState
+            !isSelectMode && showsAddedState
               ? "bg-[color-mix(in_srgb,var(--brand-primary)_75%,#2d8a4e_25%)] text-[var(--brand-primary-text)]"
               : "bg-gradient-to-r from-[#f5ad42] to-[#e8941f] text-[var(--brand-primary-text)] hover:opacity-95",
             submitting && "opacity-70"
@@ -848,28 +891,31 @@ export function LensProductDetailScreen({
         >
           {submitting ? (
             <Loader2 className="size-5 animate-spin" />
-          ) : !isOnBehalfSelectMode && showsAddedState ? (
+          ) : !isSelectMode && showsAddedState ? (
             <CheckCircle2 className="size-5" />
-          ) : isOnBehalfSelectMode ? (
+          ) : isSelectMode ? (
             <ShoppingBag className="size-5" />
           ) : (
             <ShoppingCart className="size-5" />
           )}
           {submitting
-            ? isOnBehalfSelectMode
+            ? isSelectMode
               ? "Selecting…"
               : "Adding…"
-            : isOnBehalfSelectMode
-              ? "Select product"
-              : showsAddedState
-                ? "Added to cart"
-                : "Add to cart"}
-          {!submitting && (isOnBehalfSelectMode || !showsAddedState) ? (
+            : isStockSelectMode
+              ? "Select for stock"
+              : isOnBehalfSelectMode
+                ? "Select product"
+                : showsAddedState
+                  ? "Added to cart"
+                  : "Add to cart"}
+          {!submitting && (isSelectMode || !showsAddedState) ? (
             <ArrowRight className="size-5" />
           ) : null}
         </Button>
 
-        {!isOnBehalfSelectMode && !isWhiteCatalogProduct ? (
+        {(mode === "default" || (isStockSelectMode && !onSelected)) &&
+        !isWhiteCatalogProduct ? (
         <section className="border-t border-[var(--brand-card-border)] pt-8">
           <h3 className="mb-4 text-center text-lg font-extrabold text-[var(--brand-text)]">
             Related Products

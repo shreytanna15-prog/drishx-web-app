@@ -15,10 +15,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmployeeProcurementOrderCard } from "@/components/employee/employee-procurement-order-card";
 import { EmployeeProcurementProductSheet } from "@/components/employee/employee-procurement-product-sheet";
 import { InventoryProductCard } from "@/components/employee/inventory-product-card";
+import { LensProductDetailScreen } from "@/components/shop/lens-product-detail-screen";
 import { BrandConfirmDialog } from "@/components/shared/brand-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CartProvider } from "@/contexts/cart-context";
+import { OrderModeProvider } from "@/contexts/order-mode-context";
 import { useAuth } from "@/contexts/auth-context";
 import { useBrandConfirm } from "@/hooks/use-brand-confirm";
 import {
@@ -28,6 +31,7 @@ import {
   sanitizePositiveDecimalInput,
   sanitizePositiveIntegerInput,
 } from "@/lib/cart-utils";
+import { formatLensProductCardTitle } from "@/lib/lens-display";
 import { fetchLensesPage, mapApiLens } from "@/lib/lenses-api";
 import {
   enrichOrdersWithCatalogStock,
@@ -42,6 +46,7 @@ import {
   recordStockIntakeBatch,
   type ProcurementRecord,
 } from "@/lib/procurement-api";
+import { lensTypeToShopCategory } from "@/lib/shop-navigation";
 import type { FilterOption, LensItem } from "@/lib/types/lens";
 import { toApiLensType } from "@/lib/types/lens";
 import type { OrderRecord } from "@/lib/types/orders";
@@ -142,6 +147,7 @@ export function EmployeeProcurementScreen() {
   const [lenses, setLenses] = useState<LensItem[]>([]);
   const [loadingLenses, setLoadingLenses] = useState(false);
   const [selectedLens, setSelectedLens] = useState<LensItem | null>(null);
+  const [configuringLens, setConfiguringLens] = useState<LensItem | null>(null);
   const [pendingLines, setPendingLines] = useState<StockIntakeLine[]>([]);
 
   const [quantity, setQuantity] = useState("1");
@@ -273,8 +279,11 @@ export function EmployeeProcurementScreen() {
     }
   }
 
-  function applyLensDefaults(item: LensItem) {
-    const qty = Math.max(1, Number(quantity) || 1);
+  function applyLensDefaults(item: LensItem, qtyOverride?: number) {
+    const qty = Math.max(1, qtyOverride ?? (Number(quantity) || 1));
+    if (qtyOverride != null) {
+      setQuantity(String(qty));
+    }
     const storedCost =
       item.costPrice !== null && item.costPrice >= 0
         ? formatMoneyInput(item.costPrice)
@@ -296,10 +305,17 @@ export function EmployeeProcurementScreen() {
     setSellingPrice("");
   }
 
-  function handleSelectLens(item: LensItem) {
+  function handleSelectLens(item: LensItem, qtyOverride?: number) {
     setSelectedLens(item);
     setPickerOpen(false);
-    applyLensDefaults(item);
+    setConfiguringLens(null);
+    applyLensDefaults(item, qtyOverride);
+    setStockError(null);
+  }
+
+  function handleOpenLensDetails(item: LensItem) {
+    setConfiguringLens(item);
+    setPickerOpen(false);
     setStockError(null);
   }
 
@@ -590,6 +606,27 @@ export function EmployeeProcurementScreen() {
         ) : null}
 
         {mode === "stock" ? (
+          configuringLens ? (
+            <OrderModeProvider>
+              <CartProvider>
+                <LensProductDetailScreen
+                  lensId={configuringLens.id}
+                  category={lensTypeToShopCategory(configuringLens.lensType)}
+                  catalogItem={formatLensProductCardTitle(configuringLens)}
+                  initialItem={configuringLens}
+                  mode="stock-select"
+                  onCancel={() => {
+                    setConfiguringLens(null);
+                    setPickerOpen(true);
+                  }}
+                  onSelected={(selection) => {
+                    const qty = Math.max(1, Math.floor(selection.quantity) || 1);
+                    handleSelectLens(selection.lens, qty);
+                  }}
+                />
+              </CartProvider>
+            </OrderModeProvider>
+          ) : (
           <div className="space-y-4">
             {pendingLines.length > 0 ? (
               <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-4">
@@ -729,7 +766,7 @@ export function EmployeeProcurementScreen() {
                           <button
                             key={lens.id}
                             type="button"
-                            onClick={() => handleSelectLens(lens)}
+                            onClick={() => handleOpenLensDetails(lens)}
                             className="block w-full text-left"
                           >
                             <InventoryProductCard item={lens} />
@@ -865,6 +902,7 @@ export function EmployeeProcurementScreen() {
               </div>
             </div>
           </div>
+          )
         ) : null}
 
         {mode === "history" ? (
