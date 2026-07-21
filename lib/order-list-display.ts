@@ -163,7 +163,10 @@ export function orderPowerLineToLensItem(line: OrderPowerDisplayLine): LensItem 
     crossPower: line.crossPower ?? null,
     axis: line.axis,
     add: line.add,
-    eye: order.eye ?? (catalog && "eye" in catalog ? catalog.eye ?? undefined : undefined),
+    eye:
+      order.eye ??
+      (catalog && "eye" in catalog ? catalog.eye ?? undefined : undefined) ??
+      undefined,
     // Inventory stock from catalog lens — never order.quantity (ordered pieces).
     quantity: catalogStock,
     createdAt: order.createdAt,

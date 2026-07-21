@@ -1,6 +1,7 @@
 import { formatPowerLabel } from "@/lib/cart-utils";
 import { resolveCrossPowerMeta } from "@/lib/cross-power";
 import type { LensItem, LensType } from "@/lib/types/lens";
+import { formatProgressiveEyeLabel } from "@/lib/progressive-eye";
 import { resolveWholesalePowerProfile } from "@/lib/wholesale-powers";
 
 /** Shown when a product has no SPH/CYL (and no cross power). */
@@ -39,6 +40,11 @@ export function formatLensProductDetail(item: LensItem): string {
 
   if (hasPower(item.add)) {
     parts.push(`ADD ${formatPower(Number(item.add))}`);
+  }
+
+  const eyeLabel = formatProgressiveEyeLabel(item.eye);
+  if (eyeLabel) {
+    parts.push(eyeLabel);
   }
 
   if (item.index) {
@@ -100,6 +106,7 @@ export function formatLensProductCardDetail(item: {
   axis?: number | null;
   coating?: string | null;
   lensType?: LensType | string | null;
+  eye?: string | null;
 }): string {
   const coating = item.coating?.trim() ?? "";
   const profileLabel = formatPowerProfileLabel(resolveWholesalePowerProfile(item));
@@ -126,7 +133,9 @@ export function formatLensProductCardDetail(item: {
       ? ` x ${formatAxisValue(item.axis)}`
       : "";
 
-  return [coating, profileLabel, lensAbbrev, `${powerPart}${axisPart}`]
+  const eyeLabel = formatProgressiveEyeLabel(item.eye);
+
+  return [coating, profileLabel, lensAbbrev, `${powerPart}${axisPart}`, eyeLabel]
     .filter(Boolean)
     .join(" ");
 }

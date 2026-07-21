@@ -32,6 +32,7 @@ import {
 } from "@/lib/order-list-display";
 import { formatPairQuantity, pairsFromPieces } from "@/lib/order-quantity";
 import { recordStockIntake } from "@/lib/procurement-api";
+import { formatProgressiveEyeLabel } from "@/lib/progressive-eye";
 import type { OrderRecord } from "@/lib/types/orders";
 import { formatLensType } from "@/lib/types/lens";
 
@@ -78,6 +79,7 @@ export function EmployeeProcurementProductSheet({
         .filter(Boolean)
         .join(" · ")
     : "";
+  const eyeLabel = formatProgressiveEyeLabel(lensItem?.eye);
 
   useEffect(() => {
     if (!open || !order) return;
@@ -205,8 +207,12 @@ export function EmployeeProcurementProductSheet({
               <p className="mt-1 text-sm font-semibold text-[var(--brand-text-muted)]">
                 {formatLensType(order?.lensType ?? "")}
                 {lensItem.index != null ? ` · Index ${lensItem.index}` : ""}
-                {lensItem.eye ? ` · ${lensItem.eye}` : ""}
               </p>
+              {eyeLabel ? (
+                <p className="mt-2 inline-flex rounded-md border border-[var(--brand-primary)]/35 bg-[var(--brand-primary)]/14 px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide text-[var(--brand-primary)]">
+                  {eyeLabel}
+                </p>
+              ) : null}
               <p className="mt-2 text-sm font-bold text-[var(--brand-primary)]">
                 ₹{lensItem.price}
                 <span className="ml-1 text-xs font-semibold text-[var(--brand-text-muted)]">
@@ -260,6 +266,11 @@ export function EmployeeProcurementProductSheet({
                       </div>
                     ))}
                   </div>
+                  {eyeLabel ? (
+                    <p className="mt-2 text-xs font-bold text-[var(--brand-primary)]">
+                      Ordered for: {eyeLabel}
+                    </p>
+                  ) : null}
                 </div>
               ))}
             </div>
