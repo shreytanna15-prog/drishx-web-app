@@ -1,8 +1,22 @@
 import { resolveCrossPowerMeta } from "@/lib/cross-power";
+import {
+  DEFAULT_LENS_SORT,
+  isCustomLensSort,
+  paginateItems,
+  sortApiLenses,
+  type LensSortOption,
+} from "@/lib/lens-sort";
 import type { FilterOption, LensItem, LensType, SelectableRange } from "@/lib/types/lens";
 
 export const PAGE_SIZE = 21;
 export const LOAD_MORE_AT_INDEX = 14;
+
+export {
+  DEFAULT_LENS_SORT,
+  isCustomLensSort,
+  LENS_SORT_OPTIONS,
+  type LensSortOption,
+} from "@/lib/lens-sort";
 
 export type LensesPageResponse = {
   items: Array<{
@@ -128,49 +142,75 @@ export async function fetchLensCatalogItems(
   return data.items ?? [];
 }
 
+async function fetchAllLensesPages({
+  type,
+  search,
+  item,
+}: {
+  type: FilterOption;
+  search?: string;
+  item?: string;
+}): Promise<LensesPageResponse["items"]> {
+  const collected: LensesPageResponse["items"] = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const data = await fetchLensesPageRaw({
+      page,
+      limit: 50,
+      type,
+      search,
+      item,
+    });
+    collected.push(...data.items);
+    hasMore = data.hasMore;
+    if (!hasMore) break;
+    page += 1;
+  }
+
+  return collected;
+}
+
 export async function fetchLensesPage({
   page,
   limit = PAGE_SIZE,
   type,
   search,
   item,
+  sort = DEFAULT_LENS_SORT,
 }: {
   page: number;
   limit?: number;
   type: FilterOption;
   search: string;
   item?: string;
+  sort?: LensSortOption;
 }): Promise<LensesPageResponse> {
   const trimmedSearch = search.trim();
   const planoSearch = isPlanoSearchQuery(trimmedSearch);
 
   if (planoSearch) {
-    return fetchPlanoLensesPage({ page, limit, type, item });
+    return fetchPlanoLensesPage({ page, limit, type, item, sort });
   }
 
-  const params = new URLSearchParams({
-    page: String(page),
-    limit: String(limit),
-    type: filterToApiType(type),
+  if (isCustomLensSort(sort)) {
+    const allItems = await fetchAllLensesPages({
+      type,
+      search: trimmedSearch,
+      item,
+    });
+    const sorted = sortApiLenses(allItems, sort);
+    return paginateItems(sorted, page, limit);
+  }
+
+  return fetchLensesPageRaw({
+    page,
+    limit,
+    type,
+    search: trimmedSearch,
+    item,
   });
-
-  if (trimmedSearch) {
-    params.set("search", trimmedSearch);
-  }
-
-  const trimmedItem = item?.trim();
-  if (trimmedItem) {
-    params.set("item", trimmedItem);
-  }
-
-  const response = await fetch(`/api/lenses?${params.toString()}`, {
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to load lenses");
-  }
-
-  return response.json() as Promise<LensesPageResponse>;
 }
 
 /** True when the user is searching for plano (no SPH/CYL) products. */
@@ -237,12 +277,20 @@ async function fetchPlanoLensesPage({
   limit,
   type,
   item,
+  sort = DEFAULT_LENS_SORT,
 }: {
   page: number;
   limit: number;
   type: FilterOption;
   item?: string;
+  sort?: LensSortOption;
 }): Promise<LensesPageResponse> {
+  if (isCustomLensSort(sort)) {
+    const allItems = await fetchAllLensesPages({ type, item });
+    const planoItems = sortApiLenses(allItems.filter(isPlanoApiLens), sort);
+    return paginateItems(planoItems, page, limit);
+  }
+
   const collected: LensesPageResponse["items"] = [];
   let apiPage = page;
   let hasMore = true;

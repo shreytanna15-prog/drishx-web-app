@@ -3,6 +3,7 @@
 import {
   AlertCircle,
   ArrowLeft,
+  ChevronDown,
   Package,
   RefreshCw,
   Search,
@@ -15,9 +16,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  DEFAULT_LENS_SORT,
   fetchLensesPage,
+  LENS_SORT_OPTIONS,
   LOAD_MORE_AT_INDEX,
   mapApiLens,
+  type LensSortOption,
 } from "@/lib/lenses-api";
 import {
   parseShopCategory,
@@ -41,6 +45,7 @@ export function ShopProductsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sort, setSort] = useState<LensSortOption>(DEFAULT_LENS_SORT);
 
   const pageRef = useRef(1);
   const hasMoreRef = useRef(false);
@@ -48,7 +53,9 @@ export function ShopProductsScreen() {
   const loadingMoreRef = useRef(false);
   const requestIdRef = useRef(0);
   const debouncedSearchRef = useRef("");
+  const sortRef = useRef(sort);
   debouncedSearchRef.current = debouncedSearch;
+  sortRef.current = sort;
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 450);
@@ -74,6 +81,7 @@ export function ShopProductsScreen() {
           type: filter,
           search: debouncedSearchRef.current,
           item: selectedItem,
+          sort: sortRef.current,
         });
 
         if (currentRequestId !== requestIdRef.current) return;
@@ -112,7 +120,7 @@ export function ShopProductsScreen() {
     setHasMore(false);
     setInitialLoading(true);
     void loadPage(1, true);
-  }, [loadPage, selectedItem, debouncedSearch]);
+  }, [loadPage, selectedItem, debouncedSearch, sort]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -170,14 +178,31 @@ export function ShopProductsScreen() {
               </p>
             </div>
 
-            <div className="relative w-full sm:max-w-sm">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--brand-text-muted)]" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search power, coating, plano…"
-                className="h-11 rounded-xl border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] pl-10"
-              />
+            <div className="flex w-full flex-col gap-2 sm:max-w-sm">
+              <div className="relative">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--brand-text-muted)]" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search power, coating, plano…"
+                  className="h-11 rounded-xl border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] pl-10"
+                />
+              </div>
+              <div className="relative">
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as LensSortOption)}
+                  aria-label="Sort products"
+                  className="h-11 w-full appearance-none rounded-xl border border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] px-3 pr-10 text-sm font-semibold text-[var(--brand-text)] outline-none"
+                >
+                  {LENS_SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-[var(--brand-text-muted)]" />
+              </div>
             </div>
           </div>
         </div>
