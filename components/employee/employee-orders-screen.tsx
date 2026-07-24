@@ -16,30 +16,41 @@ import { fetchOrders } from "@/lib/orders-api";
 import type { OrderRecord } from "@/lib/types/orders";
 import { cn } from "@/lib/utils";
 
-type StaffOrderFilter = "ALL" | "IN_PROGRESS" | "COMPLETED";
+type StaffOrderFilter =
+  | "ALL"
+  | "PENDING"
+  | "PICKING"
+  | "PACKED"
+  | "COMPLETED";
 
 const FILTERS: { key: StaffOrderFilter; label: string }[] = [
   { key: "ALL", label: "All" },
-  { key: "IN_PROGRESS", label: "In Progress" },
+  { key: "PENDING", label: "Pending" },
+  { key: "PICKING", label: "Picking" },
+  { key: "PACKED", label: "Packed" },
   { key: "COMPLETED", label: "Completed" },
 ];
 
-function isInProgressStatus(status: string): boolean {
-  const normalized = normalizeOrderStatus(status);
-  return normalized !== "COMPLETED" && normalized !== "CANCELLED";
-}
+/** Statuses that belong under each staff filter tab. */
+const FILTER_STATUSES: Record<
+  Exclude<StaffOrderFilter, "ALL">,
+  ReturnType<typeof normalizeOrderStatus>[]
+> = {
+  PENDING: ["PENDING"],
+  PICKING: ["PICKING", "PARTIALLY_FULFILLED"],
+  PACKED: ["PACKED", "DISPATCHED"],
+  COMPLETED: ["COMPLETED"],
+};
 
 function groupMatchesStaffFilter(
   group: OrderListGroup,
   filter: StaffOrderFilter
 ): boolean {
   if (filter === "ALL") return true;
-  if (filter === "COMPLETED") {
-    return group.orders.some(
-      (order) => normalizeOrderStatus(order.status) === "COMPLETED"
-    );
-  }
-  return group.orders.some((order) => isInProgressStatus(order.status));
+  const allowed = FILTER_STATUSES[filter];
+  return group.orders.some((order) =>
+    allowed.includes(normalizeOrderStatus(order.status))
+  );
 }
 
 export function EmployeeOrdersScreen() {
@@ -128,7 +139,7 @@ export function EmployeeOrdersScreen() {
           </div>
         </div>
 
-        <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="mb-5 grid grid-cols-5 gap-1.5 sm:gap-2">
           {FILTERS.map((filter) => {
             const active = activeFilter === filter.key;
             return (
@@ -137,7 +148,7 @@ export function EmployeeOrdersScreen() {
                 type="button"
                 onClick={() => setActiveFilter(filter.key)}
                 className={cn(
-                  "rounded-xl border px-3 py-2.5 text-sm font-bold transition-colors",
+                  "rounded-xl border px-1.5 py-2.5 text-center text-[11px] font-bold transition-colors sm:px-3 sm:text-sm",
                   active
                     ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]"
                     : "border-[var(--brand-card-border)] bg-[var(--brand-card)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
