@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, ChevronDown, ChevronUp, Eye, Minus } from "lucide-react";
 import type { OrderProductSection, PickState, PowerLineRow } from "@/lib/order-detail-display";
+import { formatPairQuantity } from "@/lib/order-quantity";
 import { cn } from "@/lib/utils";
 
 function PackedStatusCell({
@@ -110,14 +111,16 @@ export function OrderProductSectionCard({
             <p className="truncate text-[15px] font-bold text-[var(--brand-text)]">
               {section.title}
             </p>
-            <p className="mt-0.5 line-clamp-2 text-xs text-[var(--brand-text-muted)]">
-              {section.subtitle}
-            </p>
+            {section.subtitle ? (
+              <p className="mt-0.5 line-clamp-2 text-xs text-[var(--brand-text-muted)]">
+                {section.subtitle}
+              </p>
+            ) : null}
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <p className="text-xs font-bold text-[var(--brand-primary)]">
-            {section.totalPairs} Pairs
+            {formatPairQuantity(section.totalPairs)} Pairs
           </p>
           {expanded ? (
             <ChevronUp className="size-5 text-[var(--brand-text-muted)]" />
@@ -130,7 +133,8 @@ export function OrderProductSectionCard({
       <div className="mt-3 space-y-1.5">
         <div className="flex items-center justify-between text-xs font-semibold">
           <span className="text-[var(--brand-text-muted)]">
-            {section.pickedPairs} / {section.totalPairs} Picked
+            {formatPairQuantity(section.pickedPairs)} /{" "}
+            {formatPairQuantity(section.totalPairs)} Picked
           </span>
           <span className="font-bold text-[var(--brand-primary)]">{progress}%</span>
         </div>
