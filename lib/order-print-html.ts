@@ -230,10 +230,6 @@ export function buildEmployeeOrderPrintHtml(group: OrderListGroup): string {
       <div class="stat-value">${escapeHtml(formatPairQuantity(group.pairCount))}</div>
       <div class="stat-label">Pairs</div>
     </div>
-    <div class="stat">
-      <div class="stat-value">₹${group.totalAmount.toLocaleString("en-IN")}</div>
-      <div class="stat-label">Amount</div>
-    </div>
   </div>
 
   <div class="section-label">Products &amp; power combinations</div>
