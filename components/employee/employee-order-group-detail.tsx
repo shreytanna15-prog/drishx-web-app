@@ -204,13 +204,13 @@ function EmployeeProductSectionCard({
               Packed
             </p>
           </div>
-          {section.lines.map((line) => {
+          {section.lines.map((line, index) => {
             const isUpdating =
               updatingOrderId != null &&
               (line.orderIds ?? [line.orderId]).includes(updatingOrderId);
             return (
               <button
-                key={line.orderIds?.join(":") ?? line.orderId}
+                key={`${line.orderIds?.join(":") ?? line.orderId}:${line.sphCylLabel}:${line.addLabel}:${line.axisLabel}:${line.eye ?? ""}:${index}`}
                 type="button"
                 disabled={isUpdating}
                 onClick={() => onLinePress(line)}

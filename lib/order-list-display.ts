@@ -101,10 +101,11 @@ function toNullablePower(value: number | string | null | undefined): number | nu
 
 function lineFromWholesaleItem(
   order: OrderRecord,
-  line: WholesaleOrderLineItem
+  line: WholesaleOrderLineItem,
+  index: number
 ): OrderPowerDisplayLine {
   return {
-    key: line.id || `${order.id}:${line.powerKey}`,
+    key: `${order.id}:${line.id || line.powerKey || "line"}:${index}`,
     order,
     quantity: Math.max(1, Number(line.quantity) || 1),
     sph: toNullablePower(line.sph),
@@ -126,13 +127,13 @@ export function getOrderPowerDisplayLines(
         if (sphDiff !== 0) return sphDiff;
         return Number(a.cyl ?? 0) - Number(b.cyl ?? 0);
       })
-      .map((line) => lineFromWholesaleItem(order, line));
+      .map((line, index) => lineFromWholesaleItem(order, line, index));
   }
 
   const details = getOrderLensDetails(order);
   return [
     {
-      key: order.id,
+      key: `${order.id}:${details?.sph ?? ""}:${details?.cyl ?? ""}:${details?.add ?? ""}:${details?.axis ?? ""}:${order.eye ?? ""}`,
       order,
       quantity: Math.max(1, Number(order.quantity) || 1),
       sph: toNullablePower(details?.sph),

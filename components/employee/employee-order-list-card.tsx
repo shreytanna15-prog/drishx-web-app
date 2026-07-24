@@ -159,12 +159,12 @@ export function EmployeeOrderListCard({ group }: { group: OrderListGroup }) {
 
           {expanded ? (
             <div className="mt-3 space-y-2 border-t border-[var(--brand-card-border)] pt-3">
-              {visibleOrders.flatMap((order) =>
-                getOrderPowerDisplayLines(order).map((line) => {
+              {visibleOrders.flatMap((order, orderIndex) =>
+                getOrderPowerDisplayLines(order).map((line, lineIndex) => {
                   const orderedPairs = pairsFromPieces(line.quantity);
                   return (
                     <LensProductCard
-                      key={line.key}
+                      key={`${line.key}:${orderIndex}:${lineIndex}`}
                       href={href}
                       item={orderPowerLineToLensItem(line)}
                       quantityHint={`${formatPairQuantity(orderedPairs)} ordered`}

@@ -1,6 +1,12 @@
 "use client";
 
-import { ChevronLeft, Loader2, RefreshCw } from "lucide-react";
+import {
+  ChevronLeft,
+  Download,
+  Loader2,
+  Printer,
+  RefreshCw,
+} from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
@@ -11,6 +17,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { groupOrdersForList } from "@/lib/order-list-display";
+import {
+  downloadEmployeeOrderPdf,
+  printEmployeeOrder,
+} from "@/lib/order-print";
 import type { OrderTrackingStatus } from "@/lib/order-tracking";
 import { fetchOrders, updateOrderStatus } from "@/lib/orders-api";
 import type { OrderRecord } from "@/lib/types/orders";
@@ -23,6 +33,7 @@ export function EmployeeOrderDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<"print" | "download" | null>(null);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -84,9 +95,39 @@ export function EmployeeOrderDetailScreen() {
     [loadOrders]
   );
 
+  const handlePrintOrder = useCallback(async () => {
+    if (!orderGroup) return;
+    setExporting("print");
+    try {
+      await printEmployeeOrder(orderGroup);
+    } catch (err) {
+      window.alert(
+        err instanceof Error ? err.message : "Could not print order."
+      );
+    } finally {
+      setExporting(null);
+    }
+  }, [orderGroup]);
+
+  const handleDownloadOrder = useCallback(async () => {
+    if (!orderGroup) return;
+    setExporting("download");
+    try {
+      await downloadEmployeeOrderPdf(orderGroup);
+    } catch (err) {
+      window.alert(
+        err instanceof Error ? err.message : "Could not download order."
+      );
+    } finally {
+      setExporting(null);
+    }
+  }, [orderGroup]);
+
+  const showExportActions = Boolean(orderGroup) && !loading && !error;
+
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-6 flex items-center gap-3 border-b border-[var(--brand-card-border)] pb-4">
+      <div className="mb-6 flex items-center gap-2 border-b border-[var(--brand-card-border)] pb-4 sm:gap-3">
         <Button
           variant="outline"
           size="icon"
@@ -97,26 +138,60 @@ export function EmployeeOrderDetailScreen() {
             <ChevronLeft className="size-5 text-[var(--brand-primary)]" />
           </Link>
         </Button>
-        <h1 className="flex-1 text-center text-lg font-extrabold text-[var(--brand-text)] sm:text-xl">
+        <h1 className="min-w-0 flex-1 truncate text-center text-lg font-extrabold text-[var(--brand-text)] sm:text-xl">
           {orderGroup?.displayOrderId ?? "Order details"}
         </h1>
-        <Button
-          variant="outline"
-          size="icon"
-          className="size-9 shrink-0 rounded-xl border-[var(--brand-input-border)]"
-          onClick={() => {
-            setRefreshing(true);
-            void loadOrders();
-          }}
-          disabled={loading || refreshing}
-          aria-label="Refresh order"
-        >
-          {refreshing ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <RefreshCw className="size-4" />
-          )}
-        </Button>
+        {showExportActions ? (
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-9 rounded-xl border-[var(--brand-input-border)]"
+              onClick={() => void handlePrintOrder()}
+              disabled={exporting !== null}
+              aria-label="Print order"
+            >
+              {exporting === "print" ? (
+                <Loader2 className="size-4 animate-spin text-[var(--brand-primary)]" />
+              ) : (
+                <Printer className="size-4 text-[var(--brand-primary)]" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-9 rounded-xl border-[var(--brand-input-border)]"
+              onClick={() => void handleDownloadOrder()}
+              disabled={exporting !== null}
+              aria-label="Download order"
+            >
+              {exporting === "download" ? (
+                <Loader2 className="size-4 animate-spin text-[var(--brand-primary)]" />
+              ) : (
+                <Download className="size-4 text-[var(--brand-primary)]" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-9 rounded-xl border-[var(--brand-input-border)]"
+              onClick={() => {
+                setRefreshing(true);
+                void loadOrders();
+              }}
+              disabled={loading || refreshing || exporting !== null}
+              aria-label="Refresh order"
+            >
+              {refreshing ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RefreshCw className="size-4" />
+              )}
+            </Button>
+          </div>
+        ) : (
+          <div className="w-9 shrink-0 sm:w-[7.5rem]" aria-hidden />
+        )}
       </div>
 
       {loading ? (

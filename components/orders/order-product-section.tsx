@@ -165,9 +165,9 @@ export function OrderProductSectionCard({
               Packed
             </p>
           </div>
-          {section.lines.map((line) => (
+          {section.lines.map((line, index) => (
             <PowerTableRow
-              key={line.orderIds?.join(":") ?? line.orderId}
+              key={`${line.orderIds?.join(":") ?? line.orderId}:${line.sphCylLabel}:${line.addLabel}:${line.axisLabel}:${line.eye ?? ""}:${index}`}
               line={line}
             />
           ))}
