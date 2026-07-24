@@ -176,18 +176,11 @@ export function EmployeeOrderListCard({ group }: { group: OrderListGroup }) {
             </div>
           ) : null}
 
-          {group.readyProductCount > 0 || group.procurementProductCount > 0 ? (
+          {group.readyProductCount > 0 ? (
             <div className="mt-3 flex flex-wrap gap-2">
-              {group.readyProductCount > 0 ? (
-                <span className="rounded-lg border border-green-500/35 bg-green-500/14 px-2.5 py-1 text-xs font-bold text-green-500">
-                  {group.readyProductCount} Ready
-                </span>
-              ) : null}
-              {group.procurementProductCount > 0 ? (
-                <span className="rounded-lg border border-red-400/35 bg-red-400/14 px-2.5 py-1 text-xs font-bold text-red-400">
-                  {group.procurementProductCount} Need Procurement
-                </span>
-              ) : null}
+              <span className="rounded-lg border border-green-500/35 bg-green-500/14 px-2.5 py-1 text-xs font-bold text-green-500">
+                {group.readyProductCount} Ready
+              </span>
             </div>
           ) : null}
         </>

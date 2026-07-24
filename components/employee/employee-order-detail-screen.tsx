@@ -16,7 +16,7 @@ import {
 } from "@/components/employee/employee-order-group-detail";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { groupOrdersForList } from "@/lib/order-list-display";
+import { groupOrdersForList, filterStaffFulfillmentOrders } from "@/lib/order-list-display";
 import {
   downloadEmployeeOrderPdf,
   printEmployeeOrder,
@@ -58,12 +58,15 @@ export function EmployeeOrderDetailScreen() {
       orders.find((order) => order.id === groupKey)?.checkoutBatchId?.trim() ||
       groupKey;
 
-    const batch = orders.filter(
+    // Match Orders list: never include procurement lines in fulfillment detail.
+    const staffOrders = filterStaffFulfillmentOrders(orders);
+
+    const batch = staffOrders.filter(
       (order) => (order.checkoutBatchId?.trim() || order.id) === targetKey
     );
 
     if (batch.length === 0) {
-      const single = orders.find((order) => order.id === groupKey);
+      const single = staffOrders.find((order) => order.id === groupKey);
       if (!single) return null;
       return groupOrdersForList([single])[0] ?? null;
     }

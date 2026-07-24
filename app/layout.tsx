@@ -17,8 +17,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://drishx-web-app.vercel.app"),
   title: "Drishx",
   description: "Drishx customer portal",
+  openGraph: {
+    title: "Drishx",
+    description: "Drishx customer portal",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 512,
+        height: 512,
+        alt: "Drishx",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "Drishx",
+    description: "Drishx customer portal",
+    images: ["/og-image.png"],
+  },
   icons: {
     icon: [
       { url: "/favicon.ico?v=12", sizes: "any", type: "image/x-icon" },

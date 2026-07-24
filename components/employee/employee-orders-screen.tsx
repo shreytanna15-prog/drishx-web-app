@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   enrichOrdersWithCatalogStock,
+  filterStaffFulfillmentOrders,
   groupOrdersForList,
   type OrderListGroup,
 } from "@/lib/order-list-display";
@@ -79,10 +80,7 @@ export function EmployeeOrdersScreen() {
   }, [loadOrders]);
 
   const orderGroups = useMemo(() => {
-    const staffOrders = orders.filter(
-      (order) => normalizeOrderStatus(order.status) !== "AWAITING_PROCUREMENT"
-    );
-    return groupOrdersForList(staffOrders);
+    return groupOrdersForList(filterStaffFulfillmentOrders(orders));
   }, [orders]);
 
   const filteredGroups = useMemo(
