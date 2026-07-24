@@ -166,7 +166,7 @@ export function orderPowerLineToLensItem(line: OrderPowerDisplayLine): LensItem 
     add: line.add,
     eye:
       order.eye ??
-      (catalog && "eye" in catalog ? catalog.eye ?? undefined : undefined) ??
+      order.progressiveLens?.eye ??
       undefined,
     // Inventory stock from catalog lens — never order.quantity (ordered pieces).
     quantity: catalogStock,
