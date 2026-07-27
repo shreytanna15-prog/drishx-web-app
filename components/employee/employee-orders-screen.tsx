@@ -103,7 +103,7 @@ export function EmployeeOrdersScreen() {
               Orders
             </h1>
             <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
-              Manage and update customer orders
+              Orders assigned to you
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -182,8 +182,8 @@ export function EmployeeOrdersScreen() {
             <ClipboardList className="mx-auto mb-3 size-10 text-[var(--brand-text-muted)]" />
             <p className="text-sm font-medium text-[var(--brand-text-muted)]">
               {activeFilter === "ALL"
-                ? "No orders found."
-                : "No orders match this filter."}
+                ? "No orders assigned to you yet."
+                : "No assigned orders match this filter."}
             </p>
           </div>
         ) : (

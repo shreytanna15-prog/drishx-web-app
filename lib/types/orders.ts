@@ -19,6 +19,13 @@ export type OrderUser = {
   businessName?: string | null;
 };
 
+export type OrderAssignee = {
+  id: string;
+  name: string | null;
+  email: string;
+  role?: string;
+};
+
 export type WholesaleOrderLineItem = {
   id: string;
   powerKey: string;
@@ -59,6 +66,9 @@ export type OrderRecord = {
   createdAt: string;
   updatedAt?: string;
   user?: OrderUser;
+  assignedToId?: string | null;
+  assignedAt?: string | null;
+  assignedTo?: OrderAssignee | null;
   singleVisionLens?: {
     id: string;
     brand?: string | null;

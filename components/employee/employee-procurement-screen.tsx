@@ -587,7 +587,7 @@ export function EmployeeProcurementScreen() {
                   No procurement orders
                 </p>
                 <p className="mt-1 max-w-sm text-sm text-[var(--brand-text-muted)]">
-                  Orders waiting for stock will appear here.
+                  Procurement orders assigned to you will appear here.
                 </p>
               </div>
             ) : (

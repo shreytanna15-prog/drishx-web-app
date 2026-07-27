@@ -214,7 +214,7 @@ export function EmployeeOrderDetailScreen() {
       ) : !orderGroup ? (
         <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 py-16 text-center">
           <p className="text-sm font-medium text-[var(--brand-text-muted)]">
-            Order not found.
+            Order not found or not assigned to you.
           </p>
           <Button className="mt-4 rounded-xl" asChild>
             <Link href="/employee/orders">Back to Orders</Link>
