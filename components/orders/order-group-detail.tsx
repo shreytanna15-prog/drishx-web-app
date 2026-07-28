@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ImageOff } from "lucide-react";
 import { OrderProductSectionCard } from "@/components/orders/order-product-section";
+import { ReturnRequestPanel } from "@/components/orders/return-request-panel";
 import { OrderStatusPill } from "@/components/orders/order-status-pill";
 import { OrderTrackingHorizontal } from "@/components/orders/order-tracking-horizontal";
 import {
@@ -33,8 +34,8 @@ export function OrderGroupDetail({ group }: OrderGroupDetailProps) {
     () => getBatchTrackingStatus(group.orders),
     [group.orders]
   );
-  const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
-  const [referenceLoadFailed, setReferenceLoadFailed] = useState(false);
+  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
+  const [failedReferenceUrl, setFailedReferenceUrl] = useState<string | null>(null);
 
   const orderReferenceUrl = useMemo(() => {
     const orderWithImage = group.orders.find(
@@ -46,15 +47,11 @@ export function OrderGroupDetail({ group }: OrderGroupDetailProps) {
     return raw ? resolveOrderImageUrl(raw) : null;
   }, [group.orders]);
 
-  useEffect(() => {
-    setPhotoLoadFailed(false);
-    setReferenceLoadFailed(false);
-  }, [group.key, group.photoUrl, orderReferenceUrl]);
-
   if (group.isPhotoOrder) {
     const order = group.orders[0];
     const rawImageUrl = group.photoUrl ?? order.orderImageUrl ?? null;
     const photoUri = rawImageUrl ? resolveOrderImageUrl(rawImageUrl) : null;
+    const photoLoadFailed = photoUri != null && failedPhotoUrl === photoUri;
 
     return (
       <div className="space-y-4">
@@ -86,7 +83,7 @@ export function OrderGroupDetail({ group }: OrderGroupDetailProps) {
               src={photoUri}
               alt="Prescription photo"
               className="size-full object-contain"
-              onError={() => setPhotoLoadFailed(true)}
+              onError={() => setFailedPhotoUrl(photoUri)}
             />
           </div>
         ) : (
@@ -104,6 +101,9 @@ export function OrderGroupDetail({ group }: OrderGroupDetailProps) {
       </div>
     );
   }
+
+  const referenceLoadFailed =
+    orderReferenceUrl != null && failedReferenceUrl === orderReferenceUrl;
 
   return (
     <div className="space-y-4">
@@ -136,7 +136,7 @@ export function OrderGroupDetail({ group }: OrderGroupDetailProps) {
               src={orderReferenceUrl}
               alt="Prescription reference"
               className="size-full object-contain"
-              onError={() => setReferenceLoadFailed(true)}
+              onError={() => setFailedReferenceUrl(orderReferenceUrl)}
             />
           </div>
         </div>
@@ -197,6 +197,8 @@ export function OrderGroupDetail({ group }: OrderGroupDetailProps) {
       <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-4 sm:p-5">
         <OrderTrackingHorizontal status={trackingStatus} />
       </div>
+
+      <ReturnRequestPanel group={group} />
     </div>
   );
 }

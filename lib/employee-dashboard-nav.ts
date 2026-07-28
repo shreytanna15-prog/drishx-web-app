@@ -2,6 +2,7 @@ import {
   ClipboardList,
   Home,
   Package,
+  RotateCcw,
   ShoppingCart,
   User,
   type LucideIcon,
@@ -33,6 +34,12 @@ export const EMPLOYEE_DASHBOARD_NAV: EmployeeNavItem[] = [
     label: "Tasks",
     icon: Package,
     description: "Assigned tasks",
+  },
+  {
+    href: "/employee/returns",
+    label: "Returns",
+    icon: RotateCcw,
+    description: "Review return requests",
   },
   {
     href: "/employee/procurement",
