@@ -667,12 +667,12 @@ export function LensProductDetailScreen({
 
         <section className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-5 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.35)]">
           {item.imageUrl ? (
-            <div className="mb-4 overflow-hidden rounded-xl border border-[var(--brand-card-border)]">
+            <div className="mb-4 flex h-52 items-center justify-center overflow-hidden rounded-xl border border-[var(--brand-card-border)] bg-[color-mix(in_srgb,var(--brand-primary)_6%,var(--brand-card))] sm:h-60">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={item.imageUrl}
                 alt={formatLensProductCardTitle(item)}
-                className="h-44 w-full object-cover sm:h-52"
+                className="max-h-full max-w-full object-contain p-3"
               />
             </div>
           ) : null}

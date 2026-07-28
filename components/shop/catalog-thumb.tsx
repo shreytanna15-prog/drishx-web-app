@@ -28,7 +28,7 @@ export function CatalogThumb({
         <img
           src={src}
           alt={alt}
-          className={cn("size-full object-cover", imgClassName)}
+          className={cn("size-full object-contain p-1", imgClassName)}
           loading="lazy"
         />
       ) : (

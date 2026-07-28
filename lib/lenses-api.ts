@@ -348,6 +348,7 @@ type LensDetailResponse = {
   coating?: string | null;
   index?: number | string | null;
   selectableRange?: SelectableRange | null;
+  imageUrl?: string | null;
 };
 
 function apiTypeFromFilter(type: FilterOption): LensesPageResponse["items"][number]["lensType"] {
@@ -404,6 +405,7 @@ function mapDetailLens(
         ? Number(data.index)
         : null,
     selectableRange: data.selectableRange ?? null,
+    imageUrl: data.imageUrl ?? null,
   });
 }
 
