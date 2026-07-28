@@ -26,18 +26,18 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-image.png",
-        width: 512,
-        height: 512,
+        url: "/edited-photo.png?v=2",
+        width: 1264,
+        height: 742,
         alt: "Drishx",
       },
     ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Drishx",
     description: "Drishx customer portal",
-    images: ["/og-image.png"],
+    images: ["/edited-photo.png?v=2"],
   },
   icons: {
     icon: [
