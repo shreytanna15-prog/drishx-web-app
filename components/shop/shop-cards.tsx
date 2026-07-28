@@ -2,6 +2,7 @@
 
 import { ChevronRight, Eye, ScanEye, View } from "lucide-react";
 import Link from "next/link";
+import { CatalogThumb } from "@/components/shop/catalog-thumb";
 import type { LensCatalogItem } from "@/lib/lenses-api";
 import type { ShopCategoryId } from "@/lib/shop-navigation";
 import { cn } from "@/lib/utils";
@@ -16,9 +17,15 @@ type ShopItemCardProps = {
   item: LensCatalogItem;
   category: ShopCategoryId;
   uppercase?: boolean;
+  imageUrl?: string | null;
 };
 
-export function ShopItemCard({ item, category, uppercase }: ShopItemCardProps) {
+export function ShopItemCard({
+  item,
+  category,
+  uppercase,
+  imageUrl,
+}: ShopItemCardProps) {
   const disabled = item.productCount < 1;
   const href = `/shop/products?category=${category}&item=${encodeURIComponent(item.name)}`;
 
@@ -35,6 +42,11 @@ export function ShopItemCard({ item, category, uppercase }: ShopItemCardProps) {
           : "hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/50 hover:bg-[color-mix(in_srgb,var(--brand-primary)_6%,var(--brand-card))] hover:shadow-[0_12px_28px_-12px_rgba(240,161,50,0.35)]"
       )}
     >
+      <CatalogThumb
+        src={imageUrl}
+        alt={item.name}
+        className="mb-3 size-16"
+      />
       <h3
         className={cn(
           "text-base font-extrabold leading-snug text-[var(--brand-text)]",
@@ -61,6 +73,7 @@ type ShopCategoryCardProps = {
   subtitle: string;
   active?: boolean;
   onSelect?: () => void;
+  imageUrl?: string | null;
 };
 
 export function ShopCategoryCard({
@@ -69,6 +82,7 @@ export function ShopCategoryCard({
   subtitle,
   active,
   onSelect,
+  imageUrl,
 }: ShopCategoryCardProps) {
   const Icon = CATEGORY_ICONS[id];
 
@@ -85,16 +99,20 @@ export function ShopCategoryCard({
       )}
     >
       <div className="flex items-start justify-between">
-        <span
-          className={cn(
-            "flex size-11 items-center justify-center rounded-xl",
-            active
-              ? "bg-[var(--brand-primary)] text-[var(--brand-primary-text)]"
-              : "bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]"
-          )}
-        >
-          <Icon className="size-5" />
-        </span>
+        {imageUrl ? (
+          <CatalogThumb src={imageUrl} alt={title} className="size-11" />
+        ) : (
+          <span
+            className={cn(
+              "flex size-11 items-center justify-center rounded-xl",
+              active
+                ? "bg-[var(--brand-primary)] text-[var(--brand-primary-text)]"
+                : "bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]"
+            )}
+          >
+            <Icon className="size-5" />
+          </span>
+        )}
         <ChevronRight className="size-5 text-[var(--brand-text-muted)]" />
       </div>
       <h3 className="mt-4 text-lg font-extrabold text-[var(--brand-text)]">

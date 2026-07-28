@@ -40,6 +40,8 @@ export type LensItem = {
   coating?: string | null;
   index?: number | null;
   selectableRange?: SelectableRange | null;
+  /** Catalog image from Supabase (by lens type). */
+  imageUrl?: string | null;
 };
 
 export type CartLineType = "RETAIL" | "WHOLESALE";

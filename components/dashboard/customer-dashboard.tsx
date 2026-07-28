@@ -25,6 +25,11 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
+import {
+  catalogImageForHomeCategory,
+  fetchCatalogImages,
+  type CatalogImagesResponse,
+} from "@/lib/catalog-images-api";
 import { CLIENT_HOME_CATEGORIES } from "@/lib/home-categories";
 import { computeCustomerOrderOverview } from "@/lib/home-order-stats";
 import {
@@ -174,6 +179,8 @@ export function CustomerDashboard() {
     completed: 0,
   });
   const [mostOrdered, setMostOrdered] = useState<MostOrderedProduct[]>([]);
+  const [catalogImages, setCatalogImages] =
+    useState<CatalogImagesResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -181,10 +188,14 @@ export function CustomerDashboard() {
     async function load() {
       setLoading(true);
       try {
-        const orders = await fetchOrders();
+        const [orders, images] = await Promise.all([
+          fetchOrders(),
+          fetchCatalogImages().catch(() => null),
+        ]);
         if (cancelled) return;
         setOverview(computeCustomerOrderOverview(orders));
         setMostOrdered(computeMostOrderedProducts(orders, 5));
+        setCatalogImages(images);
       } catch {
         if (!cancelled) {
           setOverview({ total: 0, inProgress: 0, readyToShip: 0, completed: 0 });
@@ -334,23 +345,39 @@ export function CustomerDashboard() {
             Product categories
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-            {CLIENT_HOME_CATEGORIES.map((category) => (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => goToCategory(router, category.id)}
-                className={cn(
-                  "flex min-h-[5.5rem] flex-col justify-between rounded-2xl border p-4 text-left transition-all",
-                  "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
-                  "hover:border-[var(--brand-primary)]/45 hover:bg-[color-mix(in_srgb,var(--brand-primary)_6%,var(--brand-card))]"
-                )}
-              >
-                <span className="text-base font-extrabold text-[var(--brand-text)]">
-                  {category.label}
-                </span>
-                <ChevronRight className="size-5 text-[var(--brand-primary)]" />
-              </button>
-            ))}
+            {CLIENT_HOME_CATEGORIES.map((category) => {
+              const imageUrl = catalogImageForHomeCategory(
+                catalogImages,
+                category.id
+              );
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => goToCategory(router, category.id)}
+                  className={cn(
+                    "flex min-h-[5.5rem] flex-col justify-between rounded-2xl border p-4 text-left transition-all",
+                    "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
+                    "hover:border-[var(--brand-primary)]/45 hover:bg-[color-mix(in_srgb,var(--brand-primary)_6%,var(--brand-card))]"
+                  )}
+                >
+                  {imageUrl ? (
+                    <span className="mb-2 size-12 overflow-hidden rounded-lg border border-[var(--brand-card-border)]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={imageUrl}
+                        alt={category.label}
+                        className="size-full object-cover"
+                      />
+                    </span>
+                  ) : null}
+                  <span className="text-base font-extrabold text-[var(--brand-text)]">
+                    {category.label}
+                  </span>
+                  <ChevronRight className="mt-auto size-5 text-[var(--brand-primary)]" />
+                </button>
+              );
+            })}
           </div>
         </section>
 

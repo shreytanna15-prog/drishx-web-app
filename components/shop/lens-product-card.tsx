@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CatalogThumb } from "@/components/shop/catalog-thumb";
 import {
   formatLensItemLabel,
   formatLensProductDetail,
@@ -36,49 +37,56 @@ export function LensProductCard({
   const inStock = stockQty > 0;
 
   const content = (
-    <div className="flex items-start justify-between gap-4">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-base font-bold text-[var(--brand-text)]">
-            {title}
-          </h3>
-          {eyeLabel ? (
-            <span className="rounded-md border border-[var(--brand-primary)]/35 bg-[var(--brand-primary)]/14 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--brand-primary)]">
-              {eyeLabel}
-            </span>
+    <div className="flex items-start gap-3">
+      <CatalogThumb
+        src={item.imageUrl}
+        alt={title}
+        className="size-16 sm:size-[4.5rem]"
+      />
+      <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-bold text-[var(--brand-text)]">
+              {title}
+            </h3>
+            {eyeLabel ? (
+              <span className="rounded-md border border-[var(--brand-primary)]/35 bg-[var(--brand-primary)]/14 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--brand-primary)]">
+                {eyeLabel}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 text-sm font-semibold leading-snug text-[var(--brand-text)]">
+            {detail}
+          </p>
+          {showItemLine ? (
+            <p className="mt-2 text-xs font-medium text-[var(--brand-text-muted)]">
+              {itemLabel}
+            </p>
           ) : null}
         </div>
-        <p className="mt-1 text-sm font-semibold leading-snug text-[var(--brand-text)]">
-          {detail}
-        </p>
-        {showItemLine ? (
-          <p className="mt-2 text-xs font-medium text-[var(--brand-text-muted)]">
-            {itemLabel}
+        <div className="shrink-0 text-right">
+          <p className="text-lg font-extrabold text-[var(--brand-primary)]">
+            ₹{item.price}
+            <span className="ml-0.5 text-[10px] font-bold text-[var(--brand-text-muted)]">
+              {LENS_PRICE_PER_PAIR_LABEL}
+            </span>
           </p>
-        ) : null}
-      </div>
-      <div className="shrink-0 text-right">
-        <p className="text-lg font-extrabold text-[var(--brand-primary)]">
-          ₹{item.price}
-          <span className="ml-0.5 text-[10px] font-bold text-[var(--brand-text-muted)]">
-            {LENS_PRICE_PER_PAIR_LABEL}
-          </span>
-        </p>
-        {quantityHint ? (
-          <p className="mt-1 text-xs font-semibold text-[var(--brand-text-muted)]">
-            {quantityHint}
+          {quantityHint ? (
+            <p className="mt-1 text-xs font-semibold text-[var(--brand-text-muted)]">
+              {quantityHint}
+            </p>
+          ) : null}
+          <p
+            className={cn(
+              "mt-1 text-xs font-semibold",
+              inStock
+                ? "text-[var(--brand-success)]"
+                : "text-[var(--brand-text-muted)]"
+            )}
+          >
+            {inStock ? `${stockQty} in stock` : "Out of stock"}
           </p>
-        ) : null}
-        <p
-          className={cn(
-            "mt-1 text-xs font-semibold",
-            inStock
-              ? "text-[var(--brand-success)]"
-              : "text-[var(--brand-text-muted)]"
-          )}
-        >
-          {inStock ? `${stockQty} in stock` : "Out of stock"}
-        </p>
+        </div>
       </div>
     </div>
   );
@@ -100,14 +108,13 @@ export function LensProductCard({
   }
 
   return (
-    <article
+    <div
       className={cn(
-        "rounded-2xl border p-4 transition-all",
-        "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
+        "rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-4",
         className
       )}
     >
       {content}
-    </article>
+    </div>
   );
 }

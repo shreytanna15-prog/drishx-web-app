@@ -5,6 +5,11 @@ import { useCallback, useEffect, useState } from "react";
 import { ShopItemCard } from "@/components/shop/shop-cards";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  catalogImageForShopCategory,
+  fetchCatalogImages,
+  type CatalogImagesResponse,
+} from "@/lib/catalog-images-api";
 import { fetchLensCatalogItems, type LensCatalogItem } from "@/lib/lenses-api";
 import {
   shopCategoryDisplayTitle,
@@ -20,6 +25,8 @@ type ShopItemsGridProps = {
 
 export function ShopItemsGrid({ category, uppercase }: ShopItemsGridProps) {
   const [items, setItems] = useState<LensCatalogItem[]>([]);
+  const [catalogImages, setCatalogImages] =
+    useState<CatalogImagesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,8 +34,12 @@ export function ShopItemsGrid({ category, uppercase }: ShopItemsGridProps) {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchLensCatalogItems(shopCategoryToApiType(category));
+      const [data, images] = await Promise.all([
+        fetchLensCatalogItems(shopCategoryToApiType(category)),
+        fetchCatalogImages().catch(() => null),
+      ]);
       setItems(data);
+      setCatalogImages(images);
     } catch {
       setItems([]);
       setError("Unable to load items from the backend.");
@@ -40,6 +51,8 @@ export function ShopItemsGrid({ category, uppercase }: ShopItemsGridProps) {
   useEffect(() => {
     void loadItems();
   }, [loadItems]);
+
+  const categoryImage = catalogImageForShopCategory(catalogImages, category);
 
   if (loading) {
     return (
@@ -99,6 +112,7 @@ export function ShopItemsGrid({ category, uppercase }: ShopItemsGridProps) {
             item={item}
             category={category}
             uppercase={uppercase}
+            imageUrl={categoryImage}
           />
         ))}
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CatalogThumb } from "@/components/shop/catalog-thumb";
 import {
   formatAddAxisLabel,
   formatLensItemLabel,
@@ -38,29 +39,32 @@ export function RelatedLensCard({ item, href, className }: RelatedLensCardProps)
         className
       )}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-bold text-[var(--brand-text)]">
-            {`${indexLabel}${title}`.trim()}
-          </p>
-          {showItemLine ? (
-            <p className="mt-0.5 text-xs font-semibold text-[var(--brand-text-muted)]">
-              {itemLabel}
+      <div className="flex items-start gap-3">
+        <CatalogThumb src={item.imageUrl} alt={title} className="size-14" />
+        <div className="flex min-w-0 flex-1 items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-bold text-[var(--brand-text)]">
+              {`${indexLabel}${title}`.trim()}
             </p>
-          ) : null}
-          <p className="mt-2 text-lg font-extrabold text-[var(--brand-text)]">
-            {sphCyl}
-          </p>
-          <p className="mt-1 text-xs font-semibold text-[var(--brand-text-muted)]">
-            {addAxis}
+            {showItemLine ? (
+              <p className="mt-0.5 text-xs font-semibold text-[var(--brand-text-muted)]">
+                {itemLabel}
+              </p>
+            ) : null}
+            <p className="mt-2 text-lg font-extrabold text-[var(--brand-text)]">
+              {sphCyl}
+            </p>
+            <p className="mt-1 text-xs font-semibold text-[var(--brand-text-muted)]">
+              {addAxis}
+            </p>
+          </div>
+          <p className="shrink-0 text-base font-extrabold text-[var(--brand-primary)]">
+            ₹{item.price}
+            <span className="ml-0.5 text-[10px] font-bold text-[var(--brand-text-muted)]">
+              {LENS_PRICE_PER_PAIR_LABEL}
+            </span>
           </p>
         </div>
-        <p className="shrink-0 text-base font-extrabold text-[var(--brand-primary)]">
-          ₹{item.price}
-          <span className="ml-0.5 text-[10px] font-bold text-[var(--brand-text-muted)]">
-            {LENS_PRICE_PER_PAIR_LABEL}
-          </span>
-        </p>
       </div>
     </Link>
   );

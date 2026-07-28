@@ -2,19 +2,40 @@
 
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useOrderMode } from "@/contexts/order-mode-context";
+import {
+  catalogImageForShopCategory,
+  fetchCatalogImages,
+  type CatalogImagesResponse,
+} from "@/lib/catalog-images-api";
 import { LENS_CATALOG_CATEGORIES } from "@/lib/wholesale-navigation";
 import { cn } from "@/lib/utils";
 
 export function WholesaleCategoryScreen() {
   const { setMode } = useOrderMode();
+  const [catalogImages, setCatalogImages] =
+    useState<CatalogImagesResponse | null>(null);
 
   useEffect(() => {
     setMode("wholesale");
   }, [setMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchCatalogImages()
+      .then((data) => {
+        if (!cancelled) setCatalogImages(data);
+      })
+      .catch(() => {
+        if (!cancelled) setCatalogImages(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="relative mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -52,6 +73,7 @@ export function WholesaleCategoryScreen() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {LENS_CATALOG_CATEGORIES.map((cat) => {
             const Icon = cat.icon;
+            const imageUrl = catalogImageForShopCategory(catalogImages, cat.id);
             return (
               <Link key={cat.id} href={`/wholesale/items?category=${cat.id}`}>
                 <Card
@@ -62,9 +84,20 @@ export function WholesaleCategoryScreen() {
                 >
                   <CardContent className="flex h-full min-h-[132px] flex-col justify-between p-5">
                     <div className="flex items-start justify-between">
-                      <span className="flex size-11 items-center justify-center rounded-xl border border-[var(--brand-card-border)] bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] text-[var(--brand-primary)]">
-                        <Icon className="size-5" />
-                      </span>
+                      {imageUrl ? (
+                        <span className="size-14 overflow-hidden rounded-xl border border-[var(--brand-card-border)]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={imageUrl}
+                            alt={cat.title}
+                            className="size-full object-cover"
+                          />
+                        </span>
+                      ) : (
+                        <span className="flex size-11 items-center justify-center rounded-xl border border-[var(--brand-card-border)] bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] text-[var(--brand-primary)]">
+                          <Icon className="size-5" />
+                        </span>
+                      )}
                       <ChevronRight className="size-5 text-[var(--brand-text-muted)]" />
                     </div>
                     <div>
