@@ -194,6 +194,30 @@ export function OrderGroupDetail({ group }: OrderGroupDetailProps) {
         </div>
       ) : null}
 
+      {group.orders.some(
+        (order) => order.courierName?.trim() || order.trackingNumber?.trim()
+      ) ? (
+        <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-4 text-sm text-[var(--brand-text)]">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--brand-primary)]">
+            Shipping
+          </p>
+          {(() => {
+            const ship = group.orders.find(
+              (order) =>
+                order.courierName?.trim() || order.trackingNumber?.trim()
+            );
+            return (
+              <>
+                <p>Courier: {ship?.courierName?.trim() || "—"}</p>
+                <p className="mt-1">
+                  Tracking: {ship?.trackingNumber?.trim() || "—"}
+                </p>
+              </>
+            );
+          })()}
+        </div>
+      ) : null}
+
       <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-4 sm:p-5">
         <OrderTrackingHorizontal status={trackingStatus} />
       </div>

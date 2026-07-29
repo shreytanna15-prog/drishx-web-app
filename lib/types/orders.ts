@@ -58,6 +58,11 @@ export type OrderRecord = {
   totalAmount?: number | string;
   status: OrderStatus;
   notes?: string | null;
+  /** Staff-only — never sent to CUSTOMER role by the API. */
+  internalNotes?: string | null;
+  cancelReason?: string | null;
+  courierName?: string | null;
+  trackingNumber?: string | null;
   sph?: number | string | null;
   cyl?: number | string | null;
   axis?: number | null;

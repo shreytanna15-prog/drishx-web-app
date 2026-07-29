@@ -125,7 +125,7 @@ export function getStaffStatusOptions(
     case "PARTIALLY_FULFILLED":
       return ["AWAITING_PROCUREMENT", "COMPLETED", "CANCELLED"];
     case "AWAITING_PROCUREMENT":
-      return ["PARTIALLY_FULFILLED", "PICKING", "COMPLETED", "CANCELLED"];
+      return ["PARTIALLY_FULFILLED", "PICKING", "PENDING", "COMPLETED", "CANCELLED"];
     case "COMPLETED":
     case "CANCELLED":
       return [];
