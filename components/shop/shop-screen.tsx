@@ -4,6 +4,7 @@ import { ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { CatalogSearchBar } from "@/components/shop/catalog-search-bar";
 import { ShopItemsGrid } from "@/components/shop/shop-items-grid";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -64,6 +65,8 @@ export function ShopScreen() {
             </Link>
           </Button>
         </div>
+
+        <CatalogSearchBar className="max-w-xl" />
 
         <Tabs
           value={activeCategory}

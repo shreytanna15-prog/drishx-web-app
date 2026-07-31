@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CatalogSearchBar } from "@/components/shop/catalog-search-bar";
 import { useAuth } from "@/contexts/auth-context";
 import {
   catalogImageForHomeCategory,
@@ -237,6 +238,8 @@ export function CustomerDashboard() {
             <span className="font-mono text-xs sm:text-sm">{user.id}</span>
           </p>
         </section>
+
+        <CatalogSearchBar className="max-w-xl" />
 
         {/* Order overview */}
         <section>
