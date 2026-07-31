@@ -8,6 +8,7 @@ import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   fetchReturnRequest,
+  formatReturnPowerLine,
   formatReturnStatus,
   updateReturnRequest,
   type ReturnRequestRecord,
@@ -123,6 +124,26 @@ export function EmployeeReturnDetailScreen() {
                     Qty {item.quantity}
                     {item.eye ? ` · ${item.eye}` : ""} · {formatReturnStatus(item.reason)}
                   </p>
+                  <p className="mt-2 text-xs text-[var(--brand-text-muted)]">
+                    Original:{" "}
+                    {formatReturnPowerLine({
+                      sph: item.originalSph,
+                      cyl: item.originalCyl,
+                      add: item.originalAdd,
+                      axis: item.originalAxis,
+                    })}
+                  </p>
+                  {item.requestedSph != null || item.requestedCyl != null ? (
+                    <p className="mt-1 text-xs font-semibold text-[var(--brand-text)]">
+                      Requested:{" "}
+                      {formatReturnPowerLine({
+                        sph: item.requestedSph,
+                        cyl: item.requestedCyl,
+                        add: item.requestedAdd,
+                        axis: item.requestedAxis,
+                      })}
+                    </p>
+                  ) : null}
                   {item.itemRemarks ? (
                     <p className="mt-2 text-sm text-[var(--brand-text)]">{item.itemRemarks}</p>
                   ) : null}

@@ -51,6 +51,14 @@ export type ReturnRequestRecord = {
     eye?: string | null;
     reason: ReturnReason;
     itemRemarks?: string | null;
+    originalSph?: number | null;
+    originalCyl?: number | null;
+    originalAxis?: number | null;
+    originalAdd?: number | null;
+    requestedSph?: number | null;
+    requestedCyl?: number | null;
+    requestedAxis?: number | null;
+    requestedAdd?: number | null;
   }>;
   images: Array<{
     id: string;
@@ -138,6 +146,27 @@ export function formatReturnStatus(status: string) {
     .join(" ");
 }
 
+export function formatReturnPowerLine(parts: {
+  sph?: number | null;
+  cyl?: number | null;
+  add?: number | null;
+  axis?: number | null;
+}): string {
+  const format = (value: number) => {
+    const rounded = Math.round(value * 100) / 100;
+    if (rounded === 0) return "0.00";
+    const sign = rounded > 0 ? "+" : "";
+    return `${sign}${rounded.toFixed(2)}`;
+  };
+  const labels = [
+    parts.sph != null ? `SPH ${format(parts.sph)}` : null,
+    parts.cyl != null ? `CYL ${format(parts.cyl)}` : null,
+    parts.add != null ? `ADD ${format(parts.add)}` : null,
+    parts.axis != null ? `AXIS ${parts.axis}` : null,
+  ].filter(Boolean);
+  return labels.length > 0 ? labels.join(" · ") : "—";
+}
+
 export async function createReturnRequest(input: {
   requestType: ReturnRequestType;
   customerRemarks?: string;
@@ -147,6 +176,10 @@ export async function createReturnRequest(input: {
     eye?: string | null;
     reason: ReturnReason;
     itemRemarks?: string;
+    requestedSph?: number | null;
+    requestedCyl?: number | null;
+    requestedAxis?: number | null;
+    requestedAdd?: number | null;
   }>;
 }): Promise<ReturnRequestRecord> {
   const res = await fetchWithRetry("/api/returns", {

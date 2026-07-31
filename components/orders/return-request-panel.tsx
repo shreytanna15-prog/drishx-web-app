@@ -3,6 +3,10 @@
 import { useMemo, useState } from "react";
 import { Loader2, Upload } from "lucide-react";
 
+import {
+  ReplacementPowerFields,
+  type ReplacementPowerValue,
+} from "@/components/orders/replacement-power-fields";
 import { Button } from "@/components/ui/button";
 import type { OrderListGroup } from "@/lib/order-list-display";
 import {
@@ -22,6 +26,7 @@ type ItemState = {
   eye: string;
   reason: ReturnReason;
   itemRemarks: string;
+  power: ReplacementPowerValue;
 };
 
 function formatReturnStatus(status: string) {
@@ -42,6 +47,10 @@ function orderLabel(group: OrderListGroup, orderId: string) {
     order.singleVisionLens?.brand ||
     "";
   return [lensType, catalog].filter(Boolean).join(" · ");
+}
+
+function emptyPower(): ReplacementPowerValue {
+  return { sph: null, cyl: null, add: null, axis: null };
 }
 
 export function ReturnRequestPanel({ group }: { group: OrderListGroup }) {
@@ -65,6 +74,7 @@ export function ReturnRequestPanel({ group }: { group: OrderListGroup }) {
           eye: order.eye ?? "",
           reason: "WRONG_POWER" as ReturnReason,
           itemRemarks: "",
+          power: emptyPower(),
         },
       ])
     )
@@ -74,6 +84,8 @@ export function ReturnRequestPanel({ group }: { group: OrderListGroup }) {
     () => Object.values(itemState).filter((item) => item.selected).length,
     [itemState]
   );
+
+  const isReplacement = requestType === "REPLACEMENT";
 
   async function loadHistory() {
     try {
@@ -103,12 +115,39 @@ export function ReturnRequestPanel({ group }: { group: OrderListGroup }) {
           eye: state.eye || null,
           reason: state.reason,
           itemRemarks: state.itemRemarks.trim(),
+          ...(isReplacement
+            ? {
+                requestedSph: state.power.sph,
+                requestedCyl: state.power.cyl,
+                requestedAxis: state.power.axis,
+                requestedAdd: state.power.add,
+              }
+            : {}),
         };
       });
 
     if (items.length === 0) {
       setError("Select at least one item.");
       return;
+    }
+
+    if (isReplacement) {
+      const missingPower = items.some(
+        (item) =>
+          item.requestedSph === null || item.requestedSph === undefined
+      );
+      const catalogSelected = group.orders.some((order) => {
+        if (!itemState[order.id]?.selected) return false;
+        return Boolean(
+          order.singleVisionLens?.id ||
+            order.kryptokLens?.id ||
+            order.progressiveLens?.id
+        );
+      });
+      if (catalogSelected && missingPower) {
+        setError("Select a replacement power for each catalog product.");
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -131,7 +170,7 @@ export function ReturnRequestPanel({ group }: { group: OrderListGroup }) {
         Object.fromEntries(
           Object.entries(current).map(([key, value]) => [
             key,
-            { ...value, selected: false, itemRemarks: "" },
+            { ...value, selected: false, itemRemarks: "", power: emptyPower() },
           ])
         )
       );
@@ -290,6 +329,18 @@ export function ReturnRequestPanel({ group }: { group: OrderListGroup }) {
                             ))}
                           </select>
                         </label>
+
+                        <ReplacementPowerFields
+                          order={order}
+                          enabled={isReplacement}
+                          value={state.power}
+                          onChange={(power) =>
+                            setItemState((current) => ({
+                              ...current,
+                              [order.id]: { ...current[order.id], power },
+                            }))
+                          }
+                        />
 
                         <label className="block space-y-1 sm:col-span-2">
                           <span className="text-xs font-semibold text-[var(--brand-text-muted)]">
