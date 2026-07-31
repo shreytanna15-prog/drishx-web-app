@@ -115,4 +115,46 @@ export type OrderRecord = {
     /** Current inventory stock (pieces), when included by the API. */
     quantity?: number | null;
   } | null;
+  powerVersions?: OrderPowerVersion[];
+  alternateSuggestions?: AlternatePowerSuggestion[];
+};
+
+export type OrderPowerVersion = {
+  id: string;
+  orderId: string;
+  versionNumber: number;
+  sph: number | null;
+  cyl: number | null;
+  axis: number | null;
+  add: number | null;
+  eye: string | null;
+  lensType: string;
+  lensId: string | null;
+  source: string;
+  status: string;
+  reservedQuantity: number;
+  pickedQuantity: number;
+  isFinalFulfilled: boolean;
+  acceptedAt?: string | null;
+  supersededAt?: string | null;
+  notes?: string | null;
+  createdAt: string;
+};
+
+export type AlternatePowerSuggestion = {
+  id: string;
+  orderId: string;
+  forVersionId: string;
+  sph: number;
+  cyl: number | null;
+  axis: number | null;
+  add: number | null;
+  eye: string | null;
+  lensType: string;
+  lensId: string;
+  availability: "WAREHOUSE" | "SUPPLIER" | "OUT_OF_STOCK" | string;
+  etaDays: number | null;
+  distanceScore: number;
+  status: string;
+  createdAt: string;
 };

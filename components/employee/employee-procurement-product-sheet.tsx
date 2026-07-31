@@ -35,6 +35,7 @@ import { recordStockIntake } from "@/lib/procurement-api";
 import { formatProgressiveEyeLabel } from "@/lib/progressive-eye";
 import type { OrderRecord } from "@/lib/types/orders";
 import { formatLensType } from "@/lib/types/lens";
+import { AlternatePowerPanel } from "@/components/orders/alternate-power-panel";
 
 function formatPowerCell(value: number | null | undefined): string {
   if (value === null || value === undefined) {
@@ -338,6 +339,10 @@ export function EmployeeProcurementProductSheet({
             <p className="text-sm font-medium text-[var(--brand-danger)]">
               {error}
             </p>
+          ) : null}
+
+          {order && (order.lineType ?? "RETAIL") === "RETAIL" ? (
+            <AlternatePowerPanel order={order} mode="staff" onChanged={onSuccess} />
           ) : null}
         </div>
 

@@ -44,6 +44,7 @@ import {
 import { resolveOrderImageUrl } from "@/lib/orders-api";
 import type { OrderRecord } from "@/lib/types/orders";
 import { cn } from "@/lib/utils";
+import { AlternatePowerPanel } from "@/components/orders/alternate-power-panel";
 
 type EmployeeOrderGroupDetailProps = {
   group: OrderListGroup;
@@ -698,6 +699,12 @@ export function EmployeeOrderGroupDetail({
           </p>
         ) : null}
       </div>
+
+      {group.orders
+        .filter((order) => (order.lineType ?? "RETAIL") === "RETAIL")
+        .map((order) => (
+          <AlternatePowerPanel key={`alt-${order.id}`} order={order} mode="staff" />
+        ))}
 
       <EmployeeOrderRangeSheet
         open={sheetOpen}

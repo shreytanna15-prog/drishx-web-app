@@ -20,12 +20,17 @@ import {
 import { resolveOrderImageUrl } from "@/lib/orders-api";
 
 import { OrderNotesDisplay } from "@/components/orders/order-notes-display";
+import { AlternatePowerPanel } from "@/components/orders/alternate-power-panel";
 
 type OrderGroupDetailProps = {
   group: OrderListGroup;
+  onAlternateChanged?: () => void;
 };
 
-export function OrderGroupDetail({ group }: OrderGroupDetailProps) {
+export function OrderGroupDetail({
+  group,
+  onAlternateChanged,
+}: OrderGroupDetailProps) {
   const productSections = useMemo(
     () => buildOrderProductSections(group.orders),
     [group.orders]
@@ -179,6 +184,17 @@ export function OrderGroupDetail({ group }: OrderGroupDetailProps) {
           ))}
         </div>
       </div>
+
+      {group.orders
+        .filter((order) => (order.lineType ?? "RETAIL") === "RETAIL")
+        .map((order) => (
+          <AlternatePowerPanel
+            key={`alt-${order.id}`}
+            order={order}
+            mode="customer"
+            onChanged={onAlternateChanged}
+          />
+        ))}
 
       {group.orders.some((order) => order.notes?.trim()) ? (
         <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-4">
