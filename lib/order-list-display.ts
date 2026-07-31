@@ -200,6 +200,16 @@ export function filterStaffFulfillmentOrders(
   );
 }
 
+/** Catalog / color / photo fulfillment list — excludes prescription RX orders. */
+export function filterNonRxOrders(orders: OrderRecord[]): OrderRecord[] {
+  return orders.filter((order) => !isRxOrder(order));
+}
+
+/** Prescription RX orders only (`[RX Order]` marker in notes). */
+export function filterRxOrders(orders: OrderRecord[]): OrderRecord[] {
+  return orders.filter(isRxOrder);
+}
+
 /** Order batch waiting for stock purchase (Procurement tab). */
 export function hasAwaitingProcurementOrder(group: OrderListGroup): boolean {
   if (group.isPhotoOrder) {

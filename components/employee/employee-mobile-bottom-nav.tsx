@@ -2,12 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { EMPLOYEE_DASHBOARD_NAV } from "@/lib/employee-dashboard-nav";
+import { EMPLOYEE_DASHBOARD_NAV, isEmployeeNavActive } from "@/lib/employee-dashboard-nav";
 import { cn } from "@/lib/utils";
-
-function isNavActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 const MOBILE_NAV = EMPLOYEE_DASHBOARD_NAV.filter((item) =>
   ["/employee/home", "/employee/orders", "/employee/procurement", "/employee/profile"].includes(
@@ -29,7 +25,7 @@ export function EmployeeMobileBottomNav() {
       <div className="flex items-stretch justify-around px-1 pt-1">
         {MOBILE_NAV.map((item) => {
           const Icon = item.icon;
-          const isActive = isNavActive(pathname, item.href);
+          const isActive = isEmployeeNavActive(pathname, item.href);
 
           return (
             <Link

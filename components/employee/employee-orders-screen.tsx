@@ -1,6 +1,13 @@
 "use client";
 
-import { ClipboardList, Loader2, RefreshCw, ShoppingCart } from "lucide-react";
+import {
+  ArrowLeft,
+  ClipboardList,
+  FlaskConical,
+  Loader2,
+  RefreshCw,
+  ShoppingCart,
+} from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmployeeOrderListCard } from "@/components/employee/employee-order-list-card";
@@ -8,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   enrichOrdersWithCatalogStock,
+  filterNonRxOrders,
+  filterRxOrders,
   filterStaffFulfillmentOrders,
   groupOrdersForList,
   type OrderListGroup,
@@ -54,7 +63,16 @@ function groupMatchesStaffFilter(
   );
 }
 
-export function EmployeeOrdersScreen() {
+export type EmployeeOrdersScreenVariant = "standard" | "rx";
+
+type EmployeeOrdersScreenProps = {
+  variant?: EmployeeOrdersScreenVariant;
+};
+
+export function EmployeeOrdersScreen({
+  variant = "standard",
+}: EmployeeOrdersScreenProps) {
+  const isRx = variant === "rx";
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -80,13 +98,27 @@ export function EmployeeOrdersScreen() {
   }, [loadOrders]);
 
   const orderGroups = useMemo(() => {
-    return groupOrdersForList(filterStaffFulfillmentOrders(orders));
-  }, [orders]);
+    const fulfillment = filterStaffFulfillmentOrders(orders);
+    const scoped = isRx
+      ? filterRxOrders(fulfillment)
+      : filterNonRxOrders(fulfillment);
+    return groupOrdersForList(scoped);
+  }, [orders, isRx]);
 
   const filteredGroups = useMemo(
-    () => orderGroups.filter((group) => groupMatchesStaffFilter(group, activeFilter)),
+    () =>
+      orderGroups.filter((group) => groupMatchesStaffFilter(group, activeFilter)),
     [orderGroups, activeFilter]
   );
+
+  const emptyMessage =
+    activeFilter === "ALL"
+      ? isRx
+        ? "No RX orders assigned to you yet."
+        : "No orders assigned to you yet."
+      : isRx
+        ? "No assigned RX orders match this filter."
+        : "No assigned orders match this filter.";
 
   return (
     <div className="relative mx-auto w-full max-w-4xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
@@ -100,23 +132,52 @@ export function EmployeeOrdersScreen() {
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-extrabold text-[var(--brand-text)] sm:text-3xl">
-              Orders
+              {isRx ? "Rx Orders" : "Orders"}
             </h1>
             <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
-              Orders assigned to you
+              {isRx
+                ? "Prescription RX orders assigned to you"
+                : "Orders assigned to you"}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Button
-              asChild
-              className="h-9 rounded-xl bg-[var(--brand-primary)] px-3 text-xs font-extrabold text-[var(--brand-primary-text)] hover:opacity-95 sm:px-4 sm:text-sm"
-            >
-              <Link href="/employee/orders/on-behalf">
-                <ShoppingCart className="size-4" />
-                <span className="hidden sm:inline">Order on Behalf</span>
-                <span className="sm:hidden">On Behalf</span>
-              </Link>
-            </Button>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {isRx ? (
+              <Button
+                asChild
+                variant="outline"
+                className="h-9 rounded-xl border-[var(--brand-input-border)] px-3 text-xs font-extrabold sm:px-4 sm:text-sm"
+              >
+                <Link href="/employee/orders">
+                  <ArrowLeft className="size-4" />
+                  <span className="hidden sm:inline">All Orders</span>
+                  <span className="sm:hidden">Orders</span>
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-9 rounded-xl border-[var(--brand-input-border)] px-3 text-xs font-extrabold sm:px-4 sm:text-sm"
+                >
+                  <Link href="/employee/orders/rx">
+                    <FlaskConical className="size-4" />
+                    <span className="hidden sm:inline">Rx Orders</span>
+                    <span className="sm:hidden">Rx</span>
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  className="h-9 rounded-xl bg-[var(--brand-primary)] px-3 text-xs font-extrabold text-[var(--brand-primary-text)] hover:opacity-95 sm:px-4 sm:text-sm"
+                >
+                  <Link href="/employee/orders/on-behalf">
+                    <ShoppingCart className="size-4" />
+                    <span className="hidden sm:inline">Order on Behalf</span>
+                    <span className="sm:hidden">On Behalf</span>
+                  </Link>
+                </Button>
+              </>
+            )}
             <Button
               variant="outline"
               size="icon"
@@ -126,7 +187,7 @@ export function EmployeeOrdersScreen() {
                 void loadOrders();
               }}
               disabled={loading || refreshing}
-              aria-label="Refresh orders"
+              aria-label={isRx ? "Refresh RX orders" : "Refresh orders"}
             >
               {refreshing ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -181,9 +242,7 @@ export function EmployeeOrdersScreen() {
           <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 py-16 text-center">
             <ClipboardList className="mx-auto mb-3 size-10 text-[var(--brand-text-muted)]" />
             <p className="text-sm font-medium text-[var(--brand-text-muted)]">
-              {activeFilter === "ALL"
-                ? "No orders assigned to you yet."
-                : "No assigned orders match this filter."}
+              {emptyMessage}
             </p>
           </div>
         ) : (

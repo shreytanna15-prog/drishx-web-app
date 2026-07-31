@@ -15,12 +15,8 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { EMPLOYEE_DASHBOARD_NAV } from "@/lib/employee-dashboard-nav";
+import { EMPLOYEE_DASHBOARD_NAV, isEmployeeNavActive } from "@/lib/employee-dashboard-nav";
 import { cn } from "@/lib/utils";
-
-function isNavActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 export function EmployeeAppSidebar() {
   const pathname = usePathname();
@@ -64,7 +60,7 @@ export function EmployeeAppSidebar() {
             <SidebarMenu className="gap-1 px-1">
               {EMPLOYEE_DASHBOARD_NAV.map((item) => {
                 const Icon = item.icon;
-                const isActive = isNavActive(pathname, item.href);
+                const isActive = isEmployeeNavActive(pathname, item.href);
 
                 return (
                   <SidebarMenuItem key={item.href}>
