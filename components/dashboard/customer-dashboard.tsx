@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LensHeroCarousel } from "@/components/dashboard/lens-hero-carousel";
 import { CatalogSearchBar } from "@/components/shop/catalog-search-bar";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -39,7 +40,10 @@ import {
 } from "@/lib/most-ordered-products";
 import { fetchOrders } from "@/lib/orders-api";
 import { cn } from "@/lib/utils";
-import { getDisplayName } from "@/lib/user-display";
+import {
+  getCompanyDisplayName,
+  getTimeOfDayGreeting,
+} from "@/lib/user-display";
 
 function goToCategory(
   router: ReturnType<typeof useRouter>,
@@ -215,7 +219,12 @@ export function CustomerDashboard() {
 
   if (!user) return null;
 
-  const displayName = getDisplayName(user.name, user.email);
+  const greeting = getTimeOfDayGreeting();
+  const companyName = getCompanyDisplayName(
+    user.businessName,
+    user.name,
+    user.email
+  );
 
   return (
     <div className="relative mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -227,21 +236,33 @@ export function CustomerDashboard() {
       />
 
       <div className="relative space-y-8">
-        {/* Welcome */}
-        <section className="space-y-1">
-          <p className="text-sm font-medium text-[var(--brand-text-muted)]">Hello,</p>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[var(--brand-text)] sm:text-4xl">
-            {displayName}
-          </h1>
-          <p className="max-w-full truncate text-sm font-medium text-[var(--brand-link)] sm:max-w-xl">
-            Client ID:{" "}
-            <span className="font-mono text-xs sm:text-sm">{user.id}</span>
-          </p>
+        {/* Hero: greeting + cycling lens */}
+        <section className="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+          <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
+            <p className="text-sm font-medium text-[var(--brand-text-muted)]">
+              {greeting},
+            </p>
+            <h1 className="text-3xl font-extrabold tracking-tight text-[var(--brand-text)] sm:text-4xl">
+              {companyName}
+            </h1>
+            <p className="max-w-md text-sm leading-relaxed text-[var(--brand-text-muted)] sm:mx-0 mx-auto">
+              A new day. New orders. Let&apos;s grow your business.
+            </p>
+            <p className="max-w-full truncate text-sm font-medium text-[var(--brand-link)] sm:max-w-xl">
+              Client ID:{" "}
+              <span className="font-mono text-xs sm:text-sm">{user.id}</span>
+            </p>
+          </div>
+          <LensHeroCarousel
+            images={catalogImages}
+            onSelectCategory={(id) => goToCategory(router, id)}
+            className="shrink-0"
+          />
         </section>
 
         <CatalogSearchBar className="max-w-xl" />
 
-        {/* Order overview */}
+        {/* At a glance */}
         <section>
           <Card
             className={cn(
@@ -252,10 +273,10 @@ export function CustomerDashboard() {
             <CardHeader className="flex flex-row items-start justify-between gap-4 border-b border-[var(--brand-card-border)] px-5 py-5 sm:px-6">
               <div className="space-y-1">
                 <CardTitle className="text-lg font-extrabold text-[var(--brand-text)]">
-                  Order overview
+                  At a glance
                 </CardTitle>
                 <CardDescription className="text-[var(--brand-text-muted)]">
-                  Your order activity at a glance
+                  Your order activity today
                 </CardDescription>
               </div>
               <Button
@@ -264,7 +285,7 @@ export function CustomerDashboard() {
                 className="shrink-0 font-semibold text-[var(--brand-link)] hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-link)]"
                 asChild
               >
-                <Link href="#">View all</Link>
+                <Link href="/my-orders">View all</Link>
               </Button>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
@@ -342,10 +363,10 @@ export function CustomerDashboard() {
           </Button>
         </section>
 
-        {/* Categories */}
+        {/* Shop by category */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-[var(--brand-text)]">
-            Product categories
+            Shop by category
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
             {CLIENT_HOME_CATEGORIES.map((category) => {
@@ -359,25 +380,28 @@ export function CustomerDashboard() {
                   type="button"
                   onClick={() => goToCategory(router, category.id)}
                   className={cn(
-                    "flex min-h-[5.5rem] flex-col justify-between rounded-2xl border p-4 text-left transition-all",
+                    "group flex min-h-[6rem] flex-col justify-between rounded-2xl border p-4 text-left transition-all",
                     "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
-                    "hover:border-[var(--brand-primary)]/45 hover:bg-[color-mix(in_srgb,var(--brand-primary)_6%,var(--brand-card))]"
+                    "hover:border-[var(--brand-primary)]/55 hover:bg-[color-mix(in_srgb,var(--brand-primary)_8%,var(--brand-card))]",
+                    "hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-10px_rgba(240,161,50,0.35)]"
                   )}
                 >
                   {imageUrl ? (
-                    <span className="mb-2 size-12 overflow-hidden rounded-lg border border-[var(--brand-card-border)]">
+                    <span className="mb-2 size-14 overflow-hidden rounded-xl border border-[var(--brand-card-border)] shadow-[0_0_12px_rgba(240,161,50,0.15)]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={imageUrl}
                         alt={category.label}
-                        className="size-full object-cover"
+                        className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     </span>
                   ) : null}
                   <span className="text-base font-extrabold text-[var(--brand-text)]">
-                    {category.label}
+                    {category.id === "singlevision"
+                      ? "Single Vision"
+                      : category.label}
                   </span>
-                  <ChevronRight className="mt-auto size-5 text-[var(--brand-primary)]" />
+                  <ChevronRight className="mt-auto size-5 text-[var(--brand-primary)] transition-transform group-hover:translate-x-0.5" />
                 </button>
               );
             })}
