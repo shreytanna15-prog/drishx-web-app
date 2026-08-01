@@ -62,36 +62,36 @@ export function LensHeroCarousel({
 
   return (
     <div
-      className={cn("flex flex-col items-center gap-3", className)}
+      className={cn("relative w-full sm:w-[17.5rem] lg:w-[18.5rem]", className)}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
+      {/* Soft ambient wash behind panel — not a hard ring */}
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-x-3 inset-y-2 rounded-[1.75rem] opacity-50 blur-xl",
+          !reduceMotion && "animate-pulse"
+        )}
+        style={{
+          background:
+            "radial-gradient(ellipse at center, color-mix(in srgb, var(--brand-primary) 28%, transparent), transparent 70%)",
+        }}
+      />
+
       <button
         type="button"
         onClick={() => active && onSelectCategory(active.id)}
-        aria-label={
-          active ? `Shop ${active.label}` : "Shop lens categories"
-        }
+        aria-label={active ? `Shop ${active.label}` : "Shop lens categories"}
         className={cn(
-          "group relative size-[11.5rem] shrink-0 overflow-visible rounded-full sm:size-[13.5rem]",
+          "group relative block h-[13rem] w-full overflow-hidden rounded-3xl border sm:h-[14.5rem]",
+          "border-[var(--brand-card-border)] bg-[var(--brand-background)]",
+          "shadow-[0_16px_40px_-18px_rgba(0,0,0,0.55)]",
+          "transition-transform duration-300 hover:-translate-y-0.5",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brand-background)]"
         )}
       >
-        {/* Glow ring */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -inset-2 rounded-full opacity-80 blur-md"
-          style={{
-            background:
-              "radial-gradient(circle, color-mix(in srgb, var(--brand-primary) 55%, transparent) 0%, transparent 70%)",
-          }}
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-full border-2 border-[var(--brand-primary)]/45 shadow-[0_0_28px_rgba(240,161,50,0.35)]"
-        />
-
-        <span className="absolute inset-[6px] overflow-hidden rounded-full bg-[var(--brand-card)] ring-1 ring-[var(--brand-card-border)]">
+        <span className="absolute inset-0 bg-[var(--brand-background)]">
           {slides.map((slide, index) => {
             const isActive = index === activeIndex;
             return slide.url ? (
@@ -101,10 +101,8 @@ export function LensHeroCarousel({
                 src={slide.url}
                 alt=""
                 className={cn(
-                  "absolute inset-0 size-full object-cover transition-[opacity,transform]",
-                  isActive
-                    ? "scale-100 opacity-100"
-                    : "scale-[1.03] opacity-0"
+                  "absolute inset-0 size-full object-contain object-center transition-[opacity,transform]",
+                  isActive ? "scale-100 opacity-100" : "scale-[0.97] opacity-0"
                 )}
                 style={{ transitionDuration: `${FADE_MS}ms` }}
                 aria-hidden={!isActive}
@@ -113,7 +111,7 @@ export function LensHeroCarousel({
               <span
                 key={slide.id}
                 className={cn(
-                  "absolute inset-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--brand-primary)_12%,var(--brand-card))] transition-opacity",
+                  "absolute inset-0 bg-[color-mix(in_srgb,var(--brand-primary)_10%,var(--brand-card))] transition-opacity",
                   isActive ? "opacity-100" : "opacity-0"
                 )}
                 style={{ transitionDuration: `${FADE_MS}ms` }}
@@ -122,11 +120,33 @@ export function LensHeroCarousel({
             );
           })}
         </span>
-      </button>
 
-      <p className="text-center text-sm font-semibold tracking-wide text-[var(--brand-primary)]">
-        {active?.label ?? "Lenses"}
-      </p>
+        {/* Bottom gradient scrim */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 via-black/35 to-transparent"
+        />
+
+        <span className="absolute inset-x-3.5 bottom-3 flex items-center justify-between gap-3">
+          <span className="max-w-[65%] truncate rounded-full border border-white/25 bg-white/15 px-3 py-1 text-xs font-bold tracking-wide text-white backdrop-blur-sm">
+            {active?.label ?? "Lenses"}
+          </span>
+          <span className="flex items-center gap-1.5" aria-hidden>
+            {slides.map((slide, index) => {
+              const isActive = index === activeIndex;
+              return (
+                <span
+                  key={slide.id}
+                  className={cn(
+                    "h-1.5 rounded-full bg-[var(--brand-primary)] transition-all duration-300",
+                    isActive ? "w-4 opacity-100" : "w-1.5 opacity-35"
+                  )}
+                />
+              );
+            })}
+          </span>
+        </span>
+      </button>
     </div>
   );
 }

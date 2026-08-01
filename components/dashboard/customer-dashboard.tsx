@@ -104,8 +104,9 @@ function StatBox({
     <div
       className={cn(
         "flex flex-col gap-3 rounded-2xl border p-4 transition-colors sm:p-5",
-        "border-[var(--brand-card-border)] bg-[color-mix(in_srgb,var(--brand-card)_92%,var(--brand-primary)_8%)]",
-        highlight && "border-[var(--brand-primary)]/40 bg-[color-mix(in_srgb,var(--brand-primary)_12%,var(--brand-card))]"
+        "border-[var(--brand-card-border)] bg-[color-mix(in_srgb,var(--brand-card)_88%,var(--brand-primary)_12%)]",
+        "shadow-[0_10px_28px_-20px_rgba(0,0,0,0.45)]",
+        highlight && "border-[var(--brand-primary)]/45 bg-[color-mix(in_srgb,var(--brand-primary)_14%,var(--brand-card))]"
       )}
     >
       <div className="flex items-center justify-between">
@@ -236,27 +237,27 @@ export function CustomerDashboard() {
       />
 
       <div className="relative space-y-8">
-        {/* Hero: greeting + cycling lens */}
-        <section className="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
-          <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
-            <p className="text-sm font-medium text-[var(--brand-text-muted)]">
+        {/* Hero: greeting + cinematic lens showcase */}
+        <section className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
+          <div className="min-w-0 flex-1 space-y-2.5 text-left">
+            <p className="text-sm font-medium tracking-wide text-[var(--brand-text-muted)]">
               {greeting},
             </p>
-            <h1 className="text-3xl font-extrabold tracking-tight text-[var(--brand-text)] sm:text-4xl">
+            <h1 className="text-3xl font-extrabold tracking-tight text-[var(--brand-text)] sm:text-[2.5rem] sm:leading-tight">
               {companyName}
             </h1>
-            <p className="max-w-md text-sm leading-relaxed text-[var(--brand-text-muted)] sm:mx-0 mx-auto">
+            <p className="max-w-md text-sm leading-relaxed text-[var(--brand-text-muted)]">
               A new day. New orders. Let&apos;s grow your business.
             </p>
-            <p className="max-w-full truncate text-sm font-medium text-[var(--brand-link)] sm:max-w-xl">
+            <p className="max-w-full truncate text-xs font-medium text-[var(--brand-text-muted)]/80 sm:max-w-xl">
               Client ID:{" "}
-              <span className="font-mono text-xs sm:text-sm">{user.id}</span>
+              <span className="font-mono text-[11px] sm:text-xs">{user.id}</span>
             </p>
           </div>
           <LensHeroCarousel
             images={catalogImages}
             onSelectCategory={(id) => goToCategory(router, id)}
-            className="shrink-0"
+            className="w-full shrink-0 sm:w-auto"
           />
         </section>
 
@@ -266,8 +267,9 @@ export function CustomerDashboard() {
         <section>
           <Card
             className={cn(
-              "gap-0 overflow-hidden rounded-2xl border py-0 shadow-[var(--brand-card-shadow)]",
-              "border-[var(--brand-card-border)] bg-[var(--brand-card)]"
+              "gap-0 overflow-hidden rounded-3xl border py-0",
+              "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
+              "shadow-[0_18px_40px_-24px_rgba(0,0,0,0.45)]"
             )}
           >
             <CardHeader className="flex flex-row items-start justify-between gap-4 border-b border-[var(--brand-card-border)] px-5 py-5 sm:px-6">
@@ -314,14 +316,14 @@ export function CustomerDashboard() {
             {QUICK_ACTIONS.map((action) => {
               const Icon = action.icon;
               const className = cn(
-                "flex flex-col items-center gap-3 rounded-2xl border p-4 transition-all sm:p-5",
+                "flex flex-col items-center gap-3 rounded-3xl border p-4 transition-all sm:p-5",
                 "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
-                "hover:border-[var(--brand-primary)]/45 hover:bg-[color-mix(in_srgb,var(--brand-primary)_8%,var(--brand-card))]",
-                "hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-10px_rgba(240,161,50,0.35)]"
+                "hover:border-[var(--brand-primary)]/40 hover:bg-[color-mix(in_srgb,var(--brand-primary)_7%,var(--brand-card))]",
+                "hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-14px_rgba(240,161,50,0.35)]"
               );
               const content = (
                 <>
-                  <span className="flex size-11 items-center justify-center rounded-xl bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]">
+                  <span className="flex size-12 items-center justify-center rounded-2xl bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]">
                     <Icon className="size-5" />
                   </span>
                   <span className="text-center text-sm font-bold text-[var(--brand-text)]">
@@ -350,7 +352,7 @@ export function CustomerDashboard() {
             size="lg"
             asChild
             className={cn(
-              "h-14 w-full rounded-2xl text-base font-extrabold shadow-lg",
+              "h-14 w-full rounded-3xl text-base font-extrabold shadow-lg",
               "bg-gradient-to-b from-[#f5ad42] to-[#e8941f] text-[var(--brand-primary-text)]",
               "hover:from-[#f7b84e] hover:to-[#ec9d28]",
               "shadow-[0_4px_20px_rgba(240,161,50,0.35)]"
@@ -380,14 +382,14 @@ export function CustomerDashboard() {
                   type="button"
                   onClick={() => goToCategory(router, category.id)}
                   className={cn(
-                    "group flex min-h-[6rem] flex-col justify-between rounded-2xl border p-4 text-left transition-all",
+                    "group flex min-h-[6.25rem] flex-col justify-between rounded-3xl border p-4 text-left transition-all",
                     "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
-                    "hover:border-[var(--brand-primary)]/55 hover:bg-[color-mix(in_srgb,var(--brand-primary)_8%,var(--brand-card))]",
-                    "hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-10px_rgba(240,161,50,0.35)]"
+                    "hover:border-[var(--brand-primary)]/50 hover:bg-[color-mix(in_srgb,var(--brand-primary)_7%,var(--brand-card))]",
+                    "hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-14px_rgba(240,161,50,0.3)]"
                   )}
                 >
                   {imageUrl ? (
-                    <span className="mb-2 size-14 overflow-hidden rounded-xl border border-[var(--brand-card-border)] shadow-[0_0_12px_rgba(240,161,50,0.15)]">
+                    <span className="mb-2 size-14 overflow-hidden rounded-2xl border border-[var(--brand-card-border)]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={imageUrl}
@@ -424,8 +426,9 @@ export function CustomerDashboard() {
 
           <Card
             className={cn(
-              "gap-0 rounded-2xl border py-0 shadow-[var(--brand-card-shadow)]",
-              "border-[var(--brand-card-border)] bg-[var(--brand-card)]"
+              "gap-0 rounded-3xl border py-0",
+              "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
+              "shadow-[0_18px_40px_-24px_rgba(0,0,0,0.4)]"
             )}
           >
             <CardContent className="p-4 sm:p-5">
