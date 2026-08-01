@@ -376,34 +376,44 @@ export function CustomerDashboard() {
                 catalogImages,
                 category.id
               );
+              const label =
+                category.id === "singlevision"
+                  ? "Single Vision"
+                  : category.label;
               return (
                 <button
                   key={category.id}
                   type="button"
                   onClick={() => goToCategory(router, category.id)}
                   className={cn(
-                    "group flex min-h-[6.25rem] flex-col justify-between rounded-3xl border p-4 text-left transition-all",
-                    "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
-                    "hover:border-[var(--brand-primary)]/50 hover:bg-[color-mix(in_srgb,var(--brand-primary)_7%,var(--brand-card))]",
-                    "hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-14px_rgba(240,161,50,0.3)]"
+                    "group relative h-[9.5rem] overflow-hidden rounded-3xl border text-left transition-all sm:h-[10.5rem]",
+                    "border-[var(--brand-card-border)] bg-[var(--brand-background)]",
+                    "shadow-[0_14px_28px_-18px_rgba(0,0,0,0.45)]",
+                    "hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/45",
+                    "hover:shadow-[0_16px_32px_-16px_rgba(240,161,50,0.28)]"
                   )}
                 >
-                  {imageUrl ? (
-                    <span className="mb-2 size-14 overflow-hidden rounded-2xl border border-[var(--brand-card-border)]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <span className="absolute inset-0 flex items-center justify-center bg-[var(--brand-background)]">
+                    {imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={imageUrl}
-                        alt={category.label}
-                        className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        alt={label}
+                        className="size-full object-contain object-center transition-transform duration-300 group-hover:scale-[1.02]"
                       />
-                    </span>
-                  ) : null}
-                  <span className="text-base font-extrabold text-[var(--brand-text)]">
-                    {category.id === "singlevision"
-                      ? "Single Vision"
-                      : category.label}
+                    ) : (
+                      <span className="size-2/3 rounded-2xl bg-[var(--brand-primary)]/10" />
+                    )}
                   </span>
-                  <ChevronRight className="mt-auto size-5 text-[var(--brand-primary)] transition-transform group-hover:translate-x-0.5" />
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 via-black/40 to-transparent"
+                  />
+                  <span className="absolute inset-x-0 bottom-0 px-3.5 pb-3 pt-2">
+                    <span className="block truncate text-sm font-bold tracking-wide text-white">
+                      {label}
+                    </span>
+                  </span>
                 </button>
               );
             })}
