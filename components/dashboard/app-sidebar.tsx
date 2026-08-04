@@ -19,7 +19,10 @@ import { DASHBOARD_NAV } from "@/lib/dashboard-nav";
 import { cn } from "@/lib/utils";
 
 function isNavActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
+  const pathOnly = href.split("?")[0] ?? href;
+  if (pathOnly === "/home") return pathname === "/home";
+  if (pathname === pathOnly) return true;
+  return pathname.startsWith(`${pathOnly}/`);
 }
 
 export function AppSidebar() {

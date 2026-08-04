@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 const FEATURE_LABELS: Record<string, string> = {
   "billing-address": "Billing Address",
   "outstanding-payments": "Outstanding / Payments",
+  support: "Support",
 };
 
 export function ProfileComingSoonScreen() {

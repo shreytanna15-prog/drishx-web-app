@@ -1,5 +1,6 @@
 import {
   ClipboardList,
+  Headphones,
   Home,
   RotateCcw,
   ShoppingBag,
@@ -51,6 +52,12 @@ export const DASHBOARD_NAV: DashboardNavItem[] = [
     label: "Profile",
     icon: User,
     description: "Account settings",
+  },
+  {
+    href: "/profile/coming-soon?feature=support",
+    label: "Support",
+    icon: Headphones,
+    description: "Help and customer support",
   },
 ];
 

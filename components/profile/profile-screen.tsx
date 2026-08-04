@@ -4,6 +4,7 @@ import {
   Building2,
   ChevronLeft,
   FileText,
+  Headphones,
   History,
   LogOut,
   MapPin,
@@ -124,9 +125,15 @@ export function ProfileScreen() {
           />
           <div className="h-px bg-[var(--brand-card-border)]" />
           <ProfileMenuRow
+            icon={Headphones}
+            label="Support"
+            href="/profile/coming-soon?feature=support"
+            variant="alt"
+          />
+          <div className="h-px bg-[var(--brand-card-border)]" />
+          <ProfileMenuRow
             icon={LogOut}
             label="Logout"
-            variant="alt"
             danger
             onClick={() => void handleLogout()}
           />

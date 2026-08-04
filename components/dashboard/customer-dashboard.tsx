@@ -3,9 +3,9 @@
 import {
   ChevronRight,
   FileText,
-  Headphones,
   Package,
   Receipt,
+  RotateCcw,
   ShoppingCart,
   Store,
   TrendingUp,
@@ -77,7 +77,12 @@ const QUICK_ACTIONS = [
   { id: "place-order", label: "Place order", icon: ShoppingCart, href: "/shop" },
   { id: "my-orders", label: "My orders", icon: Receipt, href: "/my-orders" },
   { id: "invoices", label: "Invoices", icon: FileText, href: "/profile/invoices" },
-  { id: "support", label: "Support", icon: Headphones, href: null },
+  {
+    id: "returns",
+    label: "Returns",
+    icon: RotateCcw,
+    href: "/returns",
+  },
 ] as const;
 
 const STAT_CONFIG = [

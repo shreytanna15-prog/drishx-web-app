@@ -10,8 +10,16 @@ import {
 import { cn } from "@/lib/utils";
 
 function isNavActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
+  const pathOnly = href.split("?")[0] ?? href;
+  if (pathOnly === "/home") return pathname === "/home";
+  if (pathname === pathOnly) return true;
+  return pathname.startsWith(`${pathOnly}/`);
 }
+
+/** Bottom tab bar omits secondary items (e.g. Support lives in sidebar/profile). */
+const BOTTOM_NAV = DASHBOARD_NAV.filter(
+  (item) => !item.href.includes("coming-soon") && !item.href.includes("?")
+);
 
 export function MobileBottomNav() {
   const pathname = usePathname();
@@ -28,7 +36,7 @@ export function MobileBottomNav() {
       )}
     >
       <div className="flex items-stretch justify-around px-1 pt-1">
-        {DASHBOARD_NAV.map((item) => {
+        {BOTTOM_NAV.map((item) => {
           const Icon = item.icon;
           const isActive = isNavActive(pathname, item.href);
 
