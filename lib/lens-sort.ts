@@ -5,16 +5,17 @@ export type LensSortOption =
   | "stock_first"
   | "sph_asc";
 
-export const DEFAULT_LENS_SORT: LensSortOption = "newest";
+export const DEFAULT_LENS_SORT: LensSortOption = "price_asc";
 
 export const LENS_SORT_OPTIONS: { value: LensSortOption; label: string }[] = [
-  { value: "newest", label: "Default (Newest)" },
-  { value: "price_asc", label: "Price: Low → High" },
+  { value: "price_asc", label: "Default (Price: Low → High)" },
   { value: "price_desc", label: "Price: High → Low" },
+  { value: "newest", label: "Newest" },
   { value: "stock_first", label: "In stock first" },
   { value: "sph_asc", label: "Power: SPH Low → High" },
 ];
 
+/** True when API natural order (newest) is not enough and client re-sort is required. */
 export function isCustomLensSort(
   sort: LensSortOption | null | undefined
 ): boolean {
