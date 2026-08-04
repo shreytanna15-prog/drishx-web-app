@@ -145,13 +145,30 @@ export async function fetchLensCatalogItems(
 }
 
 /** Distinct coating labels for a catalog subcategory (type + item). */
-export async function fetchLensCoatings({
+export type PowerShapeFilter = "sph" | "cyl" | "compound";
+
+export const POWER_SHAPE_OPTIONS: {
+  value: PowerShapeFilter;
+  label: string;
+}[] = [
+  { value: "sph", label: "SPH" },
+  { value: "cyl", label: "CYL" },
+  { value: "compound", label: "Compound" },
+];
+
+export type LensFacetsResponse = {
+  coatings: string[];
+  powerShapes: PowerShapeFilter[];
+};
+
+/** Coatings (color) and power-shape facets for a catalog subcategory. */
+export async function fetchLensFacets({
   type,
   item,
 }: {
   type: FilterOption;
   item?: string;
-}): Promise<string[]> {
+}): Promise<LensFacetsResponse> {
   const params = new URLSearchParams({
     type: filterToApiType(type),
   });
@@ -166,8 +183,26 @@ export async function fetchLensCoatings({
   if (!response.ok) {
     throw new Error("Failed to load lens coatings");
   }
-  const data = (await response.json()) as { coatings?: string[] };
-  return data.coatings ?? [];
+  const data = (await response.json()) as {
+    coatings?: string[];
+    powerShapes?: PowerShapeFilter[];
+  };
+  return {
+    coatings: data.coatings ?? [],
+    powerShapes: data.powerShapes ?? [],
+  };
+}
+
+/** @deprecated Prefer fetchLensFacets */
+export async function fetchLensCoatings({
+  type,
+  item,
+}: {
+  type: FilterOption;
+  item?: string;
+}): Promise<string[]> {
+  const facets = await fetchLensFacets({ type, item });
+  return facets.coatings;
 }
 
 async function fetchAllLensesPages({
@@ -175,11 +210,13 @@ async function fetchAllLensesPages({
   search,
   item,
   coating,
+  powerShape,
 }: {
   type: FilterOption;
   search?: string;
   item?: string;
   coating?: string;
+  powerShape?: PowerShapeFilter;
 }): Promise<LensesPageResponse["items"]> {
   const collected: LensesPageResponse["items"] = [];
   let page = 1;
@@ -193,6 +230,7 @@ async function fetchAllLensesPages({
       search,
       item,
       coating,
+      powerShape,
     });
     collected.push(...data.items);
     hasMore = data.hasMore;
@@ -210,6 +248,7 @@ export async function fetchLensesPage({
   search,
   item,
   coating,
+  powerShape,
   sort = DEFAULT_LENS_SORT,
 }: {
   page: number;
@@ -218,13 +257,22 @@ export async function fetchLensesPage({
   search: string;
   item?: string;
   coating?: string;
+  powerShape?: PowerShapeFilter;
   sort?: LensSortOption;
 }): Promise<LensesPageResponse> {
   const trimmedSearch = search.trim();
   const planoSearch = isPlanoSearchQuery(trimmedSearch);
 
   if (planoSearch) {
-    return fetchPlanoLensesPage({ page, limit, type, item, coating, sort });
+    return fetchPlanoLensesPage({
+      page,
+      limit,
+      type,
+      item,
+      coating,
+      powerShape,
+      sort,
+    });
   }
 
   if (isCustomLensSort(sort)) {
@@ -233,6 +281,7 @@ export async function fetchLensesPage({
       search: trimmedSearch,
       item,
       coating,
+      powerShape,
     });
     const sorted = sortApiLenses(allItems, sort);
     return paginateItems(sorted, page, limit);
@@ -245,6 +294,7 @@ export async function fetchLensesPage({
     search: trimmedSearch,
     item,
     coating,
+    powerShape,
   });
 }
 
@@ -274,6 +324,7 @@ async function fetchLensesPageRaw({
   search,
   item,
   coating,
+  powerShape,
 }: {
   page: number;
   limit: number;
@@ -281,6 +332,7 @@ async function fetchLensesPageRaw({
   search?: string;
   item?: string;
   coating?: string;
+  powerShape?: PowerShapeFilter;
 }): Promise<LensesPageResponse> {
   const params = new URLSearchParams({
     page: String(page),
@@ -303,6 +355,10 @@ async function fetchLensesPageRaw({
     params.set("coating", trimmedCoating);
   }
 
+  if (powerShape) {
+    params.set("powerShape", powerShape);
+  }
+
   const response = await fetch(`/api/lenses?${params.toString()}`, {
     cache: "no-store",
   });
@@ -320,6 +376,7 @@ async function fetchPlanoLensesPage({
   type,
   item,
   coating,
+  powerShape,
   sort = DEFAULT_LENS_SORT,
 }: {
   page: number;
@@ -327,10 +384,16 @@ async function fetchPlanoLensesPage({
   type: FilterOption;
   item?: string;
   coating?: string;
+  powerShape?: PowerShapeFilter;
   sort?: LensSortOption;
 }): Promise<LensesPageResponse> {
   if (isCustomLensSort(sort)) {
-    const allItems = await fetchAllLensesPages({ type, item, coating });
+    const allItems = await fetchAllLensesPages({
+      type,
+      item,
+      coating,
+      powerShape,
+    });
     const planoItems = sortApiLenses(allItems.filter(isPlanoApiLens), sort);
     return paginateItems(planoItems, page, limit);
   }
@@ -348,6 +411,7 @@ async function fetchPlanoLensesPage({
       type,
       item,
       coating,
+      powerShape,
     });
     total = data.total;
     lastLimit = data.limit;
