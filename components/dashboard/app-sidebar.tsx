@@ -31,28 +31,21 @@ export function AppSidebar() {
       variant="sidebar"
       className="border-[var(--brand-card-border)] bg-[var(--brand-card)] text-[var(--brand-text)]"
     >
-      <SidebarHeader className="dashboard-topbar !flex-row gap-0 !p-0 px-3">
-        <SidebarMenu className="w-full">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              asChild
-              className="h-11 rounded-xl hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,var(--brand-card))]"
-            >
-              <Link href="/home">
-                <BrandMark size="md" className="dashboard-sidebar__nav-icon size-10 shadow-[0_1px_3px_rgba(0,0,0,0.22)]" />
-                <div className="grid flex-1 text-left leading-tight">
-                  <span className="truncate text-base font-extrabold tracking-tight text-[var(--brand-text)]">
-                    Drishx
-                  </span>
-                  <span className="truncate text-xs font-medium text-[var(--brand-text-muted)]">
-                    Customer portal
-                  </span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarHeader className="dashboard-topbar h-14 min-h-14 justify-center gap-0 px-3 py-0 group-data-[collapsible=icon]:px-1.5">
+        <Link
+          href="/home"
+          className="flex w-full items-center gap-2.5 rounded-xl px-0.5 py-1 transition-colors hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,var(--brand-card))] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+        >
+          <BrandMark size="sm" className="shrink-0" />
+          <div className="grid min-w-0 flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
+            <span className="truncate text-base font-extrabold tracking-tight text-[var(--brand-text)]">
+              Drishx
+            </span>
+            <span className="truncate text-xs font-medium text-[var(--brand-text-muted)]">
+              Customer portal
+            </span>
+          </div>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent className="px-1">
