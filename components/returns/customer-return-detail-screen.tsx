@@ -56,7 +56,7 @@ export function CustomerReturnDetailScreen() {
     request?.items[0]?.originalOrderId;
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-3xl space-y-5 px-4 py-6 sm:px-6 sm:py-8">
       <div className="flex flex-wrap items-center gap-3">
         <Button asChild variant="outline" className="rounded-xl">
           <Link href="/returns">
@@ -75,7 +75,7 @@ export function CustomerReturnDetailScreen() {
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-600">
+        <div className="rounded-2xl border border-[var(--brand-danger-border)] bg-[var(--brand-danger-bg)] px-4 py-3 text-sm text-[var(--brand-danger)]">
           {error}
         </div>
       ) : null}
@@ -89,7 +89,7 @@ export function CustomerReturnDetailScreen() {
           <section className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--brand-text-muted)]">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-primary)]">
                   {request.requestType === "REPLACEMENT" ? "Replacement" : "Return"}
                 </p>
                 <p className="mt-1 text-lg font-extrabold text-[var(--brand-text)]">
