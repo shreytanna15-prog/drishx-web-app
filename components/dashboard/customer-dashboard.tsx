@@ -320,34 +320,23 @@ export function CustomerDashboard() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {QUICK_ACTIONS.map((action) => {
               const Icon = action.icon;
-              const className = cn(
-                "flex flex-col items-center gap-3 rounded-3xl border p-4 transition-all sm:p-5",
-                "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
-                "hover:border-[var(--brand-primary)]/40 hover:bg-[color-mix(in_srgb,var(--brand-primary)_7%,var(--brand-card))]",
-                "hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-14px_rgba(240,161,50,0.35)]"
-              );
-              const content = (
-                <>
+              return (
+                <Link
+                  key={action.id}
+                  href={action.href}
+                  className={cn(
+                    "flex flex-col items-center gap-3 rounded-3xl border p-4 transition-all sm:p-5",
+                    "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
+                    "hover:border-[var(--brand-primary)]/40 hover:bg-[color-mix(in_srgb,var(--brand-primary)_7%,var(--brand-card))]",
+                    "hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-14px_rgba(240,161,50,0.35)]"
+                  )}
+                >
                   <span className="flex size-12 items-center justify-center rounded-2xl bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]">
                     <Icon className="size-5" />
                   </span>
                   <span className="text-center text-sm font-bold text-[var(--brand-text)]">
                     {action.label}
                   </span>
-                </>
-              );
-
-              if (!action.href) {
-                return (
-                  <button key={action.id} type="button" className={className}>
-                    {content}
-                  </button>
-                );
-              }
-
-              return (
-                <Link key={action.id} href={action.href} className={className}>
-                  {content}
                 </Link>
               );
             })}
