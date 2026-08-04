@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DEFAULT_LENS_SORT,
+  fetchLensCoatings,
   fetchLensesPage,
   LENS_SORT_OPTIONS,
   LOAD_MORE_AT_INDEX,
@@ -29,6 +30,7 @@ import {
   shopCategoryToFilter,
 } from "@/lib/shop-navigation";
 import type { LensItem } from "@/lib/types/lens";
+import { cn } from "@/lib/utils";
 
 export function ShopProductsScreen() {
   const router = useRouter();
@@ -46,6 +48,8 @@ export function ShopProductsScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sort, setSort] = useState<LensSortOption>(DEFAULT_LENS_SORT);
+  const [coatings, setCoatings] = useState<string[]>([]);
+  const [selectedCoating, setSelectedCoating] = useState("");
 
   const pageRef = useRef(1);
   const hasMoreRef = useRef(false);
@@ -54,13 +58,39 @@ export function ShopProductsScreen() {
   const requestIdRef = useRef(0);
   const debouncedSearchRef = useRef("");
   const sortRef = useRef(sort);
+  const coatingRef = useRef(selectedCoating);
   debouncedSearchRef.current = debouncedSearch;
   sortRef.current = sort;
+  coatingRef.current = selectedCoating;
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 450);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    setSelectedCoating("");
+    coatingRef.current = "";
+    setCoatings([]);
+    if (!selectedItem) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const list = await fetchLensCoatings({
+          type: filter,
+          item: selectedItem,
+        });
+        if (!cancelled) setCoatings(list);
+      } catch {
+        if (!cancelled) setCoatings([]);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filter, selectedItem]);
 
   const loadPage = useCallback(
     async (pageToLoad: number, replace: boolean) => {
@@ -81,6 +111,7 @@ export function ShopProductsScreen() {
           type: filter,
           search: debouncedSearchRef.current,
           item: selectedItem,
+          coating: coatingRef.current || undefined,
           sort: sortRef.current,
         });
 
@@ -120,7 +151,7 @@ export function ShopProductsScreen() {
     setHasMore(false);
     setInitialLoading(true);
     void loadPage(1, true);
-  }, [loadPage, selectedItem, debouncedSearch, sort]);
+  }, [loadPage, selectedItem, debouncedSearch, sort, selectedCoating]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -147,6 +178,12 @@ export function ShopProductsScreen() {
     router.replace(`/shop?category=${category}`);
     return null;
   }
+
+  const emptyMessage = selectedCoating
+    ? "No products found for this coating."
+    : debouncedSearch
+      ? "No products found for this search."
+      : "No products found for this item.";
 
   return (
     <div className="relative mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -205,6 +242,42 @@ export function ShopProductsScreen() {
               </div>
             </div>
           </div>
+
+          {coatings.length > 0 ? (
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by coating">
+              <button
+                type="button"
+                onClick={() => setSelectedCoating("")}
+                className={cn(
+                  "rounded-xl border px-3 py-2 text-xs font-bold transition-colors sm:text-sm",
+                  !selectedCoating
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]"
+                    : "border-[var(--brand-card-border)] bg-[var(--brand-card)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                )}
+              >
+                All
+              </button>
+              {coatings.map((coating) => {
+                const active =
+                  selectedCoating.toLowerCase() === coating.toLowerCase();
+                return (
+                  <button
+                    key={coating}
+                    type="button"
+                    onClick={() => setSelectedCoating(coating)}
+                    className={cn(
+                      "rounded-xl border px-3 py-2 text-xs font-bold transition-colors sm:text-sm",
+                      active
+                        ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]"
+                        : "border-[var(--brand-card-border)] bg-[var(--brand-card)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                    )}
+                  >
+                    {coating}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
 
         {initialLoading ? (
@@ -234,7 +307,7 @@ export function ShopProductsScreen() {
           <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-6 py-16 text-center">
             <Package className="size-10 text-[var(--brand-text-muted)]" />
             <p className="text-sm font-medium text-[var(--brand-text-muted)]">
-              No products found for this item.
+              {emptyMessage}
             </p>
           </div>
         ) : (
