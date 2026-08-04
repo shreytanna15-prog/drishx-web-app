@@ -40,16 +40,12 @@ export function EmployeeReturnDetailScreen() {
     void load();
   }, [load]);
 
-  async function runAction(action: "more-info" | "escalate" | "reject") {
+  async function askMoreInfo() {
     if (!request) return;
-    if (action === "reject" && !remarks.trim()) {
-      setError("Remarks are required to reject.");
-      return;
-    }
     setSubmitting(true);
     setError("");
     try {
-      const updated = await updateReturnRequest(request.id, action, remarks.trim());
+      const updated = await updateReturnRequest(request.id, "more-info", remarks.trim());
       setRequest(updated);
       setRemarks("");
     } catch (err) {
@@ -59,8 +55,11 @@ export function EmployeeReturnDetailScreen() {
     }
   }
 
-  const canAct =
-    request?.status === "SUBMITTED" || request?.status === "MORE_INFO_REQUIRED";
+  const canRequestMoreInfo =
+    request?.status === "APPROVED_CREDIT" ||
+    request?.status === "AWAITING_MATERIAL" ||
+    request?.status === "APPROVED_REPLACEMENT" ||
+    request?.status === "MORE_INFO_REQUIRED";
 
   return (
     <div className="space-y-5">
@@ -76,7 +75,7 @@ export function EmployeeReturnDetailScreen() {
             {request?.requestNumber ?? "Return request"}
           </h1>
           <p className="text-sm text-[var(--brand-text-muted)]">
-            Review evidence and escalate for admin decision
+            Process assigned return and replacement requests
           </p>
         </div>
       </div>
@@ -107,8 +106,17 @@ export function EmployeeReturnDetailScreen() {
                 </p>
               </div>
             </div>
+            {request.adminRemarks ? (
+              <p className="mt-4 text-sm text-[var(--brand-text)]">
+                <span className="font-semibold text-[var(--brand-text-muted)]">Admin: </span>
+                {request.adminRemarks}
+              </p>
+            ) : null}
             {request.customerRemarks ? (
-              <p className="mt-4 text-sm text-[var(--brand-text)]">{request.customerRemarks}</p>
+              <p className="mt-2 text-sm text-[var(--brand-text)]">
+                <span className="font-semibold text-[var(--brand-text-muted)]">Customer: </span>
+                {request.customerRemarks}
+              </p>
             ) : null}
           </section>
 
@@ -173,46 +181,35 @@ export function EmployeeReturnDetailScreen() {
 
           <section className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-5">
             <h2 className="text-sm font-extrabold uppercase tracking-[0.14em] text-[var(--brand-primary)]">
-              Employee actions
+              Request more info
             </h2>
+            <p className="mt-2 text-sm text-[var(--brand-text-muted)]">
+              Ask the customer for additional photos or details if needed to process this request.
+            </p>
             <label className="mt-4 block space-y-1">
               <span className="text-xs font-semibold text-[var(--brand-text-muted)]">
-                Remarks
+                Remarks for customer
               </span>
               <textarea
                 rows={4}
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
-                disabled={!canAct || submitting}
+                disabled={!canRequestMoreInfo || submitting}
                 className="w-full rounded-lg border border-[var(--brand-card-border)] bg-transparent px-3 py-2 text-sm text-[var(--brand-text)]"
               />
             </label>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button
-                disabled={!canAct || submitting}
-                onClick={() => void runAction("more-info")}
+                disabled={!canRequestMoreInfo || submitting}
+                onClick={() => void askMoreInfo()}
               >
                 {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
                 Ask for more photos
               </Button>
-              <Button
-                variant="secondary"
-                disabled={!canAct || submitting}
-                onClick={() => void runAction("escalate")}
-              >
-                Escalate to admin
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={!canAct || submitting}
-                onClick={() => void runAction("reject")}
-              >
-                Reject
-              </Button>
             </div>
-            {!canAct ? (
+            {!canRequestMoreInfo ? (
               <p className="mt-3 text-sm text-[var(--brand-text-muted)]">
-                This request is already {formatReturnStatus(request.status)}.
+                This request is {formatReturnStatus(request.status)}.
               </p>
             ) : null}
           </section>

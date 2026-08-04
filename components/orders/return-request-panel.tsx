@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, Upload } from "lucide-react";
 
 import {
@@ -12,6 +13,7 @@ import type { OrderListGroup } from "@/lib/order-list-display";
 import {
   createReturnRequest,
   fetchReturnRequests,
+  formatReturnStatus,
   RETURN_REASON_OPTIONS,
   type ReturnReason,
   type ReturnRequestRecord,
@@ -28,14 +30,6 @@ type ItemState = {
   itemRemarks: string;
   power: ReplacementPowerValue;
 };
-
-function formatReturnStatus(status: string) {
-  return status
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
 
 function orderLabel(group: OrderListGroup, orderId: string) {
   const order = group.orders.find((entry) => entry.id === orderId);
@@ -101,6 +95,11 @@ export function ReturnRequestPanel({ group }: { group: OrderListGroup }) {
       setHistoryLoaded(true);
     }
   }
+
+  useEffect(() => {
+    if (!historyLoaded) void loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per order group
+  }, [group.key]);
 
   async function handleSubmit() {
     setError("");
@@ -427,12 +426,13 @@ export function ReturnRequestPanel({ group }: { group: OrderListGroup }) {
           </p>
           <div className="space-y-3">
             {history.map((request) => (
-              <div
+              <Link
                 key={request.id}
-                className="rounded-xl border border-[var(--brand-card-border)] p-3"
+                href={`/returns/${request.id}`}
+                className="block rounded-xl border border-[var(--brand-card-border)] p-3 transition-colors hover:bg-[var(--brand-card-hover,rgba(0,0,0,0.02))]"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-semibold text-[var(--brand-text)]">
+                  <p className="font-semibold text-[var(--brand-link,var(--brand-primary))]">
                     {request.requestNumber}
                   </p>
                   <span className="rounded-full border border-[var(--brand-card-border)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-text-muted)]">
@@ -440,14 +440,15 @@ export function ReturnRequestPanel({ group }: { group: OrderListGroup }) {
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
-                  {request.items.length} item{request.items.length === 1 ? "" : "s"} · {request.requestType.toLowerCase()}
+                  {request.items.length} item{request.items.length === 1 ? "" : "s"} ·{" "}
+                  {request.requestType.toLowerCase()}
                 </p>
                 {request.rejectionReason ? (
                   <p className="mt-2 text-sm text-[var(--brand-danger)]">
                     {request.rejectionReason}
                   </p>
                 ) : null}
-              </div>
+              </Link>
             ))}
           </div>
         </div>

@@ -1,6 +1,7 @@
 import {
   ClipboardList,
   Home,
+  RotateCcw,
   ShoppingBag,
   ShoppingCart,
   User,
@@ -32,6 +33,12 @@ export const DASHBOARD_NAV: DashboardNavItem[] = [
     label: "My Orders",
     icon: ClipboardList,
     description: "Track your orders",
+  },
+  {
+    href: "/returns",
+    label: "Returns",
+    icon: RotateCcw,
+    description: "Returns and replacements",
   },
   {
     href: "/cart",

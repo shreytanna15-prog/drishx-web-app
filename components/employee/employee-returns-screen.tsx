@@ -18,10 +18,10 @@ type FilterKey = "ALL" | ReturnRequestStatus;
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "ALL", label: "All" },
-  { key: "SUBMITTED", label: "Submitted" },
+  { key: "APPROVED_CREDIT", label: "Credit" },
+  { key: "AWAITING_MATERIAL", label: "Replacement" },
   { key: "MORE_INFO_REQUIRED", label: "More info" },
-  { key: "ESCALATED_TO_ADMIN", label: "Escalated" },
-  { key: "REJECTED", label: "Rejected" },
+  { key: "CLOSED", label: "Closed" },
 ];
 
 function formatDate(value: string) {
@@ -41,8 +41,10 @@ function statusClass(status: ReturnRequestStatus) {
       return "border-amber-500/35 bg-amber-500/14 text-amber-600";
     case "MORE_INFO_REQUIRED":
       return "border-sky-500/35 bg-sky-500/14 text-sky-600";
-    case "ESCALATED_TO_ADMIN":
-      return "border-fuchsia-500/35 bg-fuchsia-500/14 text-fuchsia-600";
+    case "AWAITING_MATERIAL":
+    case "APPROVED_REPLACEMENT":
+    case "APPROVED_CREDIT":
+      return "border-emerald-500/35 bg-emerald-500/14 text-emerald-600";
     case "REJECTED":
       return "border-rose-500/35 bg-rose-500/14 text-rose-600";
     default:
@@ -87,7 +89,7 @@ export function EmployeeReturnsScreen() {
             Returns
           </h1>
           <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
-            Review assigned return and replacement requests
+            Returns appear here after admin approval and assignment
           </p>
         </div>
         <Button
@@ -143,7 +145,7 @@ export function EmployeeReturnsScreen() {
           <RotateCcw className="mb-3 size-8 text-[var(--brand-text-muted)]" />
           <p className="font-semibold text-[var(--brand-text)]">No return requests</p>
           <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
-            Assigned return requests will appear here.
+            Returns appear here after admin approval and assignment.
           </p>
         </div>
       ) : (

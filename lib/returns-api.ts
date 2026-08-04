@@ -35,6 +35,11 @@ export type ReturnRequestRecord = {
   replacementBatchId?: string | null;
   createdAt: string;
   updatedAt?: string;
+  primaryOrderId?: string;
+  primaryOrder?: {
+    id: string;
+    checkoutBatchId?: string | null;
+  } | null;
   customer?: {
     id: string;
     name: string | null;
@@ -125,7 +130,7 @@ export async function fetchReturnRequest(
 
 export async function updateReturnRequest(
   id: string,
-  action: "more-info" | "escalate" | "reject" | "close",
+  action: "more-info" | "close",
   remarks?: string
 ): Promise<ReturnRequestRecord> {
   const res = await fetchWithRetry(`/api/returns/${id}`, {
@@ -139,6 +144,17 @@ export async function updateReturnRequest(
 }
 
 export function formatReturnStatus(status: string) {
+  const labels: Record<string, string> = {
+    SUBMITTED: "Pending Admin Review",
+    MORE_INFO_REQUIRED: "More Info Needed",
+    ESCALATED_TO_ADMIN: "Pending Admin Review",
+    AWAITING_MATERIAL: "Replacement Approved",
+    APPROVED_CREDIT: "Credit Approved",
+    APPROVED_REPLACEMENT: "Replacement Approved",
+    REJECTED: "Rejected",
+    CLOSED: "Closed",
+  };
+  if (labels[status]) return labels[status];
   return status
     .toLowerCase()
     .split("_")
