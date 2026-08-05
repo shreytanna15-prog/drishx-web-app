@@ -18,6 +18,14 @@ export {
   type LensSortOption,
 } from "@/lib/lens-sort";
 
+export type PowerMatchMode = "exact" | "nearest" | "range";
+
+export type PowerMatchMeta = {
+  mode: PowerMatchMode;
+  querySph: number;
+  queryCyl: number | null;
+};
+
 export type LensesPageResponse = {
   items: Array<{
     id: string;
@@ -45,6 +53,7 @@ export type LensesPageResponse = {
   page: number;
   limit: number;
   hasMore: boolean;
+  powerMatch?: PowerMatchMeta | null;
 };
 
 function toDisplayLensType(
@@ -217,10 +226,14 @@ async function fetchAllLensesPages({
   item?: string;
   coating?: string;
   powerShape?: PowerShapeFilter;
-}): Promise<LensesPageResponse["items"]> {
+}): Promise<{
+  items: LensesPageResponse["items"];
+  powerMatch?: PowerMatchMeta | null;
+}> {
   const collected: LensesPageResponse["items"] = [];
   let page = 1;
   let hasMore = true;
+  let powerMatch: PowerMatchMeta | null | undefined;
 
   while (hasMore) {
     const data = await fetchLensesPageRaw({
@@ -232,13 +245,16 @@ async function fetchAllLensesPages({
       coating,
       powerShape,
     });
+    if (page === 1) {
+      powerMatch = data.powerMatch;
+    }
     collected.push(...data.items);
     hasMore = data.hasMore;
     if (!hasMore) break;
     page += 1;
   }
 
-  return collected;
+  return { items: collected, powerMatch };
 }
 
 export async function fetchLensesPage({
@@ -283,8 +299,11 @@ export async function fetchLensesPage({
       coating,
       powerShape,
     });
-    const sorted = sortApiLenses(allItems, sort);
-    return paginateItems(sorted, page, limit);
+    const sorted = sortApiLenses(allItems.items, sort);
+    return {
+      ...paginateItems(sorted, page, limit),
+      powerMatch: allItems.powerMatch,
+    };
   }
 
   return fetchLensesPageRaw({
@@ -394,7 +413,7 @@ async function fetchPlanoLensesPage({
       coating,
       powerShape,
     });
-    const planoItems = sortApiLenses(allItems.filter(isPlanoApiLens), sort);
+    const planoItems = sortApiLenses(allItems.items.filter(isPlanoApiLens), sort);
     return paginateItems(planoItems, page, limit);
   }
 

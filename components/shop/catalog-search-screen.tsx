@@ -22,6 +22,7 @@ import {
   LOAD_MORE_AT_INDEX,
   mapApiLens,
   type LensSortOption,
+  type PowerMatchMeta,
 } from "@/lib/lenses-api";
 import {
   lensTypeToShopCategory,
@@ -38,6 +39,17 @@ const TYPE_FILTERS: { key: "all" | ShopCategoryId; label: string }[] = [
   { key: "v2", label: "Progressive" },
 ];
 
+const CATEGORY_SHORTCUTS: Record<string, ShopCategoryId> = {
+  sv: "sv",
+  kt: "kt",
+  v2: "v2",
+  prog: "v2",
+  progressive: "v2",
+  kryptok: "kt",
+  "single-vision": "sv",
+  singlevision: "sv",
+};
+
 function typeFilterToOption(key: "all" | ShopCategoryId): FilterOption {
   if (key === "all") return "All";
   return shopCategoryToFilter(key);
@@ -51,6 +63,34 @@ function productHref(item: LensItem): string {
   return `/shop/products/${item.id}?${params.toString()}`;
 }
 
+function formatDiopter(value: number): string {
+  if (Math.abs(value) < 1e-9) return "0";
+  return value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function formatPowerMatchLabel(match: PowerMatchMeta): string {
+  const sph = formatDiopter(match.querySph);
+  const cyl =
+    match.queryCyl === null || match.queryCyl === undefined
+      ? "—"
+      : formatDiopter(match.queryCyl);
+  return `${sph}/${cyl}`;
+}
+
+function powerMatchHint(match: PowerMatchMeta): string | null {
+  if (match.mode === "exact") return null;
+  const label = formatPowerMatchLabel(match);
+  if (match.mode === "range") {
+    return `No exact ${label} endpoint — showing products whose power range covers it.`;
+  }
+  return `No exact ${label} — showing closest available powers.`;
+}
+
+function syncTypeChipFromQuery(query: string): "all" | ShopCategoryId | null {
+  const normalized = query.trim().toLowerCase().replace(/\s+/g, "");
+  return CATEGORY_SHORTCUTS[normalized] ?? null;
+}
+
 export function CatalogSearchScreen() {
   const searchParams = useSearchParams();
   const urlQuery = searchParams.get("q")?.trim() ?? "";
@@ -58,6 +98,7 @@ export function CatalogSearchScreen() {
   const [typeFilter, setTypeFilter] = useState<"all" | ShopCategoryId>("all");
   const [lenses, setLenses] = useState<LensItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [powerMatch, setPowerMatch] = useState<PowerMatchMeta | null>(null);
   const [initialLoading, setInitialLoading] = useState(Boolean(urlQuery));
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +121,10 @@ export function CatalogSearchScreen() {
   useEffect(() => {
     setSearchQuery(urlQuery);
     setDebouncedSearch(urlQuery);
+    const synced = syncTypeChipFromQuery(urlQuery);
+    if (synced) {
+      setTypeFilter(synced);
+    }
   }, [urlQuery]);
 
   useEffect(() => {
@@ -87,11 +132,18 @@ export function CatalogSearchScreen() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  useEffect(() => {
+    const synced = syncTypeChipFromQuery(debouncedSearch);
+    if (!synced) return;
+    setTypeFilter((current) => (current === "all" ? synced : current));
+  }, [debouncedSearch]);
+
   const loadPage = useCallback(async (pageToLoad: number, replace: boolean) => {
     const q = debouncedSearchRef.current.trim();
     if (!q) {
       setLenses([]);
       setTotalCount(0);
+      setPowerMatch(null);
       setHasMore(false);
       hasMoreRef.current = false;
       setInitialLoading(false);
@@ -121,6 +173,9 @@ export function CatalogSearchScreen() {
       const mapped = data.items.map(mapApiLens);
       setLenses((current) => (replace ? mapped : [...current, ...mapped]));
       setTotalCount(data.total);
+      if (replace) {
+        setPowerMatch(data.powerMatch ?? null);
+      }
       pageRef.current = data.page;
       hasMoreRef.current = data.hasMore;
       setHasMore(data.hasMore);
@@ -129,6 +184,7 @@ export function CatalogSearchScreen() {
       if (pageToLoad === 1) {
         setLenses([]);
         setTotalCount(0);
+        setPowerMatch(null);
       }
       setError("Unable to load search results.");
     } finally {
@@ -170,6 +226,7 @@ export function CatalogSearchScreen() {
   }, [loadPage, initialLoading, lenses.length, hasMore]);
 
   const hasQuery = debouncedSearch.trim().length > 0;
+  const matchHint = powerMatch ? powerMatchHint(powerMatch) : null;
 
   return (
     <div className="relative mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -201,7 +258,7 @@ export function CatalogSearchScreen() {
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search lenses, brand, coating, power…"
+                placeholder="sv, kt, v2, coating, brand, or -0.25/-0.25…"
                 className="h-11 rounded-xl border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] pl-10"
                 autoFocus
               />
@@ -249,7 +306,8 @@ export function CatalogSearchScreen() {
           <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-6 py-16 text-center">
             <Package className="size-10 text-[var(--brand-text-muted)]" />
             <p className="text-sm font-medium text-[var(--brand-text-muted)]">
-              Type a brand, coating, power, or &quot;plano&quot; to search.
+              Try shortcuts like sv, kt, or v2; coating or item names; or power as
+              SPH/CYL (e.g. -0.25/-0.25).
             </p>
           </div>
         ) : initialLoading ? (
@@ -281,13 +339,24 @@ export function CatalogSearchScreen() {
             <p className="text-sm font-medium text-[var(--brand-text-muted)]">
               No products found for &quot;{debouncedSearch}&quot;.
             </p>
+            <p className="max-w-md text-xs font-medium text-[var(--brand-text-muted)]">
+              Shortcuts: sv (Single Vision), kt (Kryptok), v2 (Progressive). Power
+              search uses SPH/CYL like -1.00/-0.50.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm font-medium text-[var(--brand-text-muted)]">
-              {totalCount} result{totalCount === 1 ? "" : "s"} for &quot;
-              {debouncedSearch}&quot;
-            </p>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-[var(--brand-text-muted)]">
+                {totalCount} result{totalCount === 1 ? "" : "s"} for &quot;
+                {debouncedSearch}&quot;
+              </p>
+              {matchHint ? (
+                <p className="text-xs font-medium text-[var(--brand-primary)]">
+                  {matchHint}
+                </p>
+              ) : null}
+            </div>
             {lenses.map((item, index) => (
               <LensProductCard
                 key={`${item.id}-${index}`}
