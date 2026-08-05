@@ -17,13 +17,17 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DEFAULT_LENS_SORT,
+  fetchLensFacets,
   fetchLensesPage,
   LENS_SORT_OPTIONS,
   LOAD_MORE_AT_INDEX,
   mapApiLens,
+  POWER_SHAPE_OPTIONS,
   type LensSortOption,
+  type PowerShapeFilter,
 } from "@/lib/lenses-api";
 import type { LensItem } from "@/lib/types/lens";
+import { cn } from "@/lib/utils";
 import {
   parseWholesaleCategory,
   wholesaleCategoryTitle,
@@ -47,6 +51,11 @@ export function WholesaleProductsScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sort, setSort] = useState<LensSortOption>(DEFAULT_LENS_SORT);
+  const [coatings, setCoatings] = useState<string[]>([]);
+  const [powerShapes, setPowerShapes] = useState<PowerShapeFilter[]>([]);
+  const [selectedCoating, setSelectedCoating] = useState("");
+  const [selectedPowerShape, setSelectedPowerShape] =
+    useState<PowerShapeFilter | "">("");
 
   const pageRef = useRef(1);
   const hasMoreRef = useRef(false);
@@ -54,13 +63,52 @@ export function WholesaleProductsScreen() {
   const requestIdRef = useRef(0);
   const debouncedSearchRef = useRef("");
   const sortRef = useRef(sort);
+  const coatingRef = useRef(selectedCoating);
+  const powerShapeRef = useRef(selectedPowerShape);
   debouncedSearchRef.current = debouncedSearch;
   sortRef.current = sort;
+  coatingRef.current = selectedCoating;
+  powerShapeRef.current = selectedPowerShape;
+
+  const usePowerFilters = coatings.length === 0 && powerShapes.length > 0;
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 450);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    setSelectedCoating("");
+    coatingRef.current = "";
+    setSelectedPowerShape("");
+    powerShapeRef.current = "";
+    setCoatings([]);
+    setPowerShapes([]);
+    if (!selectedItem) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const facets = await fetchLensFacets({
+          type: filter,
+          item: selectedItem,
+        });
+        if (!cancelled) {
+          setCoatings(facets.coatings);
+          setPowerShapes(facets.powerShapes);
+        }
+      } catch {
+        if (!cancelled) {
+          setCoatings([]);
+          setPowerShapes([]);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filter, selectedItem]);
 
   const loadPage = useCallback(
     async (pageToLoad: number, replace: boolean) => {
@@ -76,11 +124,16 @@ export function WholesaleProductsScreen() {
       setError(null);
 
       try {
+        const powerShape = powerShapeRef.current || undefined;
+        const coating = powerShape ? undefined : coatingRef.current || undefined;
+
         const data = await fetchLensesPage({
           page: pageToLoad,
           type: filter,
           search: debouncedSearchRef.current,
           item: selectedItem,
+          coating,
+          powerShape,
           sort: sortRef.current,
         });
 
@@ -114,7 +167,14 @@ export function WholesaleProductsScreen() {
     hasMoreRef.current = false;
     setInitialLoading(true);
     void loadPage(1, true);
-  }, [loadPage, debouncedSearch, selectedItem, sort]);
+  }, [
+    loadPage,
+    debouncedSearch,
+    selectedItem,
+    sort,
+    selectedCoating,
+    selectedPowerShape,
+  ]);
 
   const loadNextPage = useCallback(() => {
     void loadPage(pageRef.current + 1, false);
@@ -132,6 +192,22 @@ export function WholesaleProductsScreen() {
   function buildOrderHref(item: LensItem) {
     return `/wholesale/order?payload=${encodeURIComponent(JSON.stringify(item))}`;
   }
+
+  const emptyMessage = selectedPowerShape
+    ? "No products found for this power filter."
+    : selectedCoating
+      ? "No products found for this coating."
+      : debouncedSearch
+        ? "No products found for this search."
+        : "No products found.";
+
+  const chipClass = (active: boolean) =>
+    cn(
+      "rounded-xl border px-3 py-2 text-xs font-bold transition-colors sm:text-sm",
+      active
+        ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]"
+        : "border-[var(--brand-card-border)] bg-[var(--brand-card)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+    );
 
   return (
     <div className="relative mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -186,6 +262,62 @@ export function WholesaleProductsScreen() {
           </div>
         </div>
 
+        {usePowerFilters ? (
+          <div
+            className="flex flex-wrap gap-2"
+            role="group"
+            aria-label="Filter by power type"
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedPowerShape("")}
+              className={chipClass(!selectedPowerShape)}
+            >
+              All
+            </button>
+            {POWER_SHAPE_OPTIONS.filter((option) =>
+              powerShapes.includes(option.value)
+            ).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setSelectedPowerShape(option.value)}
+                className={chipClass(selectedPowerShape === option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        ) : coatings.length > 0 ? (
+          <div
+            className="flex flex-wrap gap-2"
+            role="group"
+            aria-label="Filter by coating"
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedCoating("")}
+              className={chipClass(!selectedCoating)}
+            >
+              All
+            </button>
+            {coatings.map((coating) => {
+              const active =
+                selectedCoating.toLowerCase() === coating.toLowerCase();
+              return (
+                <button
+                  key={coating}
+                  type="button"
+                  onClick={() => setSelectedCoating(coating)}
+                  className={chipClass(active)}
+                >
+                  {coating}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
         {initialLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -225,7 +357,7 @@ export function WholesaleProductsScreen() {
             </div>
             {lenses.length === 0 ? (
               <p className="py-12 text-center text-sm text-[var(--brand-text-muted)]">
-                No products found.
+                {emptyMessage}
               </p>
             ) : null}
             {hasMoreRef.current ? (
