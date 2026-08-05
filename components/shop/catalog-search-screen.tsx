@@ -9,7 +9,7 @@ import {
   Search,
 } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LensProductCard } from "@/components/shop/lens-product-card";
 import { Button } from "@/components/ui/button";
@@ -86,20 +86,23 @@ function powerMatchHint(match: PowerMatchMeta): string | null {
   return `No exact ${label} — showing closest available powers.`;
 }
 
-function syncTypeChipFromQuery(query: string): "all" | ShopCategoryId | null {
+function syncTypeChipFromQuery(query: string): ShopCategoryId | null {
   const normalized = query.trim().toLowerCase().replace(/\s+/g, "");
   return CATEGORY_SHORTCUTS[normalized] ?? null;
 }
 
 export function CatalogSearchScreen() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const urlQuery = searchParams.get("q")?.trim() ?? "";
 
-  const [typeFilter, setTypeFilter] = useState<"all" | ShopCategoryId>("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | ShopCategoryId>(() => {
+    return syncTypeChipFromQuery(urlQuery) ?? "all";
+  });
   const [lenses, setLenses] = useState<LensItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [powerMatch, setPowerMatch] = useState<PowerMatchMeta | null>(null);
-  const [initialLoading, setInitialLoading] = useState(Boolean(urlQuery));
+  const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(urlQuery);
@@ -114,16 +117,20 @@ export function CatalogSearchScreen() {
   const debouncedSearchRef = useRef(urlQuery);
   const sortRef = useRef(sort);
   const typeRef = useRef(typeFilter);
+  const skipUrlSyncRef = useRef(false);
   debouncedSearchRef.current = debouncedSearch;
   sortRef.current = sort;
   typeRef.current = typeFilter;
 
   useEffect(() => {
+    skipUrlSyncRef.current = true;
     setSearchQuery(urlQuery);
     setDebouncedSearch(urlQuery);
     const synced = syncTypeChipFromQuery(urlQuery);
     if (synced) {
       setTypeFilter(synced);
+    } else if (!urlQuery) {
+      setTypeFilter("all");
     }
   }, [urlQuery]);
 
@@ -132,24 +139,37 @@ export function CatalogSearchScreen() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Always align type chip with category shortcuts; clear chip when search is emptied.
   useEffect(() => {
     const synced = syncTypeChipFromQuery(debouncedSearch);
-    if (!synced) return;
-    setTypeFilter((current) => (current === "all" ? synced : current));
+    if (synced) {
+      setTypeFilter(synced);
+      return;
+    }
+    if (!debouncedSearch.trim()) {
+      setTypeFilter("all");
+    }
   }, [debouncedSearch]);
+
+  // Keep URL ?q= in sync with the live search box.
+  useEffect(() => {
+    if (skipUrlSyncRef.current) {
+      skipUrlSyncRef.current = false;
+      return;
+    }
+    const next = debouncedSearch.trim();
+    if (next === urlQuery) return;
+    const href = next
+      ? `/shop/search?q=${encodeURIComponent(next)}`
+      : "/shop/search";
+    router.replace(href);
+  }, [debouncedSearch, router, urlQuery]);
 
   const loadPage = useCallback(async (pageToLoad: number, replace: boolean) => {
     const q = debouncedSearchRef.current.trim();
-    if (!q) {
-      setLenses([]);
-      setTotalCount(0);
-      setPowerMatch(null);
-      setHasMore(false);
-      hasMoreRef.current = false;
-      setInitialLoading(false);
-      setError(null);
-      return;
-    }
+    // Prefer shortcut type so "kt" never races against a stale "sv" chip.
+    const shortcutType = syncTypeChipFromQuery(q);
+    const typeForRequest = shortcutType ?? typeRef.current;
 
     if (pageToLoad > 1) {
       if (loadingMoreRef.current || !hasMoreRef.current) return;
@@ -163,7 +183,7 @@ export function CatalogSearchScreen() {
     try {
       const data = await fetchLensesPage({
         page: pageToLoad,
-        type: typeFilterToOption(typeRef.current),
+        type: typeFilterToOption(typeForRequest),
         search: q,
         sort: sortRef.current,
       });
@@ -200,7 +220,7 @@ export function CatalogSearchScreen() {
     pageRef.current = 1;
     hasMoreRef.current = true;
     setHasMore(false);
-    setInitialLoading(Boolean(debouncedSearch.trim()));
+    setInitialLoading(true);
     void loadPage(1, true);
   }, [loadPage, debouncedSearch, sort, typeFilter]);
 
@@ -302,15 +322,7 @@ export function CatalogSearchScreen() {
           </div>
         </div>
 
-        {!hasQuery ? (
-          <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-6 py-16 text-center">
-            <Package className="size-10 text-[var(--brand-text-muted)]" />
-            <p className="text-sm font-medium text-[var(--brand-text-muted)]">
-              Try shortcuts like sv, kt, or v2; coating or item names; or power as
-              SPH/CYL (e.g. -0.25/-0.25).
-            </p>
-          </div>
-        ) : initialLoading ? (
+        {initialLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-24 rounded-2xl" />
@@ -337,7 +349,9 @@ export function CatalogSearchScreen() {
           <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-6 py-16 text-center">
             <Package className="size-10 text-[var(--brand-text-muted)]" />
             <p className="text-sm font-medium text-[var(--brand-text-muted)]">
-              No products found for &quot;{debouncedSearch}&quot;.
+              {hasQuery
+                ? `No products found for "${debouncedSearch}".`
+                : "No products found."}
             </p>
             <p className="max-w-md text-xs font-medium text-[var(--brand-text-muted)]">
               Shortcuts: sv (Single Vision), kt (Kryptok), v2 (Progressive). Power
@@ -348,8 +362,8 @@ export function CatalogSearchScreen() {
           <div className="space-y-3">
             <div className="space-y-1">
               <p className="text-sm font-medium text-[var(--brand-text-muted)]">
-                {totalCount} result{totalCount === 1 ? "" : "s"} for &quot;
-                {debouncedSearch}&quot;
+                {totalCount} result{totalCount === 1 ? "" : "s"}
+                {hasQuery ? ` for "${debouncedSearch}"` : ""}
               </p>
               {matchHint ? (
                 <p className="text-xs font-medium text-[var(--brand-primary)]">
