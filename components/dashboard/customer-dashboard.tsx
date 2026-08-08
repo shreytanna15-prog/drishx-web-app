@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronRight,
   FileText,
+  History,
   MoreVertical,
   Package,
   Receipt,
@@ -34,6 +35,10 @@ import {
   type OverviewTrend,
   type OverviewTrends,
 } from "@/lib/home-order-stats";
+import {
+  getLastOrderSummary,
+  type LastOrderSummary,
+} from "@/lib/last-order-summary";
 import {
   computeMostOrderedProducts,
   type MostOrderedProduct,
@@ -219,6 +224,7 @@ export function CustomerDashboard() {
   const [overviewTrends, setOverviewTrends] =
     useState<OverviewTrends>(EMPTY_OVERVIEW_TRENDS);
   const [mostOrdered, setMostOrdered] = useState<MostOrderedProduct[]>([]);
+  const [lastOrder, setLastOrder] = useState<LastOrderSummary | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -231,11 +237,13 @@ export function CustomerDashboard() {
         setOverview(computeCustomerOrderOverview(orders));
         setOverviewTrends(computeCustomerOverviewTrends(orders));
         setMostOrdered(computeMostOrderedProducts(orders, 5));
+        setLastOrder(getLastOrderSummary(orders));
       } catch {
         if (!cancelled) {
           setOverview({ total: 0, inProgress: 0, readyToShip: 0, completed: 0 });
           setOverviewTrends(EMPTY_OVERVIEW_TRENDS);
           setMostOrdered([]);
+          setLastOrder(null);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -266,7 +274,91 @@ export function CustomerDashboard() {
       />
 
       <div className="relative space-y-8">
-        <HomeTimeHero companyName={companyName} />
+        <div className="space-y-4">
+          <HomeTimeHero companyName={companyName} />
+
+          {lastOrder ? (
+            <button
+              type="button"
+              onClick={() => router.push("/my-orders")}
+              aria-label={`Continue last order: ${lastOrder.label}`}
+              className={cn(
+                "flex w-full max-w-2xl items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition-all",
+                "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
+                "shadow-[0_12px_28px_-20px_rgba(0,0,0,0.45)]",
+                "hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/45",
+                "hover:shadow-[0_16px_32px_-16px_rgba(240,161,50,0.28)]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brand-background)]"
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-10 shrink-0 items-center justify-center rounded-full border",
+                  "border-[color-mix(in_srgb,var(--brand-primary)_40%,transparent)]",
+                  "bg-[color-mix(in_srgb,var(--brand-primary)_10%,transparent)]",
+                  "text-[var(--brand-primary)]"
+                )}
+              >
+                <History className="size-4" aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-bold text-[var(--brand-primary)]">
+                  Continue last order
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-[var(--brand-text-muted)] sm:text-sm">
+                  {lastOrder.label}
+                </span>
+              </span>
+              <ChevronRight
+                className="size-5 shrink-0 text-[var(--brand-primary)]"
+                aria-hidden
+              />
+            </button>
+          ) : null}
+        </div>
+
+        {/* Shop by category — 3×2 icon tiles */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-extrabold text-[var(--brand-text)]">
+            Shop by category
+          </h2>
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+            {CLIENT_HOME_CATEGORIES.map((category) => {
+              const label =
+                category.id === "singlevision"
+                  ? "Single Vision"
+                  : category.label;
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => goToCategory(router, category.id)}
+                  className={cn(
+                    "group flex flex-col items-center justify-center gap-2 rounded-2xl border px-2 py-3.5 text-center transition-all sm:gap-2.5 sm:px-3 sm:py-4",
+                    "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
+                    "shadow-[0_12px_28px_-20px_rgba(0,0,0,0.45)]",
+                    "hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/45",
+                    "hover:shadow-[0_16px_32px_-16px_rgba(240,161,50,0.28)]",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brand-background)]"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-11 items-center justify-center rounded-xl sm:size-12 sm:rounded-2xl",
+                      "bg-[color-mix(in_srgb,var(--brand-primary)_8%,transparent)]",
+                      "transition-transform group-hover:scale-[1.03]"
+                    )}
+                  >
+                    <HomeCategoryIcon id={category.id} size={28} />
+                  </span>
+                  <span className="text-[11px] font-bold leading-tight text-[var(--brand-text)] sm:text-sm">
+                    {label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
         <CatalogSearchBar className="max-w-2xl" />
 
@@ -329,49 +421,6 @@ export function CustomerDashboard() {
                     {action.label}
                   </span>
                 </Link>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Shop by category — icon tiles */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-[var(--brand-text)]">
-            Shop by category
-          </h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-            {CLIENT_HOME_CATEGORIES.map((category) => {
-              const label =
-                category.id === "singlevision"
-                  ? "Single Vision"
-                  : category.label;
-              return (
-                <button
-                  key={category.id}
-                  type="button"
-                  onClick={() => goToCategory(router, category.id)}
-                  className={cn(
-                    "group flex flex-col items-center justify-center gap-3 rounded-2xl border px-3 py-5 text-center transition-all sm:py-6",
-                    "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
-                    "shadow-[0_12px_28px_-20px_rgba(0,0,0,0.45)]",
-                    "hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/45",
-                    "hover:shadow-[0_16px_32px_-16px_rgba(240,161,50,0.28)]",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brand-background)]"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex size-16 items-center justify-center rounded-2xl",
-                      "bg-[color-mix(in_srgb,var(--brand-primary)_8%,transparent)]",
-                      "transition-transform group-hover:scale-[1.03]"
-                    )}
-                  >
-                    <HomeCategoryIcon id={category.id} size={42} />
-                  </span>
-                  <span className="text-sm font-bold text-[var(--brand-text)]">
-                    {label}
-                  </span>
-                </button>
               );
             })}
           </div>
