@@ -21,15 +21,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { HomeCategoryIcon } from "@/components/dashboard/category-icons";
 import { HomeTimeHero } from "@/components/dashboard/home-time-hero";
 import { WholesalePromoBanner } from "@/components/dashboard/wholesale-promo-banner";
 import { CatalogSearchBar } from "@/components/shop/catalog-search-bar";
 import { useAuth } from "@/contexts/auth-context";
-import {
-  catalogImageForHomeCategory,
-  fetchCatalogImages,
-  type CatalogImagesResponse,
-} from "@/lib/catalog-images-api";
 import { CLIENT_HOME_CATEGORIES } from "@/lib/home-categories";
 import {
   computeCustomerOrderOverview,
@@ -223,8 +219,6 @@ export function CustomerDashboard() {
   const [overviewTrends, setOverviewTrends] =
     useState<OverviewTrends>(EMPTY_OVERVIEW_TRENDS);
   const [mostOrdered, setMostOrdered] = useState<MostOrderedProduct[]>([]);
-  const [catalogImages, setCatalogImages] =
-    useState<CatalogImagesResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -232,15 +226,11 @@ export function CustomerDashboard() {
     async function load() {
       setLoading(true);
       try {
-        const [orders, images] = await Promise.all([
-          fetchOrders(),
-          fetchCatalogImages().catch(() => null),
-        ]);
+        const orders = await fetchOrders();
         if (cancelled) return;
         setOverview(computeCustomerOrderOverview(orders));
         setOverviewTrends(computeCustomerOverviewTrends(orders));
         setMostOrdered(computeMostOrderedProducts(orders, 5));
-        setCatalogImages(images);
       } catch {
         if (!cancelled) {
           setOverview({ total: 0, inProgress: 0, readyToShip: 0, completed: 0 });
@@ -344,17 +334,13 @@ export function CustomerDashboard() {
           </div>
         </section>
 
-        {/* Shop by category */}
+        {/* Shop by category — icon tiles */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-[var(--brand-text)]">
             Shop by category
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
             {CLIENT_HOME_CATEGORIES.map((category) => {
-              const imageUrl = catalogImageForHomeCategory(
-                catalogImages,
-                category.id
-              );
               const label =
                 category.id === "singlevision"
                   ? "Single Vision"
@@ -365,33 +351,25 @@ export function CustomerDashboard() {
                   type="button"
                   onClick={() => goToCategory(router, category.id)}
                   className={cn(
-                    "group relative h-[9.5rem] overflow-hidden rounded-3xl border text-left transition-all sm:h-[10.5rem]",
-                    "border-[var(--brand-card-border)] bg-[var(--brand-background)]",
-                    "shadow-[0_14px_28px_-18px_rgba(0,0,0,0.45)]",
+                    "group flex flex-col items-center justify-center gap-3 rounded-2xl border px-3 py-5 text-center transition-all sm:py-6",
+                    "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
+                    "shadow-[0_12px_28px_-20px_rgba(0,0,0,0.45)]",
                     "hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/45",
-                    "hover:shadow-[0_16px_32px_-16px_rgba(240,161,50,0.28)]"
+                    "hover:shadow-[0_16px_32px_-16px_rgba(240,161,50,0.28)]",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brand-background)]"
                   )}
                 >
-                  <span className="absolute inset-0 flex items-center justify-center bg-[var(--brand-background)]">
-                    {imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={imageUrl}
-                        alt={label}
-                        className="size-full object-contain object-center transition-transform duration-300 group-hover:scale-[1.02]"
-                      />
-                    ) : (
-                      <span className="size-2/3 rounded-2xl bg-[var(--brand-primary)]/10" />
-                    )}
-                  </span>
                   <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 via-black/40 to-transparent"
-                  />
-                  <span className="absolute inset-x-0 bottom-0 px-3.5 pb-3 pt-2">
-                    <span className="block truncate text-sm font-bold tracking-wide text-white">
-                      {label}
-                    </span>
+                    className={cn(
+                      "flex size-16 items-center justify-center rounded-2xl",
+                      "bg-[color-mix(in_srgb,var(--brand-primary)_8%,transparent)]",
+                      "transition-transform group-hover:scale-[1.03]"
+                    )}
+                  >
+                    <HomeCategoryIcon id={category.id} size={42} />
+                  </span>
+                  <span className="text-sm font-bold text-[var(--brand-text)]">
+                    {label}
                   </span>
                 </button>
               );
