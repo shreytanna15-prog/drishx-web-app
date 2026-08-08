@@ -1,14 +1,13 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export function CatalogSearchBar({
   className,
-  placeholder = "sv, kt, v2, coating, brand, or -0.25/-0.25…",
+  placeholder = "Search lenses, power, coating, brand...",
   initialQuery = "",
 }: {
   className?: string;
@@ -18,6 +17,7 @@ export function CatalogSearchBar({
 }) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
+  const [focused, setFocused] = useState(false);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -28,20 +28,65 @@ export function CatalogSearchBar({
     router.push(href);
   }
 
+  function openFilters() {
+    router.push("/shop/search");
+  }
+
   return (
     <form
       onSubmit={handleSubmit}
       className={cn("relative w-full", className)}
       role="search"
     >
-      <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--brand-text-muted)]" />
-      <Input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={placeholder}
-        aria-label="Search catalog"
-        className="h-11 rounded-xl border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] pl-10 pr-3"
-      />
+      <div
+        className={cn(
+          "flex h-12 items-center gap-2.5 rounded-full border px-2 transition-colors",
+          "border-[color-mix(in_srgb,var(--brand-primary)_28%,var(--brand-card-border))]",
+          "bg-[var(--brand-card-elevated,var(--brand-card))]",
+          "shadow-[0_10px_28px_-18px_rgba(0,0,0,0.55)]",
+          focused &&
+            "border-[color-mix(in_srgb,var(--brand-primary)_55%,var(--brand-card-border))] bg-[var(--brand-card)]"
+        )}
+      >
+        <span
+          className={cn(
+            "flex size-9 shrink-0 items-center justify-center rounded-full border",
+            "border-[color-mix(in_srgb,var(--brand-primary)_22%,transparent)]",
+            "bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)]",
+            "text-[var(--brand-primary)]"
+          )}
+        >
+          <Search className="size-4" aria-hidden />
+        </span>
+
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder={placeholder}
+          aria-label="Search catalog"
+          className={cn(
+            "min-w-0 flex-1 bg-transparent text-sm font-medium outline-none",
+            "text-[var(--brand-text)] placeholder:text-[var(--brand-placeholder)]"
+          )}
+        />
+
+        <button
+          type="button"
+          onClick={openFilters}
+          aria-label="Open filters"
+          className={cn(
+            "flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors",
+            "border-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)]",
+            "bg-[color-mix(in_srgb,var(--brand-primary)_14%,transparent)]",
+            "text-[var(--brand-primary)]",
+            "hover:bg-[color-mix(in_srgb,var(--brand-primary)_22%,transparent)]"
+          )}
+        >
+          <SlidersHorizontal className="size-4" />
+        </button>
+      </div>
     </form>
   );
 }

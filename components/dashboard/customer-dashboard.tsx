@@ -1,13 +1,16 @@
 "use client";
 
 import {
+  ArrowDown,
+  ArrowUp,
+  CheckCircle2,
   ChevronRight,
   FileText,
+  MoreVertical,
   Package,
   Receipt,
   RotateCcw,
   ShoppingCart,
-  Store,
   TrendingUp,
   Truck,
 } from "lucide-react";
@@ -16,15 +19,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ComponentType } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LensHeroCarousel } from "@/components/dashboard/lens-hero-carousel";
+import { HomeTimeHero } from "@/components/dashboard/home-time-hero";
+import { WholesalePromoBanner } from "@/components/dashboard/wholesale-promo-banner";
 import { CatalogSearchBar } from "@/components/shop/catalog-search-bar";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -33,17 +31,20 @@ import {
   type CatalogImagesResponse,
 } from "@/lib/catalog-images-api";
 import { CLIENT_HOME_CATEGORIES } from "@/lib/home-categories";
-import { computeCustomerOrderOverview } from "@/lib/home-order-stats";
+import {
+  computeCustomerOrderOverview,
+  computeCustomerOverviewTrends,
+  EMPTY_OVERVIEW_TRENDS,
+  type OverviewTrend,
+  type OverviewTrends,
+} from "@/lib/home-order-stats";
 import {
   computeMostOrderedProducts,
   type MostOrderedProduct,
 } from "@/lib/most-ordered-products";
 import { fetchOrders } from "@/lib/orders-api";
 import { cn } from "@/lib/utils";
-import {
-  getCompanyDisplayName,
-  getTimeOfDayGreeting,
-} from "@/lib/user-display";
+import { getCompanyDisplayName } from "@/lib/user-display";
 
 function goToCategory(
   router: ReturnType<typeof useRouter>,
@@ -86,59 +87,89 @@ const QUICK_ACTIONS = [
 ] as const;
 
 const STAT_CONFIG = [
-  { key: "total" as const, label: "Total orders", icon: Package, highlight: false },
-  { key: "inProgress" as const, label: "In progress", icon: TrendingUp, highlight: true },
-  { key: "readyToShip" as const, label: "Ready to ship", icon: Truck, highlight: false },
-  { key: "completed" as const, label: "Completed", icon: Receipt, highlight: false },
+  {
+    key: "total" as const,
+    label: "Total Orders",
+    icon: Package,
+    accent: "#5B9BF0",
+  },
+  {
+    key: "inProgress" as const,
+    label: "In Progress",
+    icon: TrendingUp,
+    accent: "#D782E0",
+  },
+  {
+    key: "readyToShip" as const,
+    label: "Ready to Ship",
+    icon: Truck,
+    accent: "#F0A132",
+  },
+  {
+    key: "completed" as const,
+    label: "Completed",
+    icon: CheckCircle2,
+    accent: "#4CC38A",
+  },
 ];
 
 function StatBox({
   label,
   value,
   icon: Icon,
-  highlight,
+  accent,
+  trend,
   loading,
 }: {
   label: string;
   value: string;
   icon: ComponentType<{ className?: string }>;
-  highlight?: boolean;
+  accent: string;
+  trend?: OverviewTrend;
   loading?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-2xl border p-4 transition-colors sm:p-5",
-        "border-[var(--brand-card-border)] bg-[color-mix(in_srgb,var(--brand-card)_88%,var(--brand-primary)_12%)]",
-        "shadow-[0_10px_28px_-20px_rgba(0,0,0,0.45)]",
-        highlight && "border-[var(--brand-primary)]/45 bg-[color-mix(in_srgb,var(--brand-primary)_14%,var(--brand-card))]"
+        "flex min-w-0 flex-col gap-2.5 rounded-2xl border p-4 sm:p-5",
+        "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
+        "shadow-[0_12px_28px_-20px_rgba(0,0,0,0.45)]",
+        "transition-all hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--brand-primary)_35%,var(--brand-card-border))]"
       )}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <span
-          className={cn(
-            "flex size-9 items-center justify-center rounded-xl",
-            highlight
-              ? "bg-[var(--brand-primary)]/20 text-[var(--brand-primary)]"
-              : "bg-[var(--brand-primary)]/10 text-[var(--brand-link)]"
-          )}
+          className="flex size-9 items-center justify-center rounded-xl"
+          style={{ backgroundColor: `${accent}29`, color: accent }}
         >
           <Icon className="size-4" />
         </span>
+        <MoreVertical className="size-4 text-[var(--brand-text-muted)]" aria-hidden />
       </div>
+
       {loading ? (
         <Skeleton className="h-8 w-16" />
       ) : (
-        <p
-          className={cn(
-            "text-3xl font-extrabold tracking-tight",
-            highlight ? "text-[var(--brand-primary)]" : "text-[var(--brand-text)]"
-          )}
-        >
+        <p className="text-3xl font-extrabold tracking-tight text-[var(--brand-text)]">
           {value}
         </p>
       )}
+
       <p className="text-sm font-medium text-[var(--brand-text-muted)]">{label}</p>
+
+      {trend ? (
+        <p
+          className="flex items-center gap-1 text-xs font-semibold"
+          style={{ color: accent }}
+        >
+          {trend.direction === "down" ? (
+            <ArrowDown className="size-3.5" />
+          ) : (
+            <ArrowUp className="size-3.5" />
+          )}
+          {trend.percent}% vs yesterday
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -189,6 +220,8 @@ export function CustomerDashboard() {
     readyToShip: 0,
     completed: 0,
   });
+  const [overviewTrends, setOverviewTrends] =
+    useState<OverviewTrends>(EMPTY_OVERVIEW_TRENDS);
   const [mostOrdered, setMostOrdered] = useState<MostOrderedProduct[]>([]);
   const [catalogImages, setCatalogImages] =
     useState<CatalogImagesResponse | null>(null);
@@ -205,11 +238,13 @@ export function CustomerDashboard() {
         ]);
         if (cancelled) return;
         setOverview(computeCustomerOrderOverview(orders));
+        setOverviewTrends(computeCustomerOverviewTrends(orders));
         setMostOrdered(computeMostOrderedProducts(orders, 5));
         setCatalogImages(images);
       } catch {
         if (!cancelled) {
           setOverview({ total: 0, inProgress: 0, readyToShip: 0, completed: 0 });
+          setOverviewTrends(EMPTY_OVERVIEW_TRENDS);
           setMostOrdered([]);
         }
       } finally {
@@ -225,7 +260,6 @@ export function CustomerDashboard() {
 
   if (!user) return null;
 
-  const greeting = getTimeOfDayGreeting();
   const companyName = getCompanyDisplayName(
     user.businessName,
     user.name,
@@ -242,77 +276,44 @@ export function CustomerDashboard() {
       />
 
       <div className="relative space-y-8">
-        {/* Hero: greeting + cinematic lens showcase */}
-        <section className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
-          <div className="min-w-0 flex-1 space-y-2.5 text-left">
-            <p className="text-sm font-medium tracking-wide text-[var(--brand-text-muted)]">
-              {greeting},
-            </p>
-            <h1 className="text-3xl font-extrabold tracking-tight text-[var(--brand-text)] sm:text-[2.5rem] sm:leading-tight">
-              {companyName}
-            </h1>
-            <p className="max-w-md text-sm leading-relaxed text-[var(--brand-text-muted)]">
-              A new day. New orders. Let&apos;s grow your business.
-            </p>
-            <p className="max-w-full truncate text-xs font-medium text-[var(--brand-text-muted)]/80 sm:max-w-xl">
-              Client ID:{" "}
-              <span className="font-mono text-[11px] sm:text-xs">{user.id}</span>
-            </p>
+        <HomeTimeHero companyName={companyName} />
+
+        <CatalogSearchBar className="max-w-2xl" />
+
+        {/* At a glance — mobile-inspired cards, web grid layout */}
+        <section className="space-y-4">
+          <div className="flex items-end justify-between gap-4">
+            <h2 className="text-lg font-extrabold text-[var(--brand-text)]">
+              At a glance
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0 font-semibold text-[var(--brand-link)] hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-link)]"
+              asChild
+            >
+              <Link href="/my-orders">View all</Link>
+            </Button>
           </div>
-          <LensHeroCarousel
-            images={catalogImages}
-            onSelectCategory={(id) => goToCategory(router, id)}
-            className="w-full shrink-0 sm:w-auto"
-          />
+
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+            {STAT_CONFIG.map((stat) => (
+              <StatBox
+                key={stat.key}
+                label={stat.label}
+                value={String(overview[stat.key])}
+                icon={stat.icon}
+                accent={stat.accent}
+                trend={overviewTrends[stat.key]}
+                loading={loading}
+              />
+            ))}
+          </div>
         </section>
 
-        <CatalogSearchBar className="max-w-xl" />
+        <WholesalePromoBanner />
 
-        {/* At a glance */}
-        <section>
-          <Card
-            className={cn(
-              "gap-0 overflow-hidden rounded-3xl border py-0",
-              "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
-              "shadow-[0_18px_40px_-24px_rgba(0,0,0,0.45)]"
-            )}
-          >
-            <CardHeader className="flex flex-row items-start justify-between gap-4 border-b border-[var(--brand-card-border)] px-5 py-5 sm:px-6">
-              <div className="space-y-1">
-                <CardTitle className="text-lg font-extrabold text-[var(--brand-text)]">
-                  At a glance
-                </CardTitle>
-                <CardDescription className="text-[var(--brand-text-muted)]">
-                  Your order activity today
-                </CardDescription>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="shrink-0 font-semibold text-[var(--brand-link)] hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-link)]"
-                asChild
-              >
-                <Link href="/my-orders">View all</Link>
-              </Button>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {STAT_CONFIG.map((stat) => (
-                  <StatBox
-                    key={stat.key}
-                    label={stat.label}
-                    value={String(overview[stat.key])}
-                    icon={stat.icon}
-                    highlight={stat.highlight}
-                    loading={loading}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Quick actions + wholesale */}
+        {/* Quick actions */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-[var(--brand-text)]">
             Quick actions
@@ -341,22 +342,6 @@ export function CustomerDashboard() {
               );
             })}
           </div>
-
-          <Button
-            size="lg"
-            asChild
-            className={cn(
-              "h-14 w-full rounded-3xl text-base font-extrabold shadow-lg",
-              "bg-gradient-to-b from-[#f5ad42] to-[#e8941f] text-[var(--brand-primary-text)]",
-              "hover:from-[#f7b84e] hover:to-[#ec9d28]",
-              "shadow-[0_4px_20px_rgba(240,161,50,0.35)]"
-            )}
-          >
-            <Link href="/wholesale">
-              <Store className="size-5" />
-              Place wholesale order
-            </Link>
-          </Button>
         </section>
 
         {/* Shop by category */}

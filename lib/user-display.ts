@@ -3,6 +3,8 @@ export type TimeOfDayGreeting =
   | "Good Afternoon"
   | "Good Evening";
 
+export type TimeOfDayBucket = "morning" | "afternoon" | "evening";
+
 export function getDisplayName(
   name: string | null | undefined,
   email: string
@@ -24,14 +26,38 @@ export function getCompanyDisplayName(
   return getDisplayName(name, email);
 }
 
-/** Local-time greeting: Morning 5–11, Afternoon 12–16, Evening 17–4. */
+/** Local-time bucket: morning 5–11:59, afternoon 12–17:59, evening 18–4:59. */
+export function getTimeOfDayBucket(date: Date = new Date()): TimeOfDayBucket {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 12) return "morning";
+  if (hour >= 12 && hour < 18) return "afternoon";
+  return "evening";
+}
+
 export function getTimeOfDayGreeting(
   date: Date = new Date()
 ): TimeOfDayGreeting {
-  const hour = date.getHours();
-  if (hour >= 5 && hour < 12) return "Good Morning";
-  if (hour >= 12 && hour < 17) return "Good Afternoon";
+  const bucket = getTimeOfDayBucket(date);
+  if (bucket === "morning") return "Good Morning";
+  if (bucket === "afternoon") return "Good Afternoon";
   return "Good Evening";
+}
+
+export function getTimeOfDayTagline(date: Date = new Date()): string {
+  const bucket = getTimeOfDayBucket(date);
+  if (bucket === "morning") return "Let's make today more productive!";
+  if (bucket === "afternoon") return "Clear mind. Better focus.";
+  return "Great vision. Stronger tomorrow.";
+}
+
+/** Theme-aware lifestyle hero art from `public/home_imgs`. */
+export function getTimeOfDayHeroImageSrc(
+  theme: "light" | "dark",
+  date: Date = new Date()
+): string {
+  const bucket = getTimeOfDayBucket(date);
+  const tone = theme === "dark" ? "black" : "light";
+  return `/home_imgs/${bucket}-${tone}.jpeg`;
 }
 
 export function getInitials(
