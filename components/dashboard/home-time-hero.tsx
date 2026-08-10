@@ -60,32 +60,38 @@ export function HomeTimeHero({ companyName, className }: HomeTimeHeroProps) {
       />
 
       <div className="relative grid min-h-[15.5rem] grid-cols-1 md:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-        <div className="relative z-10 flex flex-col justify-center gap-3 px-6 py-7 sm:px-8 sm:py-8 lg:px-10">
+        <div className="relative z-10 flex flex-col justify-center gap-3.5 px-6 py-7 sm:px-8 sm:py-8 lg:px-10">
           <div className="flex items-center gap-2.5">
             <p
               className={cn(
-                "font-serif text-[1.65rem] leading-none font-medium tracking-wide italic sm:text-[1.85rem]",
+                "font-display text-[2rem] leading-[1.05] font-medium tracking-[0.02em] italic sm:text-[2.35rem]",
                 "text-[var(--brand-primary)]"
               )}
             >
               {greeting}
             </p>
             <Icon
-              className="size-5 shrink-0 text-[var(--brand-primary)]"
+              className="mt-1 size-[1.15rem] shrink-0 text-[var(--brand-primary)] opacity-90 sm:size-5"
+              strokeWidth={1.75}
               aria-hidden
             />
           </div>
 
-          <h1 className="max-w-xl text-3xl font-extrabold tracking-tight text-[var(--brand-text)] sm:text-4xl">
+          <h1
+            className={cn(
+              "max-w-xl text-[1.85rem] leading-[1.12] font-bold tracking-[-0.03em]",
+              "text-[var(--brand-text)] sm:text-[2.35rem]"
+            )}
+          >
             {companyName}
           </h1>
 
           <span
             aria-hidden
-            className="mt-1 h-1 w-9 rounded-full bg-[var(--brand-primary)]"
+            className="mt-0.5 h-0.5 w-11 rounded-full bg-[var(--brand-primary)]"
           />
 
-          <p className="max-w-md text-sm leading-relaxed text-[var(--brand-text-muted)] sm:text-[0.95rem]">
+          <p className="max-w-md text-[0.9rem] leading-relaxed tracking-[0.01em] text-[var(--brand-text-muted)] sm:text-[0.95rem]">
             {tagline}
           </p>
         </div>
