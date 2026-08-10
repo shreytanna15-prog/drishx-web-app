@@ -4,7 +4,6 @@ import {
   formatLensProductCardTitle,
   LENS_PRICE_PER_PAIR_LABEL,
 } from "@/lib/lens-display";
-import { formatProgressiveEyeLabel } from "@/lib/progressive-eye";
 import type { LensItem } from "@/lib/types/lens";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +18,6 @@ export function LensProductListCard({
 }: LensProductListCardProps) {
   const title = formatLensProductCardTitle(item);
   const detailLine = formatLensProductCardDetail(item);
-  const eyeLabel = formatProgressiveEyeLabel(item.eye);
 
   return (
     <div
@@ -36,14 +34,7 @@ export function LensProductListCard({
         />
         <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm font-bold text-[var(--brand-text)]">{title}</p>
-              {eyeLabel ? (
-                <span className="rounded-md border border-[var(--brand-primary)]/35 bg-[var(--brand-primary)]/14 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--brand-primary)]">
-                  {eyeLabel}
-                </span>
-              ) : null}
-            </div>
+            <p className="text-sm font-bold text-[var(--brand-text)]">{title}</p>
             <p className="mt-0.5 text-sm font-extrabold leading-snug text-[var(--brand-text)]">
               {detailLine}
             </p>

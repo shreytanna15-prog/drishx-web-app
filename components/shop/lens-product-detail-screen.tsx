@@ -720,16 +720,16 @@ export function LensProductDetailScreen({
             <div className="grid grid-cols-4 bg-[color-mix(in_srgb,var(--brand-card)_85%,var(--brand-primary)_15%)] px-2 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-muted)]">
               <span>SPH</span>
               <span>CYL</span>
-              <span>ADD</span>
               <span>AXIS</span>
+              <span>ADD</span>
             </div>
             <div className="grid grid-cols-4 bg-[var(--brand-card)] px-2 py-4 text-center text-sm font-bold text-[var(--brand-text)]">
               <span>{formatPowerLabel(item.sph ?? 0)}</span>
               <span>
                 {item.cyl != null ? formatPowerLabel(item.cyl) : "—"}
               </span>
-              <span>{formatAddValue(item.add)}</span>
               <span>{formatAxisValue(item.axis)}</span>
+              <span>{formatAddValue(item.add)}</span>
             </div>
           </div>
         </section>
