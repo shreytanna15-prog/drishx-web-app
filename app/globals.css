@@ -1668,6 +1668,36 @@ a.auth-button-outline:hover {
   }
 }
 
+/* Shop/wholesale category lens: alpha radial fade into --brand-card (theme-aware). */
+.category-lens-bleed {
+  -webkit-mask-image: radial-gradient(
+    ellipse 62% 62% at 68% 32%,
+    #000 0%,
+    rgba(0, 0, 0, 0.92) 42%,
+    rgba(0, 0, 0, 0.35) 72%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 62% 62% at 68% 32%,
+    #000 0%,
+    rgba(0, 0, 0, 0.92) 42%,
+    rgba(0, 0, 0, 0.35) 72%,
+    transparent 100%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.category-lens-bleed__img {
+  width: 128%;
+  height: 128%;
+  /* Bleed toward top-right so the soft edge dissolves into the card. */
+  top: -18%;
+  left: -4%;
+}
+
 .dashboard-category-card {
   display: flex;
   min-height: 5.5rem;

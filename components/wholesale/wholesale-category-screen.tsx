@@ -1,23 +1,30 @@
 "use client";
 
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ShopCategoryCard } from "@/components/shop/shop-cards";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useOrderMode } from "@/contexts/order-mode-context";
 import {
-  catalogImageForShopCategory,
+  catalogImageUrlForShopCategory,
   fetchCatalogImages,
   type CatalogImagesResponse,
 } from "@/lib/catalog-images-api";
-import { LENS_CATALOG_CATEGORIES } from "@/lib/wholesale-navigation";
-import { cn } from "@/lib/utils";
+import { fetchLensCatalogItems } from "@/lib/lenses-api";
+import {
+  LENS_CATALOG_CATEGORIES,
+  wholesaleCategoryToApiType,
+  type WholesaleCategoryId,
+} from "@/lib/wholesale-navigation";
 
 export function WholesaleCategoryScreen() {
   const { setMode } = useOrderMode();
   const [catalogImages, setCatalogImages] =
     useState<CatalogImagesResponse | null>(null);
+  const [productCounts, setProductCounts] = useState<
+    Partial<Record<WholesaleCategoryId, number>>
+  >({});
 
   useEffect(() => {
     setMode("wholesale");
@@ -32,6 +39,36 @@ export function WholesaleCategoryScreen() {
       .catch(() => {
         if (!cancelled) setCatalogImages(null);
       });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all(
+      LENS_CATALOG_CATEGORIES.map(async (cat) => {
+        try {
+          const items = await fetchLensCatalogItems(
+            wholesaleCategoryToApiType(cat.id)
+          );
+          const total = items.reduce(
+            (sum, item) => sum + (item.productCount ?? 0),
+            0
+          );
+          return [cat.id, total] as const;
+        } catch {
+          return [cat.id, null] as const;
+        }
+      })
+    ).then((entries) => {
+      if (cancelled) return;
+      const next: Partial<Record<WholesaleCategoryId, number>> = {};
+      for (const [id, total] of entries) {
+        if (typeof total === "number") next[id] = total;
+      }
+      setProductCounts(next);
+    });
     return () => {
       cancelled = true;
     };
@@ -66,50 +103,37 @@ export function WholesaleCategoryScreen() {
           </div>
         </div>
 
-        <p className="text-sm font-semibold text-[var(--brand-text-muted)]">
-          Select a category
-        </p>
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-extrabold text-[var(--brand-text)]">
+              Categories
+            </h2>
+            <div className="mt-1 h-0.5 w-9 rounded-full bg-[var(--brand-primary)]" />
+          </div>
+          <Link
+            href="/shop"
+            className="inline-flex items-center gap-0.5 text-sm font-bold text-[var(--brand-primary)]"
+          >
+            View all
+            <span aria-hidden>›</span>
+          </Link>
+        </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {LENS_CATALOG_CATEGORIES.map((cat) => {
-            const Icon = cat.icon;
-            const imageUrl = catalogImageForShopCategory(catalogImages, cat.id);
+            const imageUrl = catalogImageUrlForShopCategory(
+              catalogImages,
+              cat.id
+            );
             return (
               <Link key={cat.id} href={`/wholesale/items?category=${cat.id}`}>
-                <Card
-                  className={cn(
-                    "h-full rounded-2xl border-[var(--brand-card-border)] bg-[var(--brand-card)] py-0 shadow-none transition-all",
-                    "hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/45 hover:shadow-[0_12px_28px_-12px_rgba(240,161,50,0.35)]"
-                  )}
-                >
-                  <CardContent className="flex h-full min-h-[132px] flex-col justify-between p-5">
-                    <div className="flex items-start justify-between">
-                      {imageUrl ? (
-                        <span className="size-14 overflow-hidden rounded-xl border border-[var(--brand-card-border)]">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={imageUrl}
-                            alt={cat.title}
-                            className="size-full object-cover"
-                          />
-                        </span>
-                      ) : (
-                        <span className="flex size-11 items-center justify-center rounded-xl border border-[var(--brand-card-border)] bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] text-[var(--brand-primary)]">
-                          <Icon className="size-5" />
-                        </span>
-                      )}
-                      <ChevronRight className="size-5 text-[var(--brand-text-muted)]" />
-                    </div>
-                    <div>
-                      <h2 className="mt-4 text-lg font-extrabold text-[var(--brand-text)]">
-                        {cat.title}
-                      </h2>
-                      <p className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
-                        {cat.subtitle}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <ShopCategoryCard
+                  id={cat.id}
+                  title={cat.title}
+                  subtitle={cat.subtitle}
+                  imageUrl={imageUrl}
+                  productCount={productCounts[cat.id] ?? null}
+                />
               </Link>
             );
           })}

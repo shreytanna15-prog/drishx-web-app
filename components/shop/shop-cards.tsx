@@ -1,16 +1,21 @@
 "use client";
 
-import { ChevronRight, Eye, ScanEye, View } from "lucide-react";
+import { ChevronRight, Eye, Layers, ScanEye } from "lucide-react";
 import Link from "next/link";
 import { CatalogThumb } from "@/components/shop/catalog-thumb";
+import { CategoryLensBleed } from "@/components/shop/category-lens-bleed";
+import {
+  catalogImageUrlForShopCategory,
+  type CatalogImagesResponse,
+} from "@/lib/catalog-images-api";
 import type { LensCatalogItem } from "@/lib/lenses-api";
 import type { ShopCategoryId } from "@/lib/shop-navigation";
 import { cn } from "@/lib/utils";
 
 const CATEGORY_ICONS: Record<ShopCategoryId, typeof Eye> = {
-  sv: Eye,
-  kt: ScanEye,
-  v2: View,
+  sv: ScanEye,
+  kt: Eye,
+  v2: Layers,
 };
 
 type ShopItemCardProps = {
@@ -74,6 +79,8 @@ type ShopCategoryCardProps = {
   active?: boolean;
   onSelect?: () => void;
   imageUrl?: string | null;
+  catalogImages?: CatalogImagesResponse | null;
+  productCount?: number | null;
 };
 
 export function ShopCategoryCard({
@@ -83,44 +90,76 @@ export function ShopCategoryCard({
   active,
   onSelect,
   imageUrl,
+  catalogImages = null,
+  productCount,
 }: ShopCategoryCardProps) {
   const Icon = CATEGORY_ICONS[id];
+  const resolvedImageUrl =
+    imageUrl ?? catalogImageUrlForShopCategory(catalogImages, id);
+  const countLabel =
+    productCount == null
+      ? "Browse"
+      : `${productCount} Product${productCount === 1 ? "" : "s"}`;
+
+  const CardTag = onSelect ? "button" : "div";
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <CardTag
+      {...(onSelect
+        ? { type: "button" as const, onClick: onSelect }
+        : {})}
       className={cn(
-        "flex min-h-[8.5rem] flex-col rounded-2xl border p-5 text-left transition-all",
+        "flex min-h-[15rem] w-full flex-col overflow-hidden rounded-[1.25rem] border p-4 text-left transition-all",
         "border-[var(--brand-card-border)] bg-[var(--brand-card)]",
         active
           ? "border-[var(--brand-primary)]/55 bg-[color-mix(in_srgb,var(--brand-primary)_10%,var(--brand-card))] shadow-[0_8px_24px_-10px_rgba(240,161,50,0.35)]"
           : "hover:border-[var(--brand-primary)]/40 hover:bg-[color-mix(in_srgb,var(--brand-primary)_6%,var(--brand-card))]"
       )}
     >
-      <div className="flex items-start justify-between">
-        {imageUrl ? (
-          <CatalogThumb src={imageUrl} alt={title} className="size-11" />
+      <div className="relative mb-2 h-[7.5rem]">
+        {resolvedImageUrl ? (
+          <CategoryLensBleed
+            src={resolvedImageUrl}
+            alt={title}
+            className="absolute -left-1 -top-1 size-[7.5rem]"
+          />
         ) : (
           <span
             className={cn(
-              "flex size-11 items-center justify-center rounded-xl",
+              "mt-8 flex size-14 items-center justify-center rounded-2xl",
               active
                 ? "bg-[var(--brand-primary)] text-[var(--brand-primary-text)]"
                 : "bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]"
             )}
           >
-            <Icon className="size-5" />
+            <Icon className="size-6" />
           </span>
         )}
-        <ChevronRight className="size-5 text-[var(--brand-text-muted)]" />
+
+        <span className="absolute bottom-1 left-0 flex size-8 items-center justify-center rounded-[0.65rem] border-[1.5px] border-[var(--brand-primary)] bg-[var(--brand-card)] text-[var(--brand-primary)]">
+          <Icon className="size-4" />
+        </span>
+
+        <span className="absolute right-0 top-0 flex size-7 items-center justify-center rounded-full border border-[var(--brand-card-border)] bg-[var(--brand-primary)]/10">
+          <ChevronRight className="size-4 text-[var(--brand-text-muted)]" />
+        </span>
       </div>
-      <h3 className="mt-4 text-lg font-extrabold text-[var(--brand-text)]">
+
+      <h3 className="mt-2 text-lg font-extrabold text-[var(--brand-text)]">
         {title}
       </h3>
       <p className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
         {subtitle}
       </p>
-    </button>
+
+      <div className="mt-auto flex items-center justify-between pt-4">
+        <span className="text-sm font-bold text-[var(--brand-primary)]">
+          {countLabel}
+        </span>
+        <span className="text-lg font-bold text-[var(--brand-primary)]" aria-hidden>
+          →
+        </span>
+      </div>
+    </CardTag>
   );
 }
