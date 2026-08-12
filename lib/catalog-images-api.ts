@@ -37,7 +37,7 @@ export function localShopLensImageUrl(
 ): string {
   return scheme === "light"
     ? `/images/catalog/${key}-light.png`
-    : `/images/catalog/${key}.png`;
+    : `/images/catalog/${key}-lens.png`;
 }
 
 let cached: CatalogImagesResponse | null = null;
