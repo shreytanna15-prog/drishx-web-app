@@ -3,12 +3,12 @@
 import {
   ChevronDown,
   ChevronUp,
-  Eye,
   Minus,
   Plus,
   Trash2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { CatalogThumb } from "@/components/shop/catalog-thumb";
 import type { CartPowerLine, CartProductSection } from "@/lib/cart-display";
 import { buildWholesalePowerLines } from "@/lib/cart-display";
 import { formatPairQuantity } from "@/lib/order-quantity";
@@ -108,9 +108,11 @@ export function CartProductSectionCard({
     <article className="overflow-hidden rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.35)]">
       <div className="flex items-start justify-between gap-3 p-4">
         <div className="flex min-w-0 flex-1 items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]">
-            <Eye className="size-5" />
-          </div>
+          <CatalogThumb
+            alt={section.title}
+            lensType={section.lensType}
+            className="size-12 shrink-0"
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h3 className="truncate text-base font-extrabold text-[var(--brand-text)]">
