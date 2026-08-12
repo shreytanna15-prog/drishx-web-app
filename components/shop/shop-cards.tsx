@@ -2,7 +2,6 @@
 
 import { ChevronRight, Eye, Layers, ScanEye } from "lucide-react";
 import Link from "next/link";
-import { CatalogThumb } from "@/components/shop/catalog-thumb";
 import { CategoryLensBleed } from "@/components/shop/category-lens-bleed";
 import {
   catalogImageUrlForShopCategory,
@@ -11,6 +10,7 @@ import {
 import type { LensCatalogItem } from "@/lib/lenses-api";
 import type { ShopCategoryId } from "@/lib/shop-navigation";
 import { useTheme } from "@/contexts/theme-context";
+import { cn } from "@/lib/utils";
 
 const CATEGORY_ICONS: Record<ShopCategoryId, typeof Eye> = {
   sv: ScanEye,
@@ -33,6 +33,9 @@ export function ShopItemCard({
 }: ShopItemCardProps) {
   const disabled = item.productCount < 1;
   const href = `/shop/products?category=${category}&item=${encodeURIComponent(item.name)}`;
+  const { resolvedTheme } = useTheme();
+  const blendedSrc =
+    catalogImageUrlForShopCategory(null, category, resolvedTheme) ?? imageUrl;
 
   return (
     <Link
@@ -47,11 +50,13 @@ export function ShopItemCard({
           : "hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/50 hover:bg-[color-mix(in_srgb,var(--brand-primary)_6%,var(--brand-card))] hover:shadow-[0_12px_28px_-12px_rgba(240,161,50,0.35)]"
       )}
     >
-      <CatalogThumb
-        src={imageUrl}
-        alt={item.name}
-        className="mb-3 size-16"
-      />
+      {blendedSrc ? (
+        <CategoryLensBleed
+          src={blendedSrc}
+          alt={item.name}
+          className="mb-3 size-16"
+        />
+      ) : null}
       <h3
         className={cn(
           "text-base font-extrabold leading-snug text-[var(--brand-text)]",

@@ -40,7 +40,7 @@ export function RelatedLensCard({ item, href, className }: RelatedLensCardProps)
       )}
     >
       <div className="flex items-start gap-3">
-        <CatalogThumb src={item.imageUrl} alt={title} className="size-14" />
+        <CatalogThumb src={item.imageUrl} alt={title} lensType={item.lensType} className="size-14" />
         <div className="flex min-w-0 flex-1 items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <p className="text-base font-bold text-[var(--brand-text)]">

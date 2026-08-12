@@ -15,11 +15,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { PrescriptionWheelPicker } from "@/components/shop/prescription-wheel-picker";
 import { RelatedLensCard } from "@/components/shop/related-lens-card";
+import { CategoryLensBleed } from "@/components/shop/category-lens-bleed";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCart } from "@/contexts/cart-context";
 import { useOrderMode } from "@/contexts/order-mode-context";
+import { useTheme } from "@/contexts/theme-context";
+import { catalogImageUrlForLensType } from "@/lib/catalog-images-api";
 import {
   buildCartLineId,
   formatPowerLabel,
@@ -108,6 +111,7 @@ export function LensProductDetailScreen({
   const isSelectMode = isOnBehalfSelectMode || isStockSelectMode;
   const { addToCart, updateQuantity, items: cartItems } = useCart();
   const { mode: orderMode, isWholesale } = useOrderMode();
+  const { resolvedTheme } = useTheme();
   const filter = shopCategoryToFilter(category);
   const categoryTitle = shopCategoryDisplayTitle(category);
 
@@ -624,6 +628,8 @@ export function LensProductDetailScreen({
     );
   }
 
+  const detailImage = catalogImageUrlForLensType(item.lensType, resolvedTheme);
+
   return (
     <div className="relative mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
@@ -666,50 +672,51 @@ export function LensProductDetailScreen({
         </div>
 
         <section className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-5 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.35)]">
-          {item.imageUrl ? (
-            <div className="mb-4 flex h-52 items-center justify-center overflow-hidden rounded-xl border border-[var(--brand-card-border)] bg-[color-mix(in_srgb,var(--brand-primary)_6%,var(--brand-card))] sm:h-60">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={item.imageUrl}
+          <div className="flex items-center gap-4">
+            {detailImage ? (
+              <CategoryLensBleed
+                src={detailImage}
                 alt={formatLensProductCardTitle(item)}
-                className="max-h-full max-w-full object-contain p-3"
+                className="size-24 shrink-0 sm:size-28"
               />
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xl font-extrabold leading-snug text-[var(--brand-text)] sm:text-2xl">
+                {formatLensProductCardTitle(item)}
+              </h2>
+              <p className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
+                {formatLensItemCoatingSummary(item)}
+              </p>
+              <p className="mt-2 text-base font-bold text-[var(--brand-text)]">
+                {lensType}
+              </p>
+              <p className="mt-3 text-xl font-extrabold text-[var(--brand-primary)] sm:text-2xl">
+                {isWhiteCatalogProduct ? (
+                  "White catalog product"
+                ) : (
+                  <>
+                    ₹{item.price}
+                    <span className="ml-1 text-sm font-bold text-[var(--brand-text-muted)]">
+                      {LENS_PRICE_PER_PAIR_LABEL}
+                    </span>
+                  </>
+                )}
+              </p>
+              {isWhiteCatalogProduct ? (
+                <p className="mt-2 text-sm text-[var(--brand-text-muted)]">
+                  Select power from the white catalog range below.
+                </p>
+              ) : item.quantity > 0 ? (
+                <p className="mt-2 text-xs font-semibold text-[var(--brand-success)]">
+                  {item.quantity} in stock
+                </p>
+              ) : (
+                <p className="mt-2 text-xs font-semibold text-[var(--brand-text-muted)]">
+                  Out of stock
+                </p>
+              )}
             </div>
-          ) : null}
-          <h2 className="text-2xl font-extrabold text-[var(--brand-text)]">
-            {formatLensProductCardTitle(item)}
-          </h2>
-          <p className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
-            {formatLensItemCoatingSummary(item)}
-          </p>
-          <p className="mt-2 text-base font-bold text-[var(--brand-text)]">
-            {lensType}
-          </p>
-          <p className="mt-3 text-2xl font-extrabold text-[var(--brand-primary)]">
-            {isWhiteCatalogProduct ? (
-              "White catalog product"
-            ) : (
-              <>
-                ₹{item.price}
-                <span className="ml-1 text-sm font-bold text-[var(--brand-text-muted)]">
-                  {LENS_PRICE_PER_PAIR_LABEL}
-                </span>
-              </>
-            )}
-          </p>
-          {isWhiteCatalogProduct ? (
-            <p className="mt-2 text-sm text-[var(--brand-text-muted)]">
-              Select power from the white catalog range below.
-            </p>
-          ) : item.quantity > 0 ? (
-            <p className="mt-2 text-xs font-semibold text-[var(--brand-success)]">
-              {item.quantity} in stock
-            </p>
-          ) : (
-            <p className="mt-2 text-xs font-semibold text-[var(--brand-text-muted)]">
-              Out of stock
-            </p>
-          )}
+          </div>
         </section>
 
         <section>

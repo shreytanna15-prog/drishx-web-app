@@ -98,3 +98,13 @@ export function catalogImageUrlForShopCategory(
   }
   return catalogImageForShopCategory(data, categoryId);
 }
+
+/** Blended local lens art for product list / detail cards. */
+export function catalogImageUrlForLensType(
+  lensType: string | undefined,
+  scheme: "light" | "dark" = "dark"
+): string | null {
+  const categoryId =
+    lensType === "Kryptok" ? "kt" : lensType === "Progressive" ? "v2" : "sv";
+  return catalogImageUrlForShopCategory(null, categoryId, scheme);
+}

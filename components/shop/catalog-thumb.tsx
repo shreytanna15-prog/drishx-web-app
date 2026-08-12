@@ -1,5 +1,9 @@
 "use client";
 
+import { CategoryLensBleed } from "@/components/shop/category-lens-bleed";
+import { useTheme } from "@/contexts/theme-context";
+import { catalogImageUrlForLensType } from "@/lib/catalog-images-api";
+import type { LensType } from "@/lib/types/lens";
 import { cn } from "@/lib/utils";
 
 type CatalogThumbProps = {
@@ -7,33 +11,38 @@ type CatalogThumbProps = {
   alt: string;
   className?: string;
   imgClassName?: string;
+  lensType?: LensType | string | null;
 };
 
-/** Shared product/category thumbnail with muted fallback. */
+/** Shared product thumbnail using the same radial blend as shop category cards. */
 export function CatalogThumb({
   src,
   alt,
   className,
-  imgClassName,
+  lensType,
 }: CatalogThumbProps) {
+  const { resolvedTheme } = useTheme();
+  const blendedSrc =
+    catalogImageUrlForLensType(lensType ?? undefined, resolvedTheme) ?? src;
+
+  if (!blendedSrc) {
+    return (
+      <span
+        className={cn(
+          "relative flex shrink-0 items-center justify-center overflow-hidden bg-transparent",
+          className
+        )}
+      >
+        <span className="size-1/3 rounded-full bg-[var(--brand-primary)]/25" />
+      </span>
+    );
+  }
+
   return (
-    <span
-      className={cn(
-        "relative flex shrink-0 overflow-hidden rounded-xl border border-[var(--brand-card-border)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,var(--brand-card))]",
-        className
-      )}
-    >
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt={alt}
-          className={cn("size-full object-contain p-1", imgClassName)}
-          loading="lazy"
-        />
-      ) : (
-        <span className="m-auto size-1/3 rounded-full bg-[var(--brand-primary)]/25" />
-      )}
-    </span>
+    <CategoryLensBleed
+      src={blendedSrc}
+      alt={alt}
+      className={cn("bg-transparent", className)}
+    />
   );
 }

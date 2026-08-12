@@ -30,6 +30,7 @@ export function LensProductListCard({
         <CatalogThumb
           src={item.imageUrl}
           alt={title}
+          lensType={item.lensType}
           className="size-14"
         />
         <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
