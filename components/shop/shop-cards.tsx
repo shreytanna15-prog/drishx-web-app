@@ -138,10 +138,6 @@ export function ShopCategoryCard({
           </span>
         )}
 
-        <span className="absolute bottom-1 left-0 z-[2] flex size-8 items-center justify-center rounded-[0.65rem] border-[1.5px] border-[var(--brand-primary)] bg-[var(--brand-card)] text-[var(--brand-primary)]">
-          <Icon className="size-4" />
-        </span>
-
         <span className="absolute right-0 top-0 z-[2] flex size-7 items-center justify-center rounded-full border border-[var(--brand-card-border)] bg-[var(--brand-primary)]/10">
           <ChevronRight className="size-4 text-[var(--brand-text-muted)]" />
         </span>
