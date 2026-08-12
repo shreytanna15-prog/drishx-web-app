@@ -1,25 +1,26 @@
 "use client";
 
-import { ChevronLeft, Loader2, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronLeft, Loader2, RefreshCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
 import {
+  DEFAULT_INVOICE_SORT,
+  filterAndSortInvoices,
   fetchInvoices,
   formatInvoiceAmount,
+  INVOICE_DATE_FILTERS,
+  INVOICE_SORT_OPTIONS,
+  INVOICE_STATUS_FILTERS,
+  type InvoiceDateFilter,
   type InvoiceRecord,
+  type InvoiceSortOption,
+  type InvoiceStatusFilter,
 } from "@/lib/invoices-api";
 import { cn } from "@/lib/utils";
-
-type InvoiceFilter = "ALL" | "PAID" | "UNPAID";
-
-const FILTERS: { key: InvoiceFilter; label: string }[] = [
-  { key: "ALL", label: "All" },
-  { key: "PAID", label: "Paid" },
-  { key: "UNPAID", label: "Unpaid" },
-];
 
 function InvoiceStatusBadge({ status }: { status: string }) {
   const paid = status === "PAID";
@@ -72,13 +73,25 @@ function InvoiceCard({ invoice }: { invoice: InvoiceRecord }) {
   );
 }
 
+function chipClass(active: boolean) {
+  return cn(
+    "rounded-xl border px-3 py-2 text-sm font-bold transition-colors",
+    active
+      ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]"
+      : "border-[var(--brand-card-border)] bg-[var(--brand-card)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+  );
+}
+
 export function InvoicesScreen() {
   const { token } = useAuth();
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<InvoiceFilter>("ALL");
+  const [statusFilter, setStatusFilter] = useState<InvoiceStatusFilter>("ALL");
+  const [dateFilter, setDateFilter] = useState<InvoiceDateFilter>("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sort, setSort] = useState<InvoiceSortOption>(DEFAULT_INVOICE_SORT);
 
   const loadInvoices = useCallback(async () => {
     try {
@@ -99,12 +112,27 @@ export function InvoicesScreen() {
     void loadInvoices();
   }, [loadInvoices]);
 
-  const filtered = useMemo(() => {
-    if (filter === "ALL") {
-      return invoices;
-    }
-    return invoices.filter((invoice) => invoice.status === filter);
-  }, [filter, invoices]);
+  const filtered = useMemo(
+    () =>
+      filterAndSortInvoices(invoices, {
+        status: statusFilter,
+        date: dateFilter,
+        search: searchQuery,
+        sort,
+      }),
+    [invoices, statusFilter, dateFilter, searchQuery, sort]
+  );
+
+  const filtersActive =
+    statusFilter !== "ALL" ||
+    dateFilter !== "ALL" ||
+    searchQuery.trim().length > 0;
+  const emptyMessage =
+    invoices.length === 0
+      ? "No invoices found."
+      : filtersActive
+        ? "No invoices match these filters."
+        : "No invoices found.";
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
@@ -143,25 +171,63 @@ export function InvoicesScreen() {
         </Button>
       </div>
 
-      <div className="mb-5 grid grid-cols-3 gap-2">
-        {FILTERS.map((entry) => {
-          const active = filter === entry.key;
-          return (
+      <div className="mb-5 space-y-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--brand-text-muted)]" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search invoice number, amount…"
+            className="h-11 rounded-xl border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] pl-10"
+          />
+        </div>
+        <div className="relative">
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as InvoiceSortOption)}
+            aria-label="Sort invoices"
+            className="h-11 w-full appearance-none rounded-xl border border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] px-3 pr-10 text-sm font-semibold text-[var(--brand-text)] outline-none"
+          >
+            {INVOICE_SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-[var(--brand-text-muted)]" />
+        </div>
+
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label="Filter by payment status">
+          {INVOICE_STATUS_FILTERS.map((entry) => (
             <button
               key={entry.key}
               type="button"
-              onClick={() => setFilter(entry.key)}
-              className={cn(
-                "rounded-xl border px-3 py-2.5 text-sm font-bold transition-colors",
-                active
-                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]"
-                  : "border-[var(--brand-card-border)] bg-[var(--brand-card)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
-              )}
+              onClick={() => setStatusFilter(entry.key)}
+              className={chipClass(statusFilter === entry.key)}
             >
               {entry.label}
             </button>
-          );
-        })}
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by date">
+          {INVOICE_DATE_FILTERS.map((entry) => (
+            <button
+              key={entry.key}
+              type="button"
+              onClick={() => setDateFilter(entry.key)}
+              className={chipClass(dateFilter === entry.key)}
+            >
+              {entry.label}
+            </button>
+          ))}
+        </div>
+
+        {!loading && !error ? (
+          <p className="text-xs font-semibold text-[var(--brand-text-muted)]">
+            {filtered.length} invoice{filtered.length === 1 ? "" : "s"}
+          </p>
+        ) : null}
       </div>
 
       {loading ? (
@@ -188,7 +254,7 @@ export function InvoicesScreen() {
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 py-16 text-center">
           <p className="text-sm font-medium text-[var(--brand-text-muted)]">
-            No invoices found.
+            {emptyMessage}
           </p>
         </div>
       ) : (
