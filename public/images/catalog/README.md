@@ -1,11 +1,16 @@
 # Shop lens category images
 
-Transparent PNGs for web Shop / Wholesale category cards.
+Processed circular-crop PNGs for web Shop / Wholesale category cards.
 
-| Category | File | URL |
-| --- | --- | --- |
-| Single Vision | `singlevision.png` | `/images/catalog/singlevision.png` |
-| Kryptok | `kryptok.png` | `/images/catalog/kryptok.png` |
-| Progressive | `progressive.png` | `/images/catalog/progressive.png` |
+| Category | Source | Processed | URL |
+| --- | --- | --- | --- |
+| Single Vision | `singlevision-source.png` | `singlevision.png` | `/images/catalog/singlevision.png` |
+| Kryptok | `kryptok-source.png` | `kryptok.png` | `/images/catalog/kryptok.png` |
+| Progressive | `progressive-source.png` | `progressive.png` | `/images/catalog/progressive.png` |
 
-Gold-rim lens art with black keyed to alpha so light/dark `--brand-card` shows through under the radial CSS mask.
+Re-process from the mobile app repo:
+
+```bash
+cd DrishX-mobile-app
+node scripts/process-lens-assets.js
+```

@@ -9,8 +9,8 @@ type CategoryLensBleedProps = {
 };
 
 /**
- * Lens art with a true CSS alpha radial mask.
- * Pass a transparent PNG (lens highlights only); the mask fades alpha into the card.
+ * Photorealistic lens, fully visible and centered.
+ * Mask only feathers the outer corners so the square photo bound disappears.
  */
 export function CategoryLensBleed({
   src,
@@ -20,18 +20,21 @@ export function CategoryLensBleed({
   return (
     <span
       className={cn(
-        "category-lens-bleed relative block shrink-0 overflow-hidden",
+        "category-lens-bleed relative mx-auto block shrink-0 overflow-hidden bg-transparent",
         className
       )}
       aria-hidden={alt ? undefined : true}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        className="category-lens-bleed__img pointer-events-none absolute object-contain"
-        loading="lazy"
-      />
+      <span className="category-lens-bleed__glow" aria-hidden />
+      <span className="category-lens-bleed__mask">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt}
+          className="category-lens-bleed__img pointer-events-none absolute inset-0 size-full object-contain"
+          loading="lazy"
+        />
+      </span>
     </span>
   );
 }

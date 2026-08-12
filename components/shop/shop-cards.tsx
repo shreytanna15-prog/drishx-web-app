@@ -10,7 +10,7 @@ import {
 } from "@/lib/catalog-images-api";
 import type { LensCatalogItem } from "@/lib/lenses-api";
 import type { ShopCategoryId } from "@/lib/shop-navigation";
-import { cn } from "@/lib/utils";
+import { useTheme } from "@/contexts/theme-context";
 
 const CATEGORY_ICONS: Record<ShopCategoryId, typeof Eye> = {
   sv: ScanEye,
@@ -94,8 +94,10 @@ export function ShopCategoryCard({
   productCount,
 }: ShopCategoryCardProps) {
   const Icon = CATEGORY_ICONS[id];
+  const { resolvedTheme } = useTheme();
   const resolvedImageUrl =
-    imageUrl ?? catalogImageUrlForShopCategory(catalogImages, id);
+    catalogImageUrlForShopCategory(catalogImages, id, resolvedTheme) ??
+    imageUrl;
   const countLabel =
     productCount == null
       ? "Browse"
@@ -116,12 +118,12 @@ export function ShopCategoryCard({
           : "hover:border-[var(--brand-primary)]/40 hover:bg-[color-mix(in_srgb,var(--brand-primary)_6%,var(--brand-card))]"
       )}
     >
-      <div className="relative mb-2 h-[7.5rem]">
+      <div className="relative mb-2 flex h-[7.5rem] items-center justify-center overflow-hidden">
         {resolvedImageUrl ? (
           <CategoryLensBleed
             src={resolvedImageUrl}
             alt={title}
-            className="absolute -left-1 -top-1 size-[7.5rem]"
+            className="size-[6.75rem]"
           />
         ) : (
           <span
@@ -136,11 +138,11 @@ export function ShopCategoryCard({
           </span>
         )}
 
-        <span className="absolute bottom-1 left-0 flex size-8 items-center justify-center rounded-[0.65rem] border-[1.5px] border-[var(--brand-primary)] bg-[var(--brand-card)] text-[var(--brand-primary)]">
+        <span className="absolute bottom-1 left-0 z-[2] flex size-8 items-center justify-center rounded-[0.65rem] border-[1.5px] border-[var(--brand-primary)] bg-[var(--brand-card)] text-[var(--brand-primary)]">
           <Icon className="size-4" />
         </span>
 
-        <span className="absolute right-0 top-0 flex size-7 items-center justify-center rounded-full border border-[var(--brand-card-border)] bg-[var(--brand-primary)]/10">
+        <span className="absolute right-0 top-0 z-[2] flex size-7 items-center justify-center rounded-full border border-[var(--brand-card-border)] bg-[var(--brand-primary)]/10">
           <ChevronRight className="size-4 text-[var(--brand-text-muted)]" />
         </span>
       </div>

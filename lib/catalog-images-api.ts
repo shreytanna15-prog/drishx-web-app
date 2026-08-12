@@ -30,9 +30,14 @@ function isShopLensImageKey(key: CatalogImageKey): key is ShopLensImageKey {
   return SHOP_LENS_KEYS.has(key as ShopLensImageKey);
 }
 
-/** Local transparent lens art under /public/images/catalog/ */
-export function localShopLensImageUrl(key: ShopLensImageKey): string {
-  return `/images/catalog/${key}.png`;
+/** Local lens art under /public/images/catalog/ */
+export function localShopLensImageUrl(
+  key: ShopLensImageKey,
+  scheme: "light" | "dark" = "dark"
+): string {
+  return scheme === "light"
+    ? `/images/catalog/${key}-light.png`
+    : `/images/catalog/${key}.png`;
 }
 
 let cached: CatalogImagesResponse | null = null;
@@ -79,16 +84,17 @@ export function catalogImageForShopCategory(
 
 /**
  * Source for shop/wholesale category cards.
- * Prefers local transparent PNGs over API remotes (dark-baked vignette).
+ * Light theme uses *-light.png (studio fill lifted to paper).
  */
 export function catalogImageUrlForShopCategory(
   data: CatalogImagesResponse | null,
-  categoryId: string
+  categoryId: string,
+  scheme: "light" | "dark" = "dark"
 ): string | null {
   const key = data?.shopCategories[categoryId] ?? SHOP_CATEGORY_KEYS[categoryId];
   if (!key) return null;
   if (isShopLensImageKey(key)) {
-    return localShopLensImageUrl(key);
+    return localShopLensImageUrl(key, scheme);
   }
   return catalogImageForShopCategory(data, categoryId);
 }
