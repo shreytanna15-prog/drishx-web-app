@@ -84,7 +84,7 @@ export function catalogImageForShopCategory(
 
 /**
  * Source for shop/wholesale category cards.
- * Light theme uses *-light.png (studio fill lifted to paper).
+ * Local *-lens / *-light PNGs have studio fill punched to alpha.
  */
 export function catalogImageUrlForShopCategory(
   data: CatalogImagesResponse | null,

@@ -9,8 +9,8 @@ type CategoryLensBleedProps = {
 };
 
 /**
- * Photorealistic lens, fully visible and centered.
- * Mask only feathers the outer corners so the square photo bound disappears.
+ * Photorealistic glass cutout. Studio fill is already punched to alpha in the PNG.
+ * Mask only feathers square photo corners.
  */
 export function CategoryLensBleed({
   src,
@@ -25,7 +25,6 @@ export function CategoryLensBleed({
       )}
       aria-hidden={alt ? undefined : true}
     >
-      <span className="category-lens-bleed__glow" aria-hidden />
       <span className="category-lens-bleed__mask">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

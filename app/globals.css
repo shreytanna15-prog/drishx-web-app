@@ -1668,46 +1668,9 @@ a.auth-button-outline:hover {
   }
 }
 
-/* Shop/wholesale category lens: keep the full lens, feather only outer corners. */
-.category-lens-bleed__glow {
-  position: absolute;
-  inset: 8%;
-  z-index: 0;
-  pointer-events: none;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 50% 48%,
-    rgba(240, 161, 50, 0.14) 0%,
-    transparent 70%
-  );
-  filter: blur(18px);
-}
-
-.category-lens-bleed::before {
-  content: "";
-  position: absolute;
-  inset: 5%;
-  z-index: 0;
-  border-radius: 50%;
-  background: #f6f1e8;
-  border: 1px solid rgba(240, 161, 50, 0.22);
-  pointer-events: none;
-}
-
-.dark .category-lens-bleed::before,
-[data-theme="dark"] .category-lens-bleed::before {
-  display: none;
-}
-
-.dark .category-lens-bleed__glow,
-[data-theme="dark"] .category-lens-bleed__glow {
-  background: radial-gradient(
-    circle at 50% 48%,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(240, 161, 50, 0.1) 40%,
-    transparent 72%
-  );
-  filter: blur(26px);
+/* Shop/wholesale category lens: glass cutout, no circular plate. */
+.category-lens-bleed {
+  background: transparent;
 }
 
 .category-lens-bleed__mask {
@@ -1721,13 +1684,13 @@ a.auth-button-outline:hover {
   -webkit-mask-image: radial-gradient(
     circle at 50% 48%,
     #000 0%,
-    #000 72%,
+    #000 88%,
     transparent 100%
   );
   mask-image: radial-gradient(
     circle at 50% 48%,
     #000 0%,
-    #000 72%,
+    #000 88%,
     transparent 100%
   );
   -webkit-mask-repeat: no-repeat;
