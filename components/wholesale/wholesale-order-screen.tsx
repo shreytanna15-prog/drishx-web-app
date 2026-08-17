@@ -29,7 +29,7 @@ import {
   formatSphCylSlash,
   LENS_PRICE_PER_PAIR_LABEL,
 } from "@/lib/lens-display";
-import { isValidPairQuantity, piecesFromDisplayQuantity } from "@/lib/order-quantity";
+import { isValidPairQuantity } from "@/lib/order-quantity";
 import { resolveSelectableRange } from "@/lib/prescription-range";
 import { toApiLensType } from "@/lib/types/lens";
 import type { LensItem } from "@/lib/types/lens";
@@ -56,10 +56,18 @@ import {
 import {
   buildPowerList,
   defaultWholesaleGridMode,
+  getAvailableWholesaleGridModes,
   resolveWholesalePowerProfile,
+  type WholesaleGridMode,
 } from "@/lib/wholesale-powers";
 
 type QtyMap = Record<string, string>;
+
+const GRID_MODE_LABELS: Record<WholesaleGridMode, string> = {
+  "sph-only": "SPH only",
+  "cyl-only": "CYL only",
+  compound: "Compound",
+};
 
 function parseLensPayload(raw: string | null): LensItem | null {
   if (!raw) return null;
@@ -74,52 +82,129 @@ function normalizePairsText(text: string): string {
   return sanitizePairQuantityInput(text);
 }
 
+function getWholesaleOrderInitialState(item: LensItem) {
+  const bounds = resolveWholesaleBoundOptions(item);
+  const sph = getDefaultRangeEndpoints(bounds.sph);
+  const cyl = getDefaultRangeEndpoints(bounds.cyl);
+  const add = getDefaultRangeEndpoints(bounds.add);
+  const powerProfile = resolveWholesalePowerProfile(item);
+
+  return {
+    sphFrom: sph.from,
+    sphTo: sph.to,
+    sphStep: 0.25,
+    cylFrom: cyl.from,
+    cylTo: cyl.to,
+    cylStep: 0.25,
+    addFrom: add.from,
+    addTo: add.to,
+    addStep: 0.25,
+    gridMode: defaultWholesaleGridMode(powerProfile),
+  };
+}
+
 export function WholesaleOrderScreen() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const item = useMemo(
     () => parseLensPayload(searchParams.get("payload")),
     [searchParams]
   );
-  const { addWholesaleBatchToCart } = useCart();
   const { setMode } = useOrderMode();
-
-  const selectableRange = useMemo(
-    () => (item ? resolveSelectableRange(item) : null),
-    [item]
-  );
-  const boundOptions = useMemo(
-    () => (item ? resolveWholesaleBoundOptions(item) : { sph: [], cyl: [], add: [] }),
-    [item]
-  );
-  const powerProfile = useMemo(
-    () => (item ? resolveWholesalePowerProfile(item) : "compound"),
-    [item]
-  );
-  const gridMode = useMemo(
-    () => defaultWholesaleGridMode(powerProfile),
-    [powerProfile]
-  );
-  const crossPowerMeta = useMemo(
-    () => (item ? resolveCrossPowerMeta(item) : null),
-    [item]
-  );
-  const showSphRange = powerProfile !== "cyl-only";
-  const showCylRange = powerProfile !== "sph-only";
 
   useEffect(() => {
     setMode("wholesale");
   }, [setMode]);
 
-  const [sphFrom, setSphFrom] = useState(0);
-  const [sphTo, setSphTo] = useState(0);
-  const [sphStep, setSphStep] = useState(0.25);
-  const [cylFrom, setCylFrom] = useState(0);
-  const [cylTo, setCylTo] = useState(0);
-  const [cylStep, setCylStep] = useState(0.25);
-  const [addFrom, setAddFrom] = useState(1);
-  const [addTo, setAddTo] = useState(3);
-  const [addStep, setAddStep] = useState(0.25);
+  if (!item) {
+    return (
+      <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-4 px-4 py-16 text-center">
+        <p className="text-sm font-medium text-[var(--brand-text-muted)]">
+          Unable to load product details.
+        </p>
+        <Button asChild className="rounded-xl bg-[var(--brand-primary)] font-bold">
+          <Link href="/wholesale">Back to wholesale</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return <WholesaleOrderForm key={item.id} item={item} />;
+}
+
+function WholesaleOrderForm({ item }: { item: LensItem }) {
+  const router = useRouter();
+  const { addWholesaleBatchToCart } = useCart();
+
+  const selectableRange = useMemo(
+    () => resolveSelectableRange(item),
+    [item]
+  );
+  const boundOptions = useMemo(
+    () => resolveWholesaleBoundOptions(item),
+    [item]
+  );
+  const powerProfile = useMemo(
+    () => resolveWholesalePowerProfile(item),
+    [item]
+  );
+  const [gridMode, setGridMode] = useState<WholesaleGridMode>(
+    () => getWholesaleOrderInitialState(item).gridMode
+  );
+  const crossPowerMeta = useMemo(
+    () => resolveCrossPowerMeta(item),
+    [item]
+  );
+  const selectableGridModes = useMemo(() => {
+    if (
+      item?.lensType !== "Single Vision" ||
+      powerProfile !== "compound"
+    ) {
+      return [];
+    }
+
+    const sphStart = item.sphStartRange ?? boundOptions.sph[0];
+    const cylStart = item.cylStartRange ?? boundOptions.cyl[0];
+    const bothRangesStartAtZero =
+      sphStart != null &&
+      cylStart != null &&
+      Math.abs(Number(sphStart)) <= 1e-9 &&
+      Math.abs(Number(cylStart)) <= 1e-9;
+
+    return bothRangesStartAtZero
+      ? getAvailableWholesaleGridModes(powerProfile)
+      : [];
+  }, [boundOptions.cyl, boundOptions.sph, item, powerProfile]);
+  const showGridModeSelector = selectableGridModes.length === 3;
+  const showSphRange = gridMode !== "cyl-only";
+  const showCylRange = gridMode !== "sph-only";
+
+  const [sphFrom, setSphFrom] = useState(
+    () => getWholesaleOrderInitialState(item).sphFrom
+  );
+  const [sphTo, setSphTo] = useState(
+    () => getWholesaleOrderInitialState(item).sphTo
+  );
+  const [sphStep, setSphStep] = useState(
+    () => getWholesaleOrderInitialState(item).sphStep
+  );
+  const [cylFrom, setCylFrom] = useState(
+    () => getWholesaleOrderInitialState(item).cylFrom
+  );
+  const [cylTo, setCylTo] = useState(
+    () => getWholesaleOrderInitialState(item).cylTo
+  );
+  const [cylStep, setCylStep] = useState(
+    () => getWholesaleOrderInitialState(item).cylStep
+  );
+  const [addFrom, setAddFrom] = useState(
+    () => getWholesaleOrderInitialState(item).addFrom
+  );
+  const [addTo, setAddTo] = useState(
+    () => getWholesaleOrderInitialState(item).addTo
+  );
+  const [addStep, setAddStep] = useState(
+    () => getWholesaleOrderInitialState(item).addStep
+  );
   const [pairsDefault, setPairsDefault] = useState("1");
   const [qtyMap, setQtyMap] = useState<QtyMap>({});
   const [error, setError] = useState<string | null>(null);
@@ -128,45 +213,22 @@ export function WholesaleOrderScreen() {
   const [visibleRowCount, setVisibleRowCount] = useState(MATRIX_INITIAL_ROWS);
   const [visibleColCount, setVisibleColCount] = useState(MATRIX_INITIAL_COLS);
 
-  useEffect(() => {
-    if (!item) return;
-
-    const bounds = resolveWholesaleBoundOptions(item);
-    const sph = getDefaultRangeEndpoints(bounds.sph);
-    const cyl = getDefaultRangeEndpoints(bounds.cyl);
-    const add = getDefaultRangeEndpoints(bounds.add);
-
-    setSphFrom(sph.from);
-    setSphTo(sph.to);
-    setCylFrom(cyl.from);
-    setCylTo(cyl.to);
-    setAddFrom(add.from);
-    setAddTo(add.to);
-    setSphStep(0.25);
-    setCylStep(0.25);
-    setAddStep(0.25);
-    setQtyMap({});
-    setError(null);
-    setVisibleRowCount(MATRIX_INITIAL_ROWS);
-    setVisibleColCount(MATRIX_INITIAL_COLS);
-  }, [item?.id]);
-
   const rangeHint = useMemo(() => {
     if (!selectableRange) return null;
     const parts: string[] = [];
-    if (powerProfile !== "cyl-only") {
+    if (gridMode !== "cyl-only") {
       const sphOpts = selectableRange.sph.options;
       const sphStart = sphOpts[0] ?? selectableRange.sph.min;
       const sphEnd = sphOpts[sphOpts.length - 1] ?? selectableRange.sph.max;
       parts.push(`SPH ${formatPowerRangeLabel(sphStart, sphEnd)}`);
     }
-    if (powerProfile !== "sph-only" && boundOptions.cyl.length > 0) {
+    if (gridMode !== "sph-only" && boundOptions.cyl.length > 0) {
       const cylStart = boundOptions.cyl[0]!;
       const cylEnd = boundOptions.cyl[boundOptions.cyl.length - 1]!;
       parts.push(`CYL ${formatPowerRangeLabel(cylStart, cylEnd)}`);
     }
     return parts.length > 0 ? parts.join(" · ") : null;
-  }, [boundOptions.cyl, powerProfile, selectableRange]);
+  }, [boundOptions.cyl, gridMode, selectableRange]);
 
   const sphList = useMemo(() => {
     if (!Number.isFinite(sphStep) || sphStep <= 0) return [];
@@ -250,14 +312,18 @@ export function WholesaleOrderScreen() {
     ? visibleMatrixCols.length < matrixSpec.cols.length
     : false;
 
-  useEffect(() => {
-    setVisibleRowCount(MATRIX_INITIAL_ROWS);
-    setVisibleColCount(MATRIX_INITIAL_COLS);
-  }, [powerProfile]);
-
   const title = item
     ? `${formatLensProductCardTitle(item)} • Wholesale`
     : "Wholesale";
+
+  function handleGridModeChange(mode: WholesaleGridMode) {
+    if (mode === gridMode) return;
+    setGridMode(mode);
+    setQtyMap({});
+    setError(null);
+    setVisibleRowCount(MATRIX_INITIAL_ROWS);
+    setVisibleColCount(MATRIX_INITIAL_COLS);
+  }
 
   async function handleGenerate() {
     setGenerating(true);
@@ -423,19 +489,6 @@ export function WholesaleOrderScreen() {
     ? Math.round((visibleMatrixCols.length / matrixSpec.cols.length) * 100)
     : 0;
 
-  if (!item) {
-    return (
-      <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-4 px-4 py-16 text-center">
-        <p className="text-sm font-medium text-[var(--brand-text-muted)]">
-          Unable to load product details.
-        </p>
-        <Button asChild className="rounded-xl bg-[var(--brand-primary)] font-bold">
-          <Link href="/wholesale">Back to wholesale</Link>
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="relative mx-auto w-full max-w-4xl flex-1 px-4 py-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 md:pb-28">
       <div className="mb-6 flex items-center gap-3">
@@ -507,6 +560,21 @@ export function WholesaleOrderScreen() {
                 onStepChange={setSphStep}
               />
             </div>
+          ) : isSingleVision ? (
+            <div className="space-y-2">
+              <p className="text-sm font-bold text-[var(--brand-text)]">SPH</p>
+              <div
+                aria-disabled="true"
+                className="flex min-h-16 items-center justify-between rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 opacity-70"
+              >
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--brand-text-muted)]">
+                  Fixed for CYL only
+                </span>
+                <span className="text-base font-extrabold text-[var(--brand-text)]">
+                  +0.00
+                </span>
+              </div>
+            </div>
           ) : null}
 
           {showCylRange ? (
@@ -521,6 +589,49 @@ export function WholesaleOrderScreen() {
                 onToChange={setCylTo}
                 onStepChange={setCylStep}
               />
+            </div>
+          ) : isSingleVision ? (
+            <div className="space-y-2">
+              <p className="text-sm font-bold text-[var(--brand-text)]">CYL</p>
+              <div
+                aria-disabled="true"
+                className="flex min-h-16 items-center justify-between rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 opacity-70"
+              >
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--brand-text-muted)]">
+                  Fixed for SPH only
+                </span>
+                <span className="text-base font-extrabold text-[var(--brand-text)]">
+                  +0.00
+                </span>
+              </div>
+            </div>
+          ) : null}
+
+          {showGridModeSelector ? (
+            <div
+              className="grid grid-cols-3 gap-1 rounded-xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-1"
+              role="radiogroup"
+              aria-label="Power type"
+            >
+              {selectableGridModes.map((mode) => {
+                const active = mode === gridMode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => handleGridModeChange(mode)}
+                    className={`min-h-10 rounded-lg px-2 text-sm font-extrabold transition ${
+                      active
+                        ? "bg-[var(--brand-primary)] text-[var(--brand-primary-text)]"
+                        : "text-[var(--brand-text-muted)] hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-text)]"
+                    }`}
+                  >
+                    {GRID_MODE_LABELS[mode]}
+                  </button>
+                );
+              })}
             </div>
           ) : null}
 

@@ -249,7 +249,7 @@ export function resolveGridEntryFromMatrixCell(
   params: BuildMatrixParams,
   key: string
 ): GridEntry | null {
-  const { mode, isBifocalLens, productAxis } = params;
+  const { mode, isBifocalLens, isSingleVision, productAxis } = params;
   const axis = productAxis ?? 0;
 
   if (mode === 'sph-only') {
@@ -271,7 +271,7 @@ export function resolveGridEntryFromMatrixCell(
       key,
       label: formatPowerLabel(sph),
       sph,
-      cyl: null,
+      cyl: isSingleVision ? 0 : null,
       add: null,
       sphAdd: null,
       cylAdd: null,
@@ -462,7 +462,7 @@ function resolveGridEntryByKeyShape(key: string, params: BuildMatrixParams): Gri
     key,
     label: formatPowerLabel(single),
     sph: single,
-    cyl: null,
+    cyl: params.isSingleVision ? 0 : null,
     add: null,
     sphAdd: null,
     cylAdd: null,
@@ -471,7 +471,7 @@ function resolveGridEntryByKeyShape(key: string, params: BuildMatrixParams): Gri
 }
 
 export function resolveGridEntryFromKey(key: string, params: BuildMatrixParams): GridEntry | null {
-  const { mode, isBifocalLens } = params;
+  const { mode, isBifocalLens, isSingleVision } = params;
 
   if (mode === 'sph-only') {
     if (isBifocalLens) {
@@ -497,7 +497,7 @@ export function resolveGridEntryFromKey(key: string, params: BuildMatrixParams):
       key,
       label: formatPowerLabel(sph),
       sph,
-      cyl: null,
+      cyl: isSingleVision ? 0 : null,
       add: null,
       sphAdd: null,
       cylAdd: null,
