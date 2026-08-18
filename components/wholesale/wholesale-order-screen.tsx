@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { CategoryLensBleed } from "@/components/shop/category-lens-bleed";
 import { WholesaleQtyMatrix } from "@/components/wholesale/wholesale-qty-matrix";
 import { WholesaleRangePicker } from "@/components/wholesale/wholesale-range-picker";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/contexts/cart-context";
 import { useOrderMode } from "@/contexts/order-mode-context";
+import { useTheme } from "@/contexts/theme-context";
+import { catalogImageUrlForLensType } from "@/lib/catalog-images-api";
 import {
   formatPowerRangeLabel,
   sanitizePairQuantityInput,
@@ -133,6 +136,7 @@ export function WholesaleOrderScreen() {
 
 function WholesaleOrderForm({ item }: { item: LensItem }) {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
   const { addWholesaleBatchToCart } = useCart();
 
   const selectableRange = useMemo(
@@ -312,9 +316,8 @@ function WholesaleOrderForm({ item }: { item: LensItem }) {
     ? visibleMatrixCols.length < matrixSpec.cols.length
     : false;
 
-  const title = item
-    ? `${formatLensProductCardTitle(item)} • Wholesale`
-    : "Wholesale";
+  const title = `${formatLensProductCardTitle(item)} • Wholesale`;
+  const detailImage = catalogImageUrlForLensType(item.lensType, resolvedTheme);
 
   function handleGridModeChange(mode: WholesaleGridMode) {
     if (mode === gridMode) return;
@@ -509,29 +512,40 @@ function WholesaleOrderForm({ item }: { item: LensItem }) {
       <div className="space-y-6">
         <Card className="rounded-2xl border-[var(--brand-card-border)] bg-[var(--brand-card)] py-0 shadow-none">
           <CardContent className="p-5">
-            <h2 className="text-xl font-extrabold text-[var(--brand-text)]">
-              {formatLensProductCardTitle(item)}
-            </h2>
-            <p className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
-              {formatLensItemCoatingSummary(item)}
-            </p>
-            <p className="mt-2 text-base font-bold text-[var(--brand-text)]">
-              {formatSphCylSlash(item)}
-            </p>
-            {isBifocalLens ? (
-              <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
-                {formatAddAxisLabel(item)}
-              </p>
-            ) : null}
-            <p className="mt-3 text-lg font-extrabold text-[var(--brand-primary)]">
-              ₹{item.price}
-              <span className="ml-1 text-sm font-bold text-[var(--brand-text-muted)]">
-                {LENS_PRICE_PER_PAIR_LABEL}
-              </span>
-            </p>
-            <p className="mt-2 text-sm font-bold text-[var(--brand-primary)]">
-              Wholesale orders are in pairs only.
-            </p>
+            <div className="flex items-center gap-4">
+              {detailImage ? (
+                <CategoryLensBleed
+                  src={detailImage}
+                  alt={formatLensProductCardTitle(item)}
+                  className="size-24 shrink-0 sm:size-28"
+                />
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xl font-extrabold text-[var(--brand-text)]">
+                  {formatLensProductCardTitle(item)}
+                </h2>
+                <p className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
+                  {formatLensItemCoatingSummary(item)}
+                </p>
+                <p className="mt-2 text-base font-bold text-[var(--brand-text)]">
+                  {formatSphCylSlash(item)}
+                </p>
+                {isBifocalLens ? (
+                  <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
+                    {formatAddAxisLabel(item)}
+                  </p>
+                ) : null}
+                <p className="mt-3 text-lg font-extrabold text-[var(--brand-primary)]">
+                  ₹{item.price}
+                  <span className="ml-1 text-sm font-bold text-[var(--brand-text-muted)]">
+                    {LENS_PRICE_PER_PAIR_LABEL}
+                  </span>
+                </p>
+                <p className="mt-2 text-sm font-bold text-[var(--brand-primary)]">
+                  Wholesale orders are in pairs only.
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
