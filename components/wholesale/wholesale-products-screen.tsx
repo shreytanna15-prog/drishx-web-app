@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CoatingDot } from "@/components/shop/coating-dot";
 import { LensProductCard } from "@/components/shop/lens-product-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -203,7 +204,7 @@ export function WholesaleProductsScreen() {
 
   const chipClass = (active: boolean) =>
     cn(
-      "rounded-xl border px-3 py-2 text-xs font-bold transition-colors sm:text-sm",
+      "inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-colors sm:text-sm",
       active
         ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]"
         : "border-[var(--brand-card-border)] bg-[var(--brand-card)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
@@ -311,6 +312,7 @@ export function WholesaleProductsScreen() {
                   onClick={() => setSelectedCoating(coating)}
                   className={chipClass(active)}
                 >
+                  <CoatingDot coating={coating} />
                   {coating}
                 </button>
               );

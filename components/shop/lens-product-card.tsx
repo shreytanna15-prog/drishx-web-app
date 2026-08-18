@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { CatalogThumb } from "@/components/shop/catalog-thumb";
+import { CoatingDot } from "@/components/shop/coating-dot";
 import {
   formatLensItemLabel,
   formatLensProductDetail,
@@ -47,8 +48,9 @@ export function LensProductCard({
           <h3 className="text-base font-bold text-[var(--brand-text)]">
             {title}
           </h3>
-          <p className="mt-1 text-sm font-semibold leading-snug text-[var(--brand-text)]">
-            {detail}
+          <p className="mt-1 flex items-start gap-1.5 text-sm font-semibold leading-snug text-[var(--brand-text)]">
+            <CoatingDot coating={item.coating} className="mt-1.5 size-1.5" />
+            <span>{detail}</span>
           </p>
           {showItemLine ? (
             <p className="mt-2 text-xs font-medium text-[var(--brand-text-muted)]">
