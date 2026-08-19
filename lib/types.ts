@@ -19,6 +19,15 @@ export type SafeUser = {
   rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
+  permissions?: string[];
+  staffRole?: {
+    id: string;
+    slug: string;
+    name: string;
+    description: string | null;
+    isSystem: boolean;
+    permissions: string[];
+  } | null;
 };
 
 export type LoginResponse = {

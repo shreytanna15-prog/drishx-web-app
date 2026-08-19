@@ -9,6 +9,7 @@ import {
   type LucideIcon,
   Warehouse,
 } from "lucide-react";
+import { hasStaffPermission } from "@/lib/staff-permissions";
 
 export type EmployeeNavItem = {
   href: string;
@@ -68,17 +69,49 @@ export const EMPLOYEE_DASHBOARD_NAV: EmployeeNavItem[] = [
   },
 ];
 
+export function getVisibleEmployeeNav(permissions?: readonly string[] | null) {
+  return EMPLOYEE_DASHBOARD_NAV.filter((item) => {
+    if (item.href === "/employee/home" || item.href === "/employee/profile") {
+      return true;
+    }
+    if (item.href === "/employee/orders") {
+      return (
+        hasStaffPermission(permissions, "orders.view") ||
+        hasStaffPermission(permissions, "orders.fulfill") ||
+        hasStaffPermission(permissions, "orders.dispatch")
+      );
+    }
+    if (item.href === "/employee/orders/rx") {
+      return hasStaffPermission(permissions, "orders.rx");
+    }
+    if (item.href === "/employee/tasks") {
+      return hasStaffPermission(permissions, "tasks.view");
+    }
+    if (item.href === "/employee/returns") {
+      return hasStaffPermission(permissions, "returns.view");
+    }
+    if (item.href === "/employee/procurement") {
+      return (
+        hasStaffPermission(permissions, "procurement.view") ||
+        hasStaffPermission(permissions, "procurement.intake")
+      );
+    }
+    if (item.href === "/employee/inventory") {
+      return hasStaffPermission(permissions, "inventory.view");
+    }
+    return true;
+  });
+}
+
 export function getEmployeeNavItemByHref(
   href: string
 ): EmployeeNavItem | undefined {
   return EMPLOYEE_DASHBOARD_NAV.find((item) => item.href === href);
 }
 
-/** True when this nav href should be highlighted for the current path. */
 export function isEmployeeNavActive(pathname: string, href: string) {
   if (pathname === href) return true;
   if (!pathname.startsWith(`${href}/`)) return false;
-  // `/employee/orders` must not steal active state from `/employee/orders/rx`
   if (href === "/employee/orders" && pathname.startsWith("/employee/orders/rx")) {
     return false;
   }

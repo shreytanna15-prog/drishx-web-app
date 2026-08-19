@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { EMPLOYEE_DASHBOARD_NAV, isEmployeeNavActive } from "@/lib/employee-dashboard-nav";
+import { useAuth } from "@/contexts/auth-context";
+import { getVisibleEmployeeNav, isEmployeeNavActive } from "@/lib/employee-dashboard-nav";
 import { cn } from "@/lib/utils";
-
-const MOBILE_NAV = EMPLOYEE_DASHBOARD_NAV.filter((item) =>
-  ["/employee/home", "/employee/orders", "/employee/procurement", "/employee/profile"].includes(
-    item.href
-  )
-);
 
 export function EmployeeMobileBottomNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const mobileNav = getVisibleEmployeeNav(user?.permissions).filter((item) =>
+    [
+      "/employee/home",
+      "/employee/orders",
+      "/employee/procurement",
+      "/employee/profile",
+    ].includes(item.href)
+  );
 
   return (
     <nav
@@ -23,7 +27,7 @@ export function EmployeeMobileBottomNav() {
       )}
     >
       <div className="flex items-stretch justify-around px-1 pt-1">
-        {MOBILE_NAV.map((item) => {
+        {mobileNav.map((item) => {
           const Icon = item.icon;
           const isActive = isEmployeeNavActive(pathname, item.href);
 

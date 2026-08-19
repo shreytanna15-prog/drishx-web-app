@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { EmployeeAppSidebar } from "@/components/employee/employee-app-sidebar";
-import { EmployeeMobileBottomNav } from "@/components/employee/employee-mobile-bottom-nav";
+import { EmployeePermissionGate } from "@/components/employee/employee-permission-gate";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -134,7 +134,7 @@ export function EmployeeDashboardShell({
           </header>
 
           <div className="flex flex-1 flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
-            {children}
+            <EmployeePermissionGate>{children}</EmployeePermissionGate>
           </div>
 
           <EmployeeMobileBottomNav />

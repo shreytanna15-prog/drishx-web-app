@@ -15,11 +15,14 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { EMPLOYEE_DASHBOARD_NAV, isEmployeeNavActive } from "@/lib/employee-dashboard-nav";
+import { useAuth } from "@/contexts/auth-context";
+import { getVisibleEmployeeNav, isEmployeeNavActive } from "@/lib/employee-dashboard-nav";
 import { cn } from "@/lib/utils";
 
 export function EmployeeAppSidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const items = getVisibleEmployeeNav(user?.permissions);
 
   return (
     <Sidebar
@@ -51,7 +54,7 @@ export function EmployeeAppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1 px-1">
-              {EMPLOYEE_DASHBOARD_NAV.map((item) => {
+              {items.map((item) => {
                 const Icon = item.icon;
                 const isActive = isEmployeeNavActive(pathname, item.href);
 
