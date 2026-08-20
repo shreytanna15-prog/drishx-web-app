@@ -84,7 +84,8 @@ export function catalogImageForShopCategory(
 
 /**
  * Source for shop/wholesale category cards.
- * Local *-lens / *-light PNGs have studio fill punched to alpha.
+ * Local *-lens / *-light PNGs (from lens-imgs via process-lens-assets.js)
+ * have studio fill punched to alpha for light and dark themes.
  */
 export function catalogImageUrlForShopCategory(
   data: CatalogImagesResponse | null,
