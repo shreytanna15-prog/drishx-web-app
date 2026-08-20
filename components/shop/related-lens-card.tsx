@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import { CatalogThumb } from "@/components/shop/catalog-thumb";
+import { LensPowerBadges } from "@/components/shop/lens-power-badges";
 import {
-  formatAddAxisLabel,
-  formatLensItemLabel,
   formatLensProductCardTitle,
-  formatSphCylSlash,
   LENS_PRICE_PER_PAIR_LABEL,
 } from "@/lib/lens-display";
 import type { LensItem } from "@/lib/types/lens";
@@ -24,11 +22,6 @@ export function RelatedLensCard({ item, href, className }: RelatedLensCardProps)
     item.index != null && item.lensType === "Single Vision"
       ? `${Number(item.index)} `
       : "";
-  const itemLabel = formatLensItemLabel(item);
-  const showItemLine =
-    Boolean(itemLabel) && itemLabel.toLowerCase() !== title.toLowerCase();
-  const sphCyl = formatSphCylSlash(item);
-  const addAxis = formatAddAxisLabel(item);
 
   return (
     <Link
@@ -46,17 +39,10 @@ export function RelatedLensCard({ item, href, className }: RelatedLensCardProps)
             <p className="text-base font-bold text-[var(--brand-text)]">
               {`${indexLabel}${title}`.trim()}
             </p>
-            {showItemLine ? (
-              <p className="mt-0.5 text-xs font-semibold text-[var(--brand-text-muted)]">
-                {itemLabel}
-              </p>
-            ) : null}
-            <p className="mt-2 text-lg font-extrabold text-[var(--brand-text)]">
-              {sphCyl}
-            </p>
-            <p className="mt-1 text-xs font-semibold text-[var(--brand-text-muted)]">
-              {addAxis}
-            </p>
+            <LensPowerBadges
+              item={item}
+              showAdd={item.lensType === "Kryptok" || item.lensType === "Progressive"}
+            />
           </div>
           <p className="shrink-0 text-base font-extrabold text-[var(--brand-primary)]">
             ₹{item.price}

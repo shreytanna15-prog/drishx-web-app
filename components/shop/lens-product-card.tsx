@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { CatalogThumb } from "@/components/shop/catalog-thumb";
 import { CoatingDot } from "@/components/shop/coating-dot";
+import { LensPowerBadges } from "@/components/shop/lens-power-badges";
 import {
-  formatLensItemLabel,
   formatLensProductDetail,
   formatLensProductCardTitle,
   LENS_PRICE_PER_PAIR_LABEL,
@@ -28,10 +28,6 @@ export function LensProductCard({
 }: LensProductCardProps) {
   const title = formatLensProductCardTitle(item);
   const detail = formatLensProductDetail(item);
-  const itemLabel = formatLensItemLabel(item);
-  const showItemLine =
-    Boolean(item.item?.trim()) &&
-    itemLabel.toLowerCase() !== title.toLowerCase();
   const stockQty = Math.max(0, Number(item.quantity) || 0);
   const inStock = stockQty > 0;
 
@@ -52,11 +48,10 @@ export function LensProductCard({
             <CoatingDot coating={item.coating} className="mt-1.5 size-1.5" />
             <span>{detail}</span>
           </p>
-          {showItemLine ? (
-            <p className="mt-2 text-xs font-medium text-[var(--brand-text-muted)]">
-              {itemLabel}
-            </p>
-          ) : null}
+          <LensPowerBadges
+            item={item}
+            showAdd={item.lensType === "Kryptok" || item.lensType === "Progressive"}
+          />
         </div>
         <div className="shrink-0 text-right">
           <p className="text-lg font-extrabold text-[var(--brand-primary)]">

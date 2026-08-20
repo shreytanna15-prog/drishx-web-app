@@ -1,5 +1,6 @@
 import { CatalogThumb } from "@/components/shop/catalog-thumb";
 import { CoatingDot } from "@/components/shop/coating-dot";
+import { LensPowerBadges } from "@/components/shop/lens-power-badges";
 import {
   formatLensProductCardDetail,
   formatLensProductCardTitle,
@@ -41,6 +42,10 @@ export function LensProductListCard({
               <CoatingDot coating={item.coating} className="mt-1.5 size-1.5" />
               <span>{detailLine}</span>
             </p>
+            <LensPowerBadges
+              item={item}
+              showAdd={item.lensType === "Kryptok" || item.lensType === "Progressive"}
+            />
           </div>
           <p className="shrink-0 text-right text-base font-extrabold leading-tight text-[var(--brand-primary)]">
             ₹{item.price}
