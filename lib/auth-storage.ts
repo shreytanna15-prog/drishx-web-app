@@ -1,11 +1,60 @@
 import type { SafeUser } from "./types";
 
-const TOKEN_KEY = "drishx_token";
+const ACCESS_TOKEN_KEY = "drishx_access_token";
+const LEGACY_TOKEN_KEY = "drishx_token";
 const USER_KEY = "drishx_user";
 
-export function getStoredToken(): string | null {
+let memoryAccessToken: string | null = null;
+
+function readSessionStorage(key: string): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionStorage(key: string, value: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (value) sessionStorage.setItem(key, value);
+    else sessionStorage.removeItem(key);
+  } catch {
+    // ignore quota / privacy mode errors
+  }
+}
+
+function migrateLegacyToken(): string | null {
+  if (typeof window === "undefined") return null;
+  const legacy = localStorage.getItem(LEGACY_TOKEN_KEY);
+  if (!legacy) return null;
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
+  setAccessToken(legacy);
+  return legacy;
+}
+
+export function getAccessToken(): string | null {
+  if (memoryAccessToken) return memoryAccessToken;
+  const stored = readSessionStorage(ACCESS_TOKEN_KEY);
+  if (stored) {
+    memoryAccessToken = stored;
+    return stored;
+  }
+  return migrateLegacyToken();
+}
+
+/** @deprecated Use getAccessToken */
+export function getStoredToken(): string | null {
+  return getAccessToken();
+}
+
+export function setAccessToken(token: string | null) {
+  memoryAccessToken = token;
+  writeSessionStorage(ACCESS_TOKEN_KEY, token);
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(LEGACY_TOKEN_KEY);
+  }
 }
 
 export function getStoredUser(): SafeUser | null {
@@ -20,11 +69,12 @@ export function getStoredUser(): SafeUser | null {
 }
 
 export function setAuthSession(token: string, user: SafeUser): void {
-  localStorage.setItem(TOKEN_KEY, token);
+  setAccessToken(token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export function clearAuthSession(): void {
-  localStorage.removeItem(TOKEN_KEY);
+  setAccessToken(null);
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
 }

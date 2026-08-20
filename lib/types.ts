@@ -33,6 +33,7 @@ export type SafeUser = {
 export type LoginResponse = {
   user: SafeUser;
   token: string;
+  accessToken?: string;
 };
 
 export type SignupResponse = {
@@ -42,6 +43,7 @@ export type SignupResponse = {
 
 export type ApiError = {
   error: string;
+  code?: string;
   rejectionReason?: string;
   user?: SafeUser;
 };

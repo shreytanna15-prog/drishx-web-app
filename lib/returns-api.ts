@@ -1,5 +1,5 @@
 import { fetchWithRetry } from "./fetch-with-retry";
-import { getStoredToken } from "./auth-storage";
+import { getAuthHeaders } from "./auth-fetch";
 import type { LensType } from "./types/lens";
 
 export type ReturnRequestType = "RETURN" | "REPLACEMENT";
@@ -93,22 +93,9 @@ export const RETURN_REASON_OPTIONS: Array<{ value: ReturnReason; label: string }
   { value: "OTHER", label: "Other" },
 ];
 
-function authHeaders(includeJson = true): HeadersInit {
-  const token = getStoredToken();
-  if (!token) throw new Error("Not authenticated");
-  return includeJson
-    ? {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      }
-    : {
-        Authorization: `Bearer ${token}`,
-      };
-}
-
 export async function fetchReturnRequests(): Promise<ReturnRequestRecord[]> {
   const res = await fetchWithRetry("/api/returns", {
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     cache: "no-store",
   });
   const data = await res.json().catch(() => ({}));
@@ -120,7 +107,7 @@ export async function fetchReturnRequest(
   id: string
 ): Promise<ReturnRequestRecord> {
   const res = await fetchWithRetry(`/api/returns/${id}`, {
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     cache: "no-store",
   });
   const data = await res.json().catch(() => ({}));
@@ -135,7 +122,7 @@ export async function updateReturnRequest(
 ): Promise<ReturnRequestRecord> {
   const res = await fetchWithRetry(`/api/returns/${id}`, {
     method: "PATCH",
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     body: JSON.stringify({ action, remarks }),
   });
   const data = await res.json().catch(() => ({}));
@@ -200,7 +187,7 @@ export async function createReturnRequest(input: {
 }): Promise<ReturnRequestRecord> {
   const res = await fetchWithRetry("/api/returns", {
     method: "POST",
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     body: JSON.stringify(input),
   });
   const data = await res.json().catch(() => ({}));
@@ -214,9 +201,11 @@ export async function uploadReturnRequestPhoto(
 ): Promise<{ id: string; imageUrl: string }> {
   const formData = new FormData();
   formData.set("photo", file);
+  const headers = getAuthHeaders();
+  delete headers["Content-Type"];
   const res = await fetchWithRetry(`/api/returns/${returnRequestId}/images`, {
     method: "POST",
-    headers: authHeaders(false),
+    headers,
     body: formData,
   });
   const data = await res.json().catch(() => ({}));

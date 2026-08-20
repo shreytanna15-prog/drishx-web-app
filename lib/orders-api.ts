@@ -1,10 +1,10 @@
 import { getBackendUrl } from "./backend-url";
 import { fetchWithRetry } from "./fetch-with-retry";
+import { getAuthHeaders } from "./auth-fetch";
 import type { OrderRecord } from "./types/orders";
 import type { OrderTrackingStatus } from "./order-tracking";
 import type { ApiLensType, CartItem, LensItem } from "./types/lens";
 import { toApiLensType } from "./types/lens";
-import { getStoredToken } from "./auth-storage";
 
 export type { OrderRecord } from "./types/orders";
 
@@ -71,10 +71,7 @@ export async function createOrder(
 
     const response = await fetchWithRetry("/api/orders", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -152,10 +149,7 @@ export async function wholesaleCheckout(
   try {
     const response = await fetchWithRetry("/api/orders/wholesale-checkout", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         cartLineKeys,
         ...(notes?.trim() ? { notes: notes.trim() } : {}),
@@ -192,16 +186,8 @@ export async function wholesaleCheckout(
 }
 
 export async function fetchOrders(): Promise<OrderRecord[]> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("Not authenticated");
-  }
-
   const res = await fetchWithRetry("/api/orders", {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: getAuthHeaders(),
     cache: "no-store",
   });
 
@@ -218,11 +204,6 @@ export async function updateOrderStatus(
   status: OrderTrackingStatus,
   pickedQuantity?: number
 ): Promise<OrderRecord> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("Not authenticated");
-  }
-
   const body: { status: OrderTrackingStatus; pickedQuantity?: number } = {
     status,
   };
@@ -232,10 +213,7 @@ export async function updateOrderStatus(
 
   const res = await fetchWithRetry(`/api/orders/${orderId}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify(body),
   });
 
@@ -248,17 +226,9 @@ export async function updateOrderStatus(
 }
 
 export async function cancelOrder(orderId: string): Promise<void> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("Not authenticated");
-  }
-
   const res = await fetchWithRetry(`/api/orders/${orderId}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ status: "CANCELLED" satisfies OrderTrackingStatus }),
   });
 

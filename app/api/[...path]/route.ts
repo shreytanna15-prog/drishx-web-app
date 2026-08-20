@@ -13,9 +13,11 @@ async function proxyRequest(
   const headers = new Headers();
   const contentType = req.headers.get("content-type");
   const authorization = req.headers.get("authorization");
+  const cookie = req.headers.get("cookie");
 
   if (contentType) headers.set("Content-Type", contentType);
   if (authorization) headers.set("Authorization", authorization);
+  if (cookie && targetPath.startsWith("/api/auth/")) headers.set("Cookie", cookie);
 
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
 
@@ -41,6 +43,12 @@ async function proxyRequest(
     if (responseContentType) {
       responseHeaders.set("Content-Type", responseContentType);
     }
+
+    backendRes.headers.forEach((value, key) => {
+      if (key.toLowerCase() === "set-cookie" && targetPath.startsWith("/api/auth/")) {
+        responseHeaders.append("Set-Cookie", value);
+      }
+    });
 
     return new NextResponse(responseBody, {
       status: backendRes.status,

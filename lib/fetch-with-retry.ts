@@ -1,10 +1,12 @@
+import { authFetch } from "./auth-fetch";
+
 const RETRIABLE_STATUS = new Set([500, 502, 503, 504]);
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Retry fetch on transient server / gateway errors (common under concurrent DB load). */
+/** Retry authenticated fetch on transient server / gateway errors. */
 export async function fetchWithRetry(
   input: RequestInfo | URL,
   init?: RequestInit,
@@ -15,7 +17,7 @@ export async function fetchWithRetry(
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const response = await fetch(input, init);
+      const response = await authFetch(input, init, true);
       if (!RETRIABLE_STATUS.has(response.status) || attempt === retries) {
         return response;
       }

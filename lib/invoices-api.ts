@@ -1,4 +1,4 @@
-import { getStoredToken } from "@/lib/auth-storage";
+import { authFetch } from "@/lib/auth-fetch";
 
 export type InvoiceUser = {
   id: string;
@@ -52,19 +52,11 @@ export type InvoiceRecord = {
   order?: InvoiceOrder;
 };
 
-function authHeaders(token?: string | null): Record<string, string> {
-  const resolved = token ?? getStoredToken();
-  if (!resolved) {
-    throw new Error("Not authenticated");
-  }
-  return { Authorization: `Bearer ${resolved}` };
-}
 
 export async function fetchInvoices(
-  token?: string | null
+  _token?: string | null
 ): Promise<InvoiceRecord[]> {
-  const response = await fetch("/api/invoices", {
-    headers: authHeaders(token),
+  const response = await authFetch("/api/invoices", {
     cache: "no-store",
   });
   if (!response.ok) {
@@ -76,10 +68,9 @@ export async function fetchInvoices(
 
 export async function fetchInvoiceById(
   id: string,
-  token?: string | null
+  _token?: string | null
 ): Promise<InvoiceRecord> {
-  const response = await fetch(`/api/invoices/${encodeURIComponent(id)}`, {
-    headers: authHeaders(token),
+  const response = await authFetch(`/api/invoices/${encodeURIComponent(id)}`, {
     cache: "no-store",
   });
   const result = await response.json().catch(() => ({}));

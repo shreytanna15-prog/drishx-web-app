@@ -1,4 +1,4 @@
-import { getStoredToken } from "@/lib/auth-storage";
+import { getAuthHeaders } from "@/lib/auth-fetch";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import type { ApiLensType } from "@/lib/types/lens";
 
@@ -53,20 +53,9 @@ export type ManualExpensePayload = {
   description: string;
 };
 
-function authHeaders(): Record<string, string> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("Not authenticated");
-  }
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-}
-
 export async function fetchProcurementHistory(): Promise<ProcurementRecord[]> {
   const res = await fetchWithRetry("/api/expenses/procurement", {
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     cache: "no-store",
   });
   const result = await res.json().catch(() => ({}));
@@ -87,7 +76,7 @@ export async function recordStockIntake(
 }> {
   const res = await fetchWithRetry("/api/expenses/procurement", {
     method: "POST",
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
   const result = await res.json().catch(() => ({}));
@@ -107,7 +96,7 @@ export async function recordStockIntakeBatch(
 ): Promise<StockIntakeBatchResult> {
   const res = await fetchWithRetry("/api/expenses/procurement", {
     method: "POST",
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
   const result = await res.json().catch(() => ({}));
@@ -125,7 +114,7 @@ export async function recordManualExpense(
 ): Promise<ProcurementRecord> {
   const res = await fetchWithRetry("/api/expenses/manual", {
     method: "POST",
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
   const result = await res.json().catch(() => ({}));
@@ -139,7 +128,7 @@ export async function recordManualExpense(
 
 export async function fetchManualExpenses(): Promise<ProcurementRecord[]> {
   const res = await fetchWithRetry("/api/expenses/manual", {
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     cache: "no-store",
   });
   const result = await res.json().catch(() => ({}));

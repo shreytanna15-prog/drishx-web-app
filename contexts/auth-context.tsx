@@ -11,10 +11,14 @@ import {
 import { fetchCurrentUser } from "@/lib/api";
 import {
   clearAuthSession,
-  getStoredToken,
+  getAccessToken,
   getStoredUser,
   setAuthSession,
 } from "@/lib/auth-storage";
+import {
+  logoutSession,
+  registerAuthFailureHandler,
+} from "@/lib/auth-fetch";
 import type { SafeUser } from "@/lib/types";
 
 type AuthContextValue = {
@@ -22,7 +26,7 @@ type AuthContextValue = {
   token: string | null;
   isLoading: boolean;
   login: (token: string, user: SafeUser) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUser: (user: SafeUser) => void;
   refreshUser: () => Promise<void>;
 };
@@ -40,14 +44,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(newUser);
   }, []);
 
-  const logout = useCallback(() => {
-    clearAuthSession();
+  const logout = useCallback(async () => {
+    await logoutSession();
     setToken(null);
     setUser(null);
   }, []);
 
   const updateUser = useCallback((nextUser: SafeUser) => {
-    const storedToken = getStoredToken();
+    const storedToken = getAccessToken();
     if (storedToken) {
       setAuthSession(storedToken, nextUser);
       setToken(storedToken);
@@ -56,9 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const storedToken = getStoredToken();
+    const storedToken = getAccessToken();
     if (!storedToken) {
-      logout();
+      await logout();
       return;
     }
 
@@ -68,12 +72,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(storedToken);
       setUser(currentUser);
     } catch {
-      logout();
+      await logout();
     }
   }, [logout]);
 
   useEffect(() => {
-    const storedToken = getStoredToken();
+    registerAuthFailureHandler(() => {
+      void logout();
+      if (typeof window !== "undefined") {
+        window.location.href = "/login?session=expired";
+      }
+    });
+  }, [logout]);
+
+  useEffect(() => {
+    const storedToken = getAccessToken();
     const storedUser = getStoredUser();
 
     if (!storedToken || !storedUser) {

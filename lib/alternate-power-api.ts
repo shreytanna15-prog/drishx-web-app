@@ -1,19 +1,10 @@
-import { getStoredToken } from "./auth-storage";
+import { getAuthHeaders } from "./auth-fetch";
 import { fetchWithRetry } from "./fetch-with-retry";
 import type {
   AlternatePowerSuggestion,
   OrderPowerVersion,
   OrderRecord,
 } from "./types/orders";
-
-async function authHeaders(): Promise<HeadersInit> {
-  const token = getStoredToken();
-  if (!token) throw new Error("Not signed in.");
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-}
 
 export async function fetchAlternateSuggestions(
   orderId: string,
@@ -22,7 +13,7 @@ export async function fetchAlternateSuggestions(
   const qs = pendingOnly ? "?pending=1" : "";
   const response = await fetchWithRetry(
     `/api/orders/${orderId}/alternate-suggestions${qs}`,
-    { headers: await authHeaders() }
+    { headers: getAuthHeaders() }
   );
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -35,7 +26,7 @@ export async function fetchPowerVersions(
   orderId: string
 ): Promise<OrderPowerVersion[]> {
   const response = await fetchWithRetry(`/api/orders/${orderId}/power-versions`, {
-    headers: await authHeaders(),
+    headers: getAuthHeaders(),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -55,7 +46,7 @@ export async function markOrderPowerNotAvailable(
     `/api/orders/${orderId}/procurement/not-available`,
     {
       method: "POST",
-      headers: await authHeaders(),
+      headers: getAuthHeaders(),
       body: JSON.stringify(options ?? {}),
     }
   );
@@ -76,7 +67,7 @@ export async function acceptAlternateSuggestion(
     `/api/orders/${orderId}/alternate-suggestions/${suggestionId}/accept`,
     {
       method: "POST",
-      headers: await authHeaders(),
+      headers: getAuthHeaders(),
       body: JSON.stringify({}),
     }
   );
@@ -95,7 +86,7 @@ export async function rejectAlternateSuggestion(
     `/api/orders/${orderId}/alternate-suggestions/${suggestionId}/reject`,
     {
       method: "POST",
-      headers: await authHeaders(),
+      headers: getAuthHeaders(),
       body: JSON.stringify({}),
     }
   );
@@ -112,7 +103,7 @@ export async function rejectAllAlternateSuggestions(
     `/api/orders/${orderId}/alternate-suggestions/reject-all`,
     {
       method: "POST",
-      headers: await authHeaders(),
+      headers: getAuthHeaders(),
       body: JSON.stringify({}),
     }
   );

@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { useAuth } from "@/contexts/auth-context";
+import { getAuthHeaders } from "@/lib/auth-fetch";
 import {
   bulkUpsertCartLines,
   clearServerCart,
@@ -105,7 +106,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const authHeaders = useMemo(() => {
     if (!token) return null;
-    return { Authorization: `Bearer ${token}` };
+    return getAuthHeaders();
   }, [token]);
 
   const useServerCart = Boolean(authHeaders && user?.role === "CUSTOMER");

@@ -1,4 +1,4 @@
-import { getStoredToken } from "@/lib/auth-storage";
+import { authFetch, getAuthHeaders } from "@/lib/auth-fetch";
 import {
   COLOR_LENS_DEFAULT_COATING,
   COLOR_LENS_DEFAULT_TINT_STRENGTH,
@@ -25,11 +25,6 @@ export async function placeColorLensOrder(
 ): Promise<
   { success: true; orderId: string; message: string } | { success: false; error: string }
 > {
-  const token = getStoredToken();
-  if (!token) {
-    return { success: false, error: "Not authenticated" };
-  }
-
   const lensType = (input.lensType as ColorLensTypeId | undefined) ?? "single-vision";
   const lensIndex = formatLensIndex(getLensIndexForMaterial(input.materialId));
 
@@ -51,12 +46,9 @@ export async function placeColorLensOrder(
   };
 
   try {
-    const response = await fetch("/api/orders/color-lens", {
+    const response = await authFetch("/api/orders/color-lens", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(payload),
     });
 

@@ -1,4 +1,4 @@
-import { getStoredToken } from "@/lib/auth-storage";
+import { getAuthHeaders } from "@/lib/auth-fetch";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import type { OrderRecord } from "@/lib/types/orders";
 
@@ -38,15 +38,7 @@ function dedupeCustomersFromOrders(orders: OrderRecord[]): CustomerCompany[] {
 }
 
 export async function fetchCustomerCompanies(): Promise<CustomerCompany[]> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("Not authenticated");
-  }
-
-  const headers = {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
+  const headers = getAuthHeaders();
 
   const response = await fetchWithRetry("/api/users/customers", {
     headers,

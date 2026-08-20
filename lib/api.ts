@@ -1,5 +1,8 @@
 import type { ApiError, LoginResponse, SafeUser, SignupResponse } from "./types";
-import { getStoredToken } from "./auth-storage";
+import { authFetch, AuthError } from "./auth-fetch";
+import { getAccessToken } from "./auth-storage";
+
+export { AuthError };
 
 export class LoginRejectedError extends Error {
   rejectionReason: string | null;
@@ -25,12 +28,17 @@ async function parseError(res: Response): Promise<string> {
   }
 }
 
+function resolveAccessToken(data: LoginResponse) {
+  return data.accessToken ?? data.token;
+}
+
 export async function login(
   email: string,
   password: string
 ): Promise<LoginResponse> {
   const res = await fetch("/api/auth/login", {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
@@ -53,7 +61,10 @@ export async function login(
     );
   }
 
-  return data;
+  return {
+    ...data,
+    token: resolveAccessToken(data),
+  };
 }
 
 export async function signup(
@@ -90,6 +101,7 @@ export type GstDetailsPayload = {
 export type GstDetailsResponse = {
   user: SafeUser;
   token: string;
+  accessToken?: string;
   message: string;
 };
 
@@ -98,6 +110,7 @@ export async function submitGstDetails(
 ): Promise<GstDetailsResponse> {
   const res = await fetch("/api/auth/gst", {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
@@ -106,21 +119,25 @@ export async function submitGstDetails(
     throw new Error(await parseError(res));
   }
 
-  return res.json() as Promise<GstDetailsResponse>;
+  const data = (await res.json()) as GstDetailsResponse;
+  return {
+    ...data,
+    token: data.accessToken ?? data.token,
+  };
 }
 
 export async function fetchCurrentUser(): Promise<SafeUser> {
-  const token = getStoredToken();
+  const token = getAccessToken();
   if (!token) {
-    throw new Error("Not authenticated");
+    throw new AuthError("Not authenticated", "TOKEN_MISSING");
   }
 
-  const res = await fetch("/api/auth/me", {
+  const res = await authFetch("/api/auth/me", {
     headers: { Authorization: `Bearer ${token}` },
   });
 
   if (!res.ok) {
-    throw new Error(await parseError(res));
+    throw new AuthError(await parseError(res), "TOKEN_INVALID", res.status);
   }
 
   const data = (await res.json()) as { user: SafeUser };

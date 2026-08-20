@@ -1,4 +1,4 @@
-import { getStoredToken } from "@/lib/auth-storage";
+import { getAuthHeaders } from "@/lib/auth-fetch";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
 
 export type NotificationType =
@@ -31,21 +31,9 @@ export type NotificationRecord = {
   } | null;
 };
 
-function authHeaders(): Record<string, string> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("Not authenticated");
-  }
-
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-}
-
 export async function fetchNotifications(): Promise<NotificationRecord[]> {
   const response = await fetchWithRetry("/api/notifications", {
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     cache: "no-store",
   });
 
@@ -60,7 +48,7 @@ export async function fetchNotifications(): Promise<NotificationRecord[]> {
 export async function markAllNotificationsRead(): Promise<void> {
   const response = await fetchWithRetry("/api/notifications", {
     method: "PATCH",
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     body: JSON.stringify({}),
   });
 

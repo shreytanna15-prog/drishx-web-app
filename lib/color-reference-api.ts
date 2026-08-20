@@ -1,4 +1,4 @@
-import { getStoredToken } from "@/lib/auth-storage";
+import { authFetch, getAuthHeaders } from "@/lib/auth-fetch";
 
 export type ColorReferenceUploadResult = {
   imageUrl: string;
@@ -9,19 +9,15 @@ export type ColorReferenceUploadResult = {
 export async function uploadColorReference(
   file: File
 ): Promise<ColorReferenceUploadResult> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("Not authenticated");
-  }
-
   const formData = new FormData();
   formData.append("photo", file);
 
-  const response = await fetch("/api/color-references", {
+  const headers = getAuthHeaders();
+  delete headers["Content-Type"];
+
+  const response = await authFetch("/api/color-references", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers,
     body: formData,
   });
 

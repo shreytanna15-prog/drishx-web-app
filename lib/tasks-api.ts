@@ -1,4 +1,4 @@
-import { getStoredToken } from "./auth-storage";
+import { getAuthHeaders } from "./auth-fetch";
 import { fetchWithRetry } from "./fetch-with-retry";
 
 export type TaskStatus = "PENDING" | "COMPLETED";
@@ -14,21 +14,9 @@ export type TaskRecord = {
   updatedAt?: string;
 };
 
-function authHeaders(): Record<string, string> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("Not authenticated");
-  }
-
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-}
-
 export async function fetchMyTasks(): Promise<TaskRecord[]> {
   const response = await fetchWithRetry("/api/tasks", {
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     cache: "no-store",
   });
 
@@ -46,7 +34,7 @@ export async function updateTaskStatus(
 ): Promise<TaskRecord> {
   const response = await fetchWithRetry(`/api/tasks/${taskId}`, {
     method: "PATCH",
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     body: JSON.stringify({ status }),
   });
 

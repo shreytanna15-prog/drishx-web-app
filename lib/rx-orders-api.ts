@@ -1,5 +1,5 @@
 import { uploadColorReference } from "@/lib/color-reference-api";
-import { getStoredToken } from "@/lib/auth-storage";
+import { authFetch, getAuthHeaders } from "@/lib/auth-fetch";
 import type { RxLensTypeId, RxOrderFor, RxPrescription } from "@/lib/rx-order";
 
 export type PlaceRxOrderInput = {
@@ -41,19 +41,11 @@ export async function placeRxOrder(
 ): Promise<
   { success: true; orderId: string; message: string } | { success: false; error: string }
 > {
-  const token = getStoredToken();
-  if (!token) {
-    return { success: false, error: "Not authenticated" };
-  }
-
   try {
     const { userId, ...orderBody } = input;
-    const response = await fetch("/api/orders/rx", {
+    const response = await authFetch("/api/orders/rx", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         ...orderBody,
         ...(userId?.trim() ? { userId: userId.trim() } : {}),
