@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { EmployeeAppSidebar } from "@/components/employee/employee-app-sidebar";
+import { EmployeeMobileBottomNav } from "@/components/employee/employee-mobile-bottom-nav";
 import { EmployeePermissionGate } from "@/components/employee/employee-permission-gate";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";

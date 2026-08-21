@@ -8,7 +8,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { BrandSplash } from "@/components/brand-splash";
 import { useAuth } from "@/contexts/auth-context";
 import {
-  buildGstDetailsHref,
+  buildBusinessInfoHref,
   buildPendingApprovalHref,
   getPostLoginRoute,
 } from "@/lib/auth-routing";
@@ -166,12 +166,12 @@ export default function Home() {
     if (
       nextRoute === "/home" ||
       nextRoute === "/employee/home" ||
-      nextRoute === "/gst-details" ||
+      nextRoute === "/business-info" ||
       nextRoute === "/pending-approval"
     ) {
       hasNavigated.current = true;
-      if (nextRoute === "/gst-details") {
-        router.replace(buildGstDetailsHref(user.id, user.email));
+      if (nextRoute === "/business-info") {
+        router.replace(buildBusinessInfoHref(user.id, user.email));
       } else if (nextRoute === "/pending-approval") {
         router.replace(buildPendingApprovalHref(user.email));
       } else {

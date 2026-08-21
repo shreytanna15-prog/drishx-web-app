@@ -17,7 +17,7 @@ import {
   useNotificationUnread,
 } from "@/contexts/notification-unread-context";
 import {
-  buildGstDetailsHref,
+  buildBusinessInfoHref,
   getCustomerNextRoute,
   isCustomerApproved,
   isStaffUser,
@@ -48,14 +48,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
     const nextRoute = getCustomerNextRoute(user);
     if (nextRoute !== "/home") {
-      if (nextRoute === "/gst-details") {
-        router.replace(buildGstDetailsHref(user.id, user.email));
+      if (nextRoute === "/business-info") {
+        router.replace(buildBusinessInfoHref(user.id, user.email));
       } else if (nextRoute === "/pending-approval") {
         router.replace(
           `/pending-approval?email=${encodeURIComponent(user.email)}`
         );
       } else {
-        router.replace("/");
+        router.replace(nextRoute);
       }
     }
   }, [user, isLoading, router]);

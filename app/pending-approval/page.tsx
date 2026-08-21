@@ -67,13 +67,13 @@ function PendingApprovalContent() {
 
   return (
     <AuthLayout
-      step={3}
+      step={5}
       title={isRejected ? "Account rejected" : "Waiting for approval"}
       subtitle={
         isRejected
           ? rejectionReason ||
             "Your account was rejected by admin. Contact support or sign up again."
-          : "Your GST details were submitted successfully. An admin must approve your account before you can use the portal."
+          : "Your registration details were submitted successfully. An admin must approve your account before you can use the portal."
       }
     >
       {email ? (

@@ -67,18 +67,26 @@ export async function login(
   };
 }
 
-export async function signup(
-  email: string,
-  password: string,
-  name: string
-): Promise<SignupResponse> {
+export async function signup(payload: {
+  email: string;
+  password: string;
+  name: string;
+  businessName: string;
+  mobileNumber: string;
+  alternateMobileNumber?: string;
+  whatsappNumber?: string;
+}): Promise<SignupResponse> {
   const res = await fetch("/api/auth/signup", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      email: email.trim().toLowerCase(),
-      password,
-      name: name.trim(),
+      email: payload.email.trim().toLowerCase(),
+      password: payload.password,
+      name: payload.name.trim(),
+      businessName: payload.businessName.trim(),
+      mobileNumber: payload.mobileNumber.trim(),
+      alternateMobileNumber: payload.alternateMobileNumber?.trim() || undefined,
+      whatsappNumber: payload.whatsappNumber?.trim() || undefined,
     }),
   });
 
@@ -91,11 +99,31 @@ export async function signup(
 
 export type GstDetailsPayload = {
   userId: string;
+  shopName: string;
+  businessType: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  pincode: string;
+  businessEmail: string;
+  shopPhoneNumber: string;
   gstNumber: string;
-  businessName: string;
-  businessAddress: string;
-  state?: string;
-  pincode?: string;
+  legalBusinessName: string;
+  tradeName?: string;
+  gstRegistrationState: string;
+  panNumber: string;
+  billingLegalName: string;
+  billingAddress: string;
+  billingCity: string;
+  billingState: string;
+  billingPincode: string;
+  billingGstState: string;
+  shippingLegalName: string;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingState: string;
+  shippingPincode: string;
 };
 
 export type GstDetailsResponse = {

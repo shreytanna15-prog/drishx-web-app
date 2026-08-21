@@ -1,30 +1,48 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { AuthField, AuthLayout } from "@/components/auth-layout";
-import { useAuth } from "@/contexts/auth-context";
-import { submitGstDetails } from "@/lib/api";
-import { buildPendingApprovalHref } from "@/lib/auth-routing";
+import {
+  buildBusinessInfoHref,
+  buildRegistrationAddressesHref,
+} from "@/lib/auth-routing";
+import {
+  getDraftForUser,
+  saveRegistrationDraft,
+} from "@/lib/registration-draft";
 
 function GstDetailsForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login: setSession } = useAuth();
 
   const userId = searchParams.get("userId") ?? "";
   const email = searchParams.get("email") ?? "";
 
   const [gstNumber, setGstNumber] = useState("");
-  const [businessName, setBusinessName] = useState("");
-  const [businessAddress, setBusinessAddress] = useState("");
-  const [state, setState] = useState("");
-  const [pincode, setPincode] = useState("");
+  const [legalBusinessName, setLegalBusinessName] = useState("");
+  const [tradeName, setTradeName] = useState("");
+  const [gstRegistrationState, setGstRegistrationState] = useState("");
+  const [panNumber, setPanNumber] = useState("");
   const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
+  useEffect(() => {
+    if (!userId) return;
+    const draft = getDraftForUser(userId, email);
+    if (!draft.business) {
+      router.replace(buildBusinessInfoHref(userId, email));
+      return;
+    }
+    if (draft.gst) {
+      setGstNumber(draft.gst.gstNumber);
+      setLegalBusinessName(draft.gst.legalBusinessName);
+      setTradeName(draft.gst.tradeName);
+      setGstRegistrationState(draft.gst.gstRegistrationState);
+      setPanNumber(draft.gst.panNumber);
+    }
+  }, [userId, email, router]);
+
+  function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
 
@@ -34,38 +52,42 @@ function GstDetailsForm() {
       return;
     }
 
-    if (!gstNumber.trim() || !businessName.trim() || !businessAddress.trim()) {
-      setError("GST number, business name, and address are required.");
+    if (
+      !gstNumber.trim() ||
+      !legalBusinessName.trim() ||
+      !gstRegistrationState.trim() ||
+      !panNumber.trim()
+    ) {
+      setError("GSTIN, legal business name, GST registration state, and PAN are required.");
       return;
     }
 
-    setIsSubmitting(true);
-
-    try {
-      const { user, token } = await submitGstDetails({
-        userId,
-        gstNumber: gstNumber.trim().toUpperCase(),
-        businessName: businessName.trim(),
-        businessAddress: businessAddress.trim(),
-        state: state.trim() || undefined,
-        pincode: pincode.trim() || undefined,
-      });
-
-      setSession(token, user);
-      router.replace(buildPendingApprovalHref(email || user.email));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Submission failed.");
-    } finally {
-      setIsSubmitting(false);
+    const draft = getDraftForUser(userId, email);
+    if (!draft.business) {
+      router.replace(buildBusinessInfoHref(userId, email));
+      return;
     }
+
+    saveRegistrationDraft({
+      ...draft,
+      gst: {
+        gstNumber: gstNumber.trim().toUpperCase(),
+        legalBusinessName: legalBusinessName.trim(),
+        tradeName: tradeName.trim(),
+        gstRegistrationState: gstRegistrationState.trim(),
+        panNumber: panNumber.trim().toUpperCase(),
+      },
+    });
+
+    router.push(buildRegistrationAddressesHref(userId, email));
   }
 
   return (
     <AuthLayout
       wide
-      step={2}
-      title="GST details"
-      subtitle="Submit your business GST information. Admin will review and approve your account."
+      step={3}
+      title="GST information"
+      subtitle="Submit your GST details. Admin will review and approve your account."
     >
       <form onSubmit={handleSubmit}>
         {error && <div className="auth-alert-error">{error}</div>}
@@ -83,55 +105,56 @@ function GstDetailsForm() {
           />
         </AuthField>
 
-        <AuthField label="Business name" htmlFor="businessName">
+        <AuthField label="Legal business name" htmlFor="legalBusinessName">
           <input
-            id="businessName"
+            id="legalBusinessName"
             type="text"
             required
-            value={businessName}
-            onChange={(e) => setBusinessName(e.target.value)}
+            value={legalBusinessName}
+            onChange={(e) => setLegalBusinessName(e.target.value)}
             className="auth-input"
-            placeholder="Your business name"
+            placeholder="Legal business name"
           />
         </AuthField>
 
-        <AuthField label="Business address" htmlFor="businessAddress">
-          <textarea
-            id="businessAddress"
+        <AuthField label="Trade name" htmlFor="tradeName" optional>
+          <input
+            id="tradeName"
+            type="text"
+            value={tradeName}
+            onChange={(e) => setTradeName(e.target.value)}
+            className="auth-input"
+            placeholder="Trade name"
+          />
+        </AuthField>
+
+        <AuthField label="GST registration state" htmlFor="gstRegistrationState">
+          <input
+            id="gstRegistrationState"
+            type="text"
             required
-            rows={3}
-            value={businessAddress}
-            onChange={(e) => setBusinessAddress(e.target.value)}
-            className="auth-textarea"
-            placeholder="Street, city, area"
-          />
-        </AuthField>
-
-        <AuthField label="State" htmlFor="state" optional>
-          <input
-            id="state"
-            type="text"
-            value={state}
-            onChange={(e) => setState(e.target.value)}
+            value={gstRegistrationState}
+            onChange={(e) => setGstRegistrationState(e.target.value)}
             className="auth-input"
-            placeholder="State"
+            placeholder="GST registration state"
           />
         </AuthField>
 
-        <AuthField label="Pincode" htmlFor="pincode" optional>
+        <AuthField label="PAN" htmlFor="panNumber">
           <input
-            id="pincode"
+            id="panNumber"
             type="text"
-            inputMode="numeric"
-            value={pincode}
-            onChange={(e) => setPincode(e.target.value)}
+            autoCapitalize="characters"
+            required
+            value={panNumber}
+            onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
             className="auth-input"
-            placeholder="Pincode"
+            placeholder="ABCDE1234F"
           />
         </AuthField>
 
-        <button type="submit" disabled={isSubmitting} className="auth-button">
-          {isSubmitting ? "Submitting..." : "Submit for approval"}
+        <button type="submit" className="auth-button">
+          Continue
         </button>
       </form>
     </AuthLayout>

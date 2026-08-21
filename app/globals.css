@@ -633,6 +633,16 @@ body {
   margin-bottom: 1rem;
 }
 
+.auth-section-title {
+  margin: 0.5rem 0 1rem;
+  padding-top: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-primary);
+}
+
 .auth-label {
   display: block;
   margin-bottom: 0.5rem;

@@ -1,6 +1,12 @@
 import type { SafeUser } from "./types";
 
-export type CustomerRoute = "/gst-details" | "/pending-approval" | "/home" | "/";
+export type CustomerRoute =
+  | "/business-info"
+  | "/gst-details"
+  | "/registration-addresses"
+  | "/pending-approval"
+  | "/home"
+  | "/";
 
 export type StaffRoute = "/employee/home";
 
@@ -31,7 +37,7 @@ export function getCustomerNextRoute(user: SafeUser): CustomerRoute {
     return "/pending-approval";
   }
   if (!user.gstNumber) {
-    return "/gst-details";
+    return "/business-info";
   }
   if (!user.isApproved || user.approvalStatus !== "APPROVED") {
     return "/pending-approval";
@@ -53,9 +59,24 @@ export function getPostLoginRoute(user: SafeUser): PostLoginRoute {
   return "/";
 }
 
-export function buildGstDetailsHref(userId: string, email: string): string {
+function withUserParams(path: string, userId: string, email: string): string {
   const params = new URLSearchParams({ userId, email });
-  return `/gst-details?${params.toString()}`;
+  return `${path}?${params.toString()}`;
+}
+
+export function buildBusinessInfoHref(userId: string, email: string): string {
+  return withUserParams("/business-info", userId, email);
+}
+
+export function buildGstDetailsHref(userId: string, email: string): string {
+  return withUserParams("/gst-details", userId, email);
+}
+
+export function buildRegistrationAddressesHref(
+  userId: string,
+  email: string
+): string {
+  return withUserParams("/registration-addresses", userId, email);
 }
 
 export function buildPendingApprovalHref(

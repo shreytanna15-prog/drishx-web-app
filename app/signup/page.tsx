@@ -7,13 +7,21 @@ import {
   AuthFooterLink,
   AuthLayout,
 } from "@/components/auth-layout";
-import { buildGstDetailsHref } from "@/lib/auth-routing";
+import { buildBusinessInfoHref } from "@/lib/auth-routing";
 import { signup } from "@/lib/api";
+import {
+  getDraftForUser,
+  saveRegistrationDraft,
+} from "@/lib/registration-draft";
 
 export default function SignupPage() {
   const router = useRouter();
 
   const [name, setName] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [alternateMobileNumber, setAlternateMobileNumber] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -24,8 +32,14 @@ export default function SignupPage() {
     e.preventDefault();
     setError("");
 
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setError("Name, email, and password are required.");
+    if (
+      !name.trim() ||
+      !businessName.trim() ||
+      !mobileNumber.trim() ||
+      !email.trim() ||
+      !password.trim()
+    ) {
+      setError("Full name, business name, mobile, email, and password are required.");
       return;
     }
 
@@ -37,7 +51,16 @@ export default function SignupPage() {
     setIsSubmitting(true);
 
     try {
-      const result = await signup(email, password, name);
+      const normalizedEmail = email.trim().toLowerCase();
+      const result = await signup({
+        email: normalizedEmail,
+        password,
+        name,
+        businessName,
+        mobileNumber,
+        alternateMobileNumber,
+        whatsappNumber,
+      });
       const userId = result.user?.id;
 
       if (!userId) {
@@ -45,7 +68,8 @@ export default function SignupPage() {
         return;
       }
 
-      router.push(buildGstDetailsHref(userId, email.trim().toLowerCase()));
+      saveRegistrationDraft(getDraftForUser(userId, normalizedEmail));
+      router.push(buildBusinessInfoHref(userId, normalizedEmail));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed.");
     } finally {
@@ -55,6 +79,7 @@ export default function SignupPage() {
 
   return (
     <AuthLayout
+      wide
       title="Create account"
       subtitle="Join Drishx to shop and track orders"
       step={1}
@@ -72,6 +97,56 @@ export default function SignupPage() {
             onChange={(e) => setName(e.target.value)}
             className="auth-input"
             placeholder="John Doe"
+          />
+        </AuthField>
+
+        <AuthField label="Business name" htmlFor="businessName">
+          <input
+            id="businessName"
+            type="text"
+            required
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            className="auth-input"
+            placeholder="Your business name"
+          />
+        </AuthField>
+
+        <AuthField label="Mobile number" htmlFor="mobileNumber">
+          <input
+            id="mobileNumber"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            required
+            value={mobileNumber}
+            onChange={(e) => setMobileNumber(e.target.value)}
+            className="auth-input"
+            placeholder="10-digit mobile number"
+          />
+        </AuthField>
+
+        <AuthField label="Alternate mobile number" htmlFor="alternateMobileNumber" optional>
+          <input
+            id="alternateMobileNumber"
+            type="tel"
+            inputMode="tel"
+            value={alternateMobileNumber}
+            onChange={(e) => setAlternateMobileNumber(e.target.value)}
+            className="auth-input"
+            placeholder="Alternate mobile number"
+          />
+        </AuthField>
+
+        <AuthField label="WhatsApp number" htmlFor="whatsappNumber" optional>
+          <input
+            id="whatsappNumber"
+            type="tel"
+            inputMode="tel"
+            value={whatsappNumber}
+            onChange={(e) => setWhatsappNumber(e.target.value)}
+            className="auth-input"
+            placeholder="WhatsApp number"
           />
         </AuthField>
 
@@ -115,7 +190,7 @@ export default function SignupPage() {
         </AuthField>
 
         <button type="submit" disabled={isSubmitting} className="auth-button">
-          {isSubmitting ? "Creating account..." : "Sign up"}
+          {isSubmitting ? "Creating account..." : "Continue"}
         </button>
       </form>
 

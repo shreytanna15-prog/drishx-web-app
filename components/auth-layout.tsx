@@ -6,7 +6,8 @@ type AuthLayoutProps = {
   subtitle: string;
   children: React.ReactNode;
   wide?: boolean;
-  step?: 1 | 2 | 3;
+  step?: 1 | 2 | 3 | 4 | 5;
+  totalSteps?: 3 | 4 | 5;
   showLogo?: boolean;
   /** Highlighted highlight line under the brand panel title. */
   panelEyebrow?: string;
@@ -27,6 +28,7 @@ export function AuthLayout({
   children,
   wide,
   step,
+  totalSteps = 5,
   showLogo = true,
   panelEyebrow = DEFAULT_PANEL.eyebrow,
   panelTitle = DEFAULT_PANEL.title,
@@ -84,15 +86,17 @@ export function AuthLayout({
 
             {step !== undefined ? (
               <div className="auth-steps" aria-hidden>
-                <div
-                  className={`auth-step${step >= 1 ? " auth-step--active" : ""}`}
-                />
-                <div
-                  className={`auth-step${step >= 2 ? " auth-step--active" : ""}`}
-                />
-                <div
-                  className={`auth-step${step >= 3 ? " auth-step--active" : ""}`}
-                />
+                {Array.from({ length: totalSteps }, (_, index) => {
+                  const stepNumber = (index + 1) as 1 | 2 | 3 | 4 | 5;
+                  return (
+                    <div
+                      key={stepNumber}
+                      className={`auth-step${
+                        step >= stepNumber ? " auth-step--active" : ""
+                      }`}
+                    />
+                  );
+                })}
               </div>
             ) : null}
 
@@ -139,6 +143,10 @@ export function AuthField({
       {children}
     </div>
   );
+}
+
+export function AuthSectionTitle({ children }: { children: React.ReactNode }) {
+  return <h2 className="auth-section-title">{children}</h2>;
 }
 
 export function AuthFooterLink({

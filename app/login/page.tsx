@@ -10,7 +10,7 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { LoginRejectedError, login } from "@/lib/api";
 import {
-  buildGstDetailsHref,
+  buildBusinessInfoHref,
   buildPendingApprovalHref,
   getPostLoginRoute,
 } from "@/lib/auth-routing";
@@ -36,8 +36,8 @@ export default function LoginPage() {
     if (isLoading || !user) return;
 
     const nextRoute = getPostLoginRoute(user);
-    if (nextRoute === "/gst-details") {
-      router.replace(buildGstDetailsHref(user.id, user.email));
+    if (nextRoute === "/business-info") {
+      router.replace(buildBusinessInfoHref(user.id, user.email));
     } else if (nextRoute === "/pending-approval") {
       router.replace(buildPendingApprovalHref(user.email));
     } else if (nextRoute !== "/") {
