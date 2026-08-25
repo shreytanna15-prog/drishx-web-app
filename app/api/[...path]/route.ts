@@ -14,10 +14,16 @@ async function proxyRequest(
   const contentType = req.headers.get("content-type");
   const authorization = req.headers.get("authorization");
   const cookie = req.headers.get("cookie");
+  const requestId = req.headers.get("x-request-id");
+  const client = req.headers.get("x-client");
+  const offlineReplay = req.headers.get("x-offline-replay");
 
   if (contentType) headers.set("Content-Type", contentType);
   if (authorization) headers.set("Authorization", authorization);
   if (cookie && targetPath.startsWith("/api/auth/")) headers.set("Cookie", cookie);
+  if (requestId) headers.set("X-Request-Id", requestId);
+  if (client) headers.set("X-Client", client);
+  if (offlineReplay) headers.set("X-Offline-Replay", offlineReplay);
 
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
 

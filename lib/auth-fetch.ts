@@ -1,5 +1,9 @@
 import type { SafeUser } from "./types";
 import {
+  mergeClientHeaders,
+  REQUEST_ID_HEADER,
+} from "./request-headers";
+import {
   clearAuthSession,
   getAccessToken,
   setAccessToken,
@@ -108,7 +112,7 @@ export async function logoutSession(): Promise<void> {
 }
 
 function withAuthHeaders(init?: RequestInit): RequestInit {
-  const headers = new Headers(init?.headers);
+  const headers = mergeClientHeaders(init?.headers);
   const token = getAccessToken();
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
@@ -166,6 +170,8 @@ export function getAuthHeaders(): Record<string, string> {
   const token = getAccessToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "X-Client": "web",
+    [REQUEST_ID_HEADER]: crypto.randomUUID?.() ?? `${Date.now()}`,
   };
   if (token) {
     headers.Authorization = `Bearer ${token}`;

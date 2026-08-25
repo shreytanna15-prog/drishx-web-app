@@ -10,11 +10,13 @@ async function proxyAuthRequest(req: NextRequest, action: string) {
   const authorization = req.headers.get("authorization");
   const cookie = req.headers.get("cookie");
   const xClient = req.headers.get("x-client");
+  const requestId = req.headers.get("x-request-id");
 
   if (contentType) headers.set("Content-Type", contentType);
   if (authorization) headers.set("Authorization", authorization);
   if (cookie) headers.set("Cookie", cookie);
   if (xClient) headers.set("X-Client", xClient);
+  if (requestId) headers.set("X-Request-Id", requestId);
 
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
 
