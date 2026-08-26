@@ -38,18 +38,40 @@ export type InvoiceOrder = {
   } | null;
 };
 
+export type InvoiceLine = {
+  id: string;
+  description: string;
+  powerLabel?: string | null;
+  hsnCode?: string | null;
+  quantity: number | string;
+  unitPrice: number | string;
+  gstRatePercent: number | string;
+  taxableAmount: number | string;
+  cgstAmount?: number | string;
+  sgstAmount?: number | string;
+  igstAmount?: number | string;
+  lineTotal: number | string;
+};
+
 export type InvoiceRecord = {
   id: string;
   invoiceNumber: string;
   userId: string;
   orderId: string;
   amount: number | string;
-  status: "PAID" | "UNPAID" | string;
+  amountPaid?: number | string;
+  amountOutstanding?: number | string;
+  taxableAmount?: number | string;
+  cgstAmount?: number | string;
+  sgstAmount?: number | string;
+  igstAmount?: number | string;
+  status: "PAID" | "UNPAID" | "ISSUED" | "PARTIALLY_PAID" | string;
   issuedAt: string;
   createdAt: string;
   updatedAt?: string;
   user?: InvoiceUser;
   order?: InvoiceOrder;
+  lines?: InvoiceLine[];
 };
 
 
@@ -107,7 +129,7 @@ export function formatLensOrderDetails(order: InvoiceOrder | undefined): string 
   return order.lensType;
 }
 
-export type InvoiceStatusFilter = "ALL" | "PAID" | "UNPAID";
+export type InvoiceStatusFilter = "ALL" | "PAID" | "UNPAID" | "ISSUED" | "PARTIALLY_PAID";
 export type InvoiceDateFilter =
   | "ALL"
   | "THIS_MONTH"
@@ -126,7 +148,9 @@ export const INVOICE_STATUS_FILTERS: {
 }[] = [
   { key: "ALL", label: "All" },
   { key: "PAID", label: "Paid" },
-  { key: "UNPAID", label: "Unpaid" },
+  { key: "ISSUED", label: "Unpaid" },
+  { key: "PARTIALLY_PAID", label: "Partial" },
+  { key: "UNPAID", label: "Unpaid (legacy)" },
 ];
 
 export const INVOICE_DATE_FILTERS: { key: InvoiceDateFilter; label: string }[] =
@@ -204,8 +228,20 @@ export function filterAndSortInvoices(
   }
 ): InvoiceRecord[] {
   const filtered = invoices.filter((invoice) => {
-    if (options.status !== "ALL" && invoice.status !== options.status) {
-      return false;
+    if (options.status !== "ALL") {
+      const unpaidLike =
+        options.status === "UNPAID" || options.status === "ISSUED";
+      if (unpaidLike) {
+        if (
+          invoice.status !== "UNPAID" &&
+          invoice.status !== "ISSUED" &&
+          invoice.status !== "OVERDUE"
+        ) {
+          return false;
+        }
+      } else if (invoice.status !== options.status) {
+        return false;
+      }
     }
     if (!matchesInvoiceDateFilter(invoice.issuedAt, options.date)) {
       return false;

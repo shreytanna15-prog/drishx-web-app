@@ -23,11 +23,11 @@ function DetailBlock({
   value: string;
 }) {
   return (
-    <div className="grid gap-1 border-b border-[var(--brand-card-border)] py-3 last:border-b-0 sm:grid-cols-[minmax(0,9rem)_1fr] sm:gap-4">
-      <dt className="text-xs font-bold uppercase tracking-wider text-[var(--brand-label)]">
+    <div className="grid gap-1 border-b border-(--brand-card-border) py-3 last:border-b-0 sm:grid-cols-[minmax(0,9rem)_1fr] sm:gap-4">
+      <dt className="text-xs font-bold uppercase tracking-wider text-(--brand-label)">
         {label}
       </dt>
-      <dd className="text-sm font-semibold text-[var(--brand-text)]">{value}</dd>
+      <dd className="text-sm font-semibold text-(--brand-text)">{value}</dd>
     </div>
   );
 }
@@ -74,8 +74,8 @@ export function InvoiceDetailScreen() {
           <Skeleton className="h-56 rounded-2xl" />
         </div>
       ) : error ? (
-        <div className="rounded-2xl border border-[var(--brand-danger-border)] bg-[var(--brand-danger-bg)] px-4 py-8 text-center">
-          <p className="text-sm font-medium text-[var(--brand-danger)]">
+        <div className="rounded-2xl border border-(--brand-danger-border) bg-(--brand-danger-bg) px-4 py-8 text-center">
+          <p className="text-sm font-medium text-(--brand-danger)">
             {error}
           </p>
           <Button className="mt-4 rounded-xl" onClick={() => void loadInvoice()}>
@@ -84,13 +84,13 @@ export function InvoiceDetailScreen() {
         </div>
       ) : invoice ? (
         <div className="space-y-4">
-          <section className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-5 sm:p-6">
+          <section className="rounded-2xl border border-(--brand-card-border) bg-(--brand-card) p-5 sm:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-[var(--brand-text-muted)]">
+                <p className="text-sm font-semibold text-(--brand-text-muted)">
                   Drishx
                 </p>
-                <h2 className="mt-1 text-2xl font-extrabold text-[var(--brand-text)]">
+                <h2 className="mt-1 text-2xl font-extrabold text-(--brand-text)">
                   {invoice.invoiceNumber}
                 </h2>
               </div>
@@ -98,17 +98,26 @@ export function InvoiceDetailScreen() {
                 className={cn(
                   "inline-flex w-fit rounded-lg px-3 py-1.5 text-xs font-bold",
                   invoice.status === "PAID"
-                    ? "bg-[var(--brand-success-bg)] text-[var(--brand-success)]"
-                    : "bg-[color-mix(in_srgb,var(--brand-primary)_18%,transparent)] text-[var(--brand-primary)]"
+                    ? "bg-(--brand-success-bg) text-(--brand-success)"
+                    : "bg-[color-mix(in_srgb,var(--brand-primary)_18%,transparent)] text-(--brand-primary)"
                 )}
               >
-                {invoice.status === "PAID" ? "Paid" : "Unpaid"}
+                {invoice.status === "PAID"
+                  ? "Paid"
+                  : invoice.status === "PARTIALLY_PAID"
+                    ? "Partially paid"
+                    : "Unpaid"}
               </span>
             </div>
-            <p className="mt-4 text-3xl font-extrabold text-[var(--brand-primary)]">
+            <p className="mt-4 text-3xl font-extrabold text-(--brand-primary)">
               ₹{formatInvoiceAmount(invoice.amount)}
             </p>
-            <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
+            {invoice.amountOutstanding != null ? (
+              <p className="mt-1 text-sm text-(--brand-text-muted)">
+                Outstanding ₹{formatInvoiceAmount(invoice.amountOutstanding)}
+              </p>
+            ) : null}
+            <p className="mt-1 text-sm text-(--brand-text-muted)">
               Issued{" "}
               {new Date(invoice.issuedAt).toLocaleDateString("en-IN", {
                 day: "numeric",
@@ -116,10 +125,54 @@ export function InvoiceDetailScreen() {
                 year: "numeric",
               })}
             </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <Button asChild className="rounded-xl" variant="outline">
+                <a
+                  href={`/api/invoices/${invoice.id}/pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Download tax invoice
+                </a>
+              </Button>
+              {invoice.orderId ? (
+                <Button asChild className="rounded-xl">
+                  <Link href={`/my-orders/${encodeURIComponent(invoice.orderId)}`}>
+                    Return / Replacement
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
           </section>
 
-          <section className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-5 sm:px-6">
-            <h3 className="py-4 text-sm font-extrabold uppercase tracking-wider text-[var(--brand-text-muted)]">
+          {(invoice.taxableAmount != null || (invoice.lines && invoice.lines.length > 0)) && (
+            <section className="rounded-2xl border border-(--brand-card-border) bg-(--brand-card) px-5 sm:px-6">
+              <h3 className="py-4 text-sm font-extrabold uppercase tracking-wider text-(--brand-text-muted)">
+                Tax breakup
+              </h3>
+              <dl>
+                <DetailBlock
+                  label="Taxable"
+                  value={`₹${formatInvoiceAmount(invoice.taxableAmount ?? 0)}`}
+                />
+                <DetailBlock
+                  label="CGST"
+                  value={`₹${formatInvoiceAmount(invoice.cgstAmount ?? 0)}`}
+                />
+                <DetailBlock
+                  label="SGST"
+                  value={`₹${formatInvoiceAmount(invoice.sgstAmount ?? 0)}`}
+                />
+                <DetailBlock
+                  label="IGST"
+                  value={`₹${formatInvoiceAmount(invoice.igstAmount ?? 0)}`}
+                />
+              </dl>
+            </section>
+          )}
+
+          <section className="rounded-2xl border border-(--brand-card-border) bg-(--brand-card) px-5 sm:px-6">
+            <h3 className="py-4 text-sm font-extrabold uppercase tracking-wider text-(--brand-text-muted)">
               Customer
             </h3>
             <dl>
@@ -136,11 +189,15 @@ export function InvoiceDetailScreen() {
                 label="GST"
                 value={invoice.user?.gstNumber?.trim() || "—"}
               />
+              <DetailBlock
+                label="Address"
+                value={invoice.user?.businessAddress?.trim() || "—"}
+              />
             </dl>
           </section>
 
-          <section className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-5 sm:px-6">
-            <h3 className="py-4 text-sm font-extrabold uppercase tracking-wider text-[var(--brand-text-muted)]">
+          <section className="rounded-2xl border border-(--brand-card-border) bg-(--brand-card) px-5 sm:px-6">
+            <h3 className="py-4 text-sm font-extrabold uppercase tracking-wider text-(--brand-text-muted)">
               Order
             </h3>
             <dl>
@@ -170,7 +227,7 @@ export function InvoiceDetailScreen() {
           <Button
             asChild
             variant="outline"
-            className="w-full rounded-xl border-[var(--brand-input-border)]"
+            className="w-full rounded-xl border-(--brand-input-border)"
           >
             <Link href="/profile/invoices">Back to invoices</Link>
           </Button>

@@ -62,27 +62,27 @@ export function ProfileScreen() {
 
       <div className="relative space-y-5">
         <header>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[var(--brand-text)] sm:text-4xl">
+          <h1 className="text-3xl font-extrabold tracking-tight text-(--brand-text) sm:text-4xl">
             Profile
           </h1>
-          <p className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
+          <p className="mt-1 text-sm font-medium text-(--brand-text-muted)">
             Manage your account, appearance, and business details
           </p>
         </header>
 
-        <section className="flex items-center gap-4 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-5 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.25)] sm:p-6">
-          <Avatar className="size-14 shrink-0 border border-[var(--brand-card-border)] sm:size-16">
-            <AvatarFallback className="bg-[var(--brand-primary)]/15 text-lg font-extrabold text-[var(--brand-primary)]">
+        <section className="flex items-center gap-4 rounded-2xl border border-(--brand-card-border) bg-(--brand-card) p-5 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.25)] sm:p-6">
+          <Avatar className="size-14 shrink-0 border border-(--brand-card-border) sm:size-16">
+            <AvatarFallback className="bg-(--brand-primary)/15 text-lg font-extrabold text-(--brand-primary)">
               {initials}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xl font-extrabold text-[var(--brand-text)] sm:text-2xl">
+            <p className="truncate text-xl font-extrabold text-(--brand-text) sm:text-2xl">
               {displayName}
             </p>
-            <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
+            <p className="mt-1 text-sm text-(--brand-text-muted)">
               Client ID:{" "}
-              <span className="font-mono text-xs text-[var(--brand-text)] sm:text-sm">
+              <span className="font-mono text-xs text-(--brand-text) sm:text-sm">
                 {user.id}
               </span>
             </p>
@@ -91,46 +91,46 @@ export function ProfileScreen() {
 
         <ThemeSelector />
 
-        <section className="overflow-hidden rounded-2xl border border-[var(--brand-card-border)] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.2)]">
+        <section className="overflow-hidden rounded-2xl border border-(--brand-card-border) shadow-[0_8px_24px_-12px_rgba(0,0,0,0.2)]">
           <ProfileMenuRow
             icon={Building2}
             label="Company Profile"
             href="/profile/company"
           />
-          <div className="h-px bg-[var(--brand-card-border)]" />
+          <div className="h-px bg-(--brand-card-border)" />
           <ProfileMenuRow
             icon={MapPin}
             label="Billing Address"
             href="/profile/coming-soon?feature=billing-address"
             variant="alt"
           />
-          <div className="h-px bg-[var(--brand-card-border)]" />
+          <div className="h-px bg-(--brand-card-border)" />
           <ProfileMenuRow
             icon={FileText}
             label="Invoices"
             href="/profile/invoices"
           />
-          <div className="h-px bg-[var(--brand-card-border)]" />
+          <div className="h-px bg-(--brand-card-border)" />
           <ProfileMenuRow
             icon={History}
             label="Recent Orders"
             href="/my-orders"
             variant="alt"
           />
-          <div className="h-px bg-[var(--brand-card-border)]" />
+          <div className="h-px bg-(--brand-card-border)" />
           <ProfileMenuRow
             icon={Wallet}
             label="Outstanding / Payments"
-            href="/profile/coming-soon?feature=outstanding-payments"
+            href="/profile/outstanding"
           />
-          <div className="h-px bg-[var(--brand-card-border)]" />
+          <div className="h-px bg-(--brand-card-border)" />
           <ProfileMenuRow
             icon={Headphones}
             label="Support"
             href="/profile/coming-soon?feature=support"
             variant="alt"
           />
-          <div className="h-px bg-[var(--brand-card-border)]" />
+          <div className="h-px bg-(--brand-card-border)" />
           <ProfileMenuRow
             icon={LogOut}
             label="Logout"
@@ -160,18 +160,18 @@ export function ProfileSubpageHeader({
   backHref = "/profile",
 }: ProfileSubpageHeaderProps) {
   return (
-    <header className="mb-6 flex items-center gap-3 border-b border-[var(--brand-card-border)] pb-4">
+    <header className="mb-6 flex items-center gap-3 border-b border-(--brand-card-border) pb-4">
       <Button
         variant="outline"
         size="icon"
-        className="size-9 shrink-0 rounded-xl border-[var(--brand-input-border)]"
+        className="size-9 shrink-0 rounded-xl border-(--brand-input-border)"
         asChild
       >
         <Link href={backHref} aria-label="Back to profile">
           <ChevronLeft className="size-5" />
         </Link>
       </Button>
-      <h1 className="text-2xl font-extrabold text-[var(--brand-text)] sm:text-3xl">
+      <h1 className="text-2xl font-extrabold text-(--brand-text) sm:text-3xl">
         {title}
       </h1>
     </header>
