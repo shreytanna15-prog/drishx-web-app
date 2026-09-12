@@ -28,6 +28,7 @@ import {
 } from "@/lib/order-quantity";
 import type { CartPowerLine } from "@/lib/cart-display";
 import { createOrder, ORDER_NOTES_MAX_LENGTH, wholesaleCheckout } from "@/lib/orders-api";
+import { DeliveryServicePicker } from "@/components/delivery/delivery-service-picker";
 import { cn } from "@/lib/utils";
 
 export function CartScreen() {
@@ -49,6 +50,7 @@ export function CartScreen() {
 
   const [orderNotes, setOrderNotes] = useState("");
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [deliveryServiceId, setDeliveryServiceId] = useState("");
   const [orderMessage, setOrderMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -190,7 +192,8 @@ export function CartScreen() {
         wholesaleItems.map((item) => item.cartLineKey),
         token,
         trimmedNotes || undefined,
-        checkoutBatchId
+        checkoutBatchId,
+        deliveryServiceId || undefined
       );
 
       if (wholesaleResult.success) {
@@ -209,7 +212,9 @@ export function CartScreen() {
         item,
         token,
         trimmedNotes || undefined,
-        checkoutBatchId
+        checkoutBatchId,
+        undefined,
+        deliveryServiceId || undefined
       );
       if (result.success) {
         successCount += 1;
@@ -444,6 +449,8 @@ export function CartScreen() {
             )}
           />
         </section>
+
+        <DeliveryServicePicker value={deliveryServiceId} onChange={setDeliveryServiceId} />
 
         <CartCheckoutBar
           productCount={summary.productCount}

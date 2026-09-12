@@ -63,6 +63,23 @@ export type OrderRecord = {
   cancelReason?: string | null;
   courierName?: string | null;
   trackingNumber?: string | null;
+  deliveryServiceId?: string | null;
+  deliveryService?: {
+    id: string;
+    courierCompany: string;
+    serviceName: string;
+    serviceType: string;
+    customerRate: number | string;
+    etaText?: string | null;
+  } | null;
+  delivery?: {
+    actualWeight: number | string;
+    chargeableWeight: number | string;
+    customerCharge: number | string;
+    internalCost?: number | string;
+    margin?: number | string;
+    weightEnteredAt?: string | null;
+  } | null;
   sph?: number | string | null;
   cyl?: number | string | null;
   axis?: number | null;

@@ -17,6 +17,7 @@ export type PlaceRxOrderInput = {
   prescriptionImageUrl?: string | null;
   /** When staff places for a customer (order on behalf). */
   userId?: string;
+  deliveryServiceId?: string;
 };
 
 export type UploadRxPrescriptionResult = {
@@ -42,13 +43,14 @@ export async function placeRxOrder(
   { success: true; orderId: string; message: string } | { success: false; error: string }
 > {
   try {
-    const { userId, ...orderBody } = input;
+    const { userId, deliveryServiceId, ...orderBody } = input;
     const response = await authFetch("/api/orders/rx", {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({
         ...orderBody,
         ...(userId?.trim() ? { userId: userId.trim() } : {}),
+        ...(deliveryServiceId?.trim() ? { deliveryServiceId: deliveryServiceId.trim() } : {}),
       }),
     });
 

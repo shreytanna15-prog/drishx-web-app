@@ -23,6 +23,7 @@ import {
 } from "@/lib/order-print";
 import type { OrderTrackingStatus } from "@/lib/order-tracking";
 import { fetchOrders, updateOrderStatus } from "@/lib/orders-api";
+import { EmployeeDeliveryPackCard } from "@/components/employee/employee-delivery-pack-card";
 import type { OrderRecord } from "@/lib/types/orders";
 
 export function EmployeeOrderDetailScreen() {
@@ -240,11 +241,16 @@ export function EmployeeOrderDetailScreen() {
           updatingOrderId={updatingOrderId}
         />
       ) : (
-        <EmployeeOrderGroupDetail
-          group={orderGroup}
-          onUpdateLine={handleUpdateLine}
-          updatingOrderId={updatingOrderId}
-        />
+        <div className="space-y-4">
+          {orderGroup.orders.map((line) => (
+            <EmployeeDeliveryPackCard key={line.id} order={line} onDone={loadOrders} />
+          ))}
+          <EmployeeOrderGroupDetail
+            group={orderGroup}
+            onUpdateLine={handleUpdateLine}
+            updatingOrderId={updatingOrderId}
+          />
+        </div>
       )}
     </div>
   );

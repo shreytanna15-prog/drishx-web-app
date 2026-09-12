@@ -23,6 +23,7 @@ type CreateOrderPayload = {
   eye?: string;
   notes?: string;
   userId?: string;
+  deliveryServiceId?: string;
 };
 
 function buildOrderPayload(item: CartItem): CreateOrderPayload {
@@ -53,7 +54,8 @@ export async function createOrder(
   token: string,
   notes?: string,
   checkoutBatchId?: string,
-  userId?: string
+  userId?: string,
+  deliveryServiceId?: string
 ): Promise<
   | { success: true; orderId: string; status?: string }
   | { success: false; error: string }
@@ -67,6 +69,7 @@ export async function createOrder(
         ? { checkoutBatchId: checkoutBatchId.trim() }
         : {}),
       ...(userId?.trim() ? { userId: userId.trim() } : {}),
+      ...(deliveryServiceId?.trim() ? { deliveryServiceId: deliveryServiceId.trim() } : {}),
     };
 
     const response = await fetchWithRetry("/api/orders", {
@@ -102,6 +105,7 @@ export async function createOrderFromLens(
     notes?: string;
     checkoutBatchId?: string;
     userId?: string;
+    deliveryServiceId?: string;
   }
 ): Promise<
   | { success: true; orderId: string; status?: string }
@@ -123,7 +127,8 @@ export async function createOrderFromLens(
     token,
     options?.notes,
     options?.checkoutBatchId,
-    options?.userId
+    options?.userId,
+    options?.deliveryServiceId
   );
 }
 
@@ -131,7 +136,8 @@ export async function wholesaleCheckout(
   cartLineKeys: string[],
   token: string,
   notes?: string,
-  checkoutBatchId?: string
+  checkoutBatchId?: string,
+  deliveryServiceId?: string
 ): Promise<
   | {
       success: true;
@@ -155,6 +161,9 @@ export async function wholesaleCheckout(
         ...(notes?.trim() ? { notes: notes.trim() } : {}),
         ...(checkoutBatchId?.trim()
           ? { checkoutBatchId: checkoutBatchId.trim() }
+          : {}),
+        ...(deliveryServiceId?.trim()
+          ? { deliveryServiceId: deliveryServiceId.trim() }
           : {}),
       }),
     });
@@ -202,14 +211,34 @@ export async function fetchOrders(): Promise<OrderRecord[]> {
 export async function updateOrderStatus(
   orderId: string,
   status: OrderTrackingStatus,
-  pickedQuantity?: number
+  pickedQuantity?: number,
+  extras?: {
+    courierName?: string | null;
+    trackingNumber?: string | null;
+    deliveryServiceId?: string | null;
+    actualWeight?: number | null;
+    weightReason?: string | null;
+  }
 ): Promise<OrderRecord> {
-  const body: { status: OrderTrackingStatus; pickedQuantity?: number } = {
+  const body: {
+    status: OrderTrackingStatus;
+    pickedQuantity?: number;
+    courierName?: string | null;
+    trackingNumber?: string | null;
+    deliveryServiceId?: string | null;
+    actualWeight?: number | null;
+    weightReason?: string | null;
+  } = {
     status,
   };
   if (pickedQuantity !== undefined) {
     body.pickedQuantity = pickedQuantity;
   }
+  if (extras?.courierName !== undefined) body.courierName = extras.courierName;
+  if (extras?.trackingNumber !== undefined) body.trackingNumber = extras.trackingNumber;
+  if (extras?.deliveryServiceId !== undefined) body.deliveryServiceId = extras.deliveryServiceId;
+  if (extras?.actualWeight !== undefined) body.actualWeight = extras.actualWeight;
+  if (extras?.weightReason !== undefined) body.weightReason = extras.weightReason;
 
   const res = await fetchWithRetry(`/api/orders/${orderId}`, {
     method: "PUT",

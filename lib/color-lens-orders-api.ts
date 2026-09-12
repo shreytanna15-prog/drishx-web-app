@@ -18,6 +18,7 @@ export type PlaceColorLensOrderInput = ColorLensOrderParams & {
   materialId: ColorLensMaterialId;
   /** When staff places for a customer (order on behalf). */
   userId?: string;
+  deliveryServiceId?: string;
 };
 
 export async function placeColorLensOrder(
@@ -43,6 +44,7 @@ export async function placeColorLensOrder(
       left: input.prescription.left,
     },
     ...(input.userId?.trim() ? { userId: input.userId.trim() } : {}),
+    ...(input.deliveryServiceId?.trim() ? { deliveryServiceId: input.deliveryServiceId.trim() } : {}),
   };
 
   try {

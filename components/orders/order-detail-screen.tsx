@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { OrderGroupDetail } from "@/components/orders/order-group-detail";
+import { DeliverySummary } from "@/components/delivery/delivery-service-picker";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
@@ -88,7 +89,12 @@ export function OrderDetailScreen() {
           </Button>
         </div>
       ) : (
-        <OrderGroupDetail group={group} onAlternateChanged={() => void loadOrders()} />
+        <div className="space-y-4">
+          <OrderGroupDetail group={group} onAlternateChanged={() => void loadOrders()} />
+          {group.orders.map((order) => (
+            <DeliverySummary key={order.id} order={order} />
+          ))}
+        </div>
       )}
     </div>
   );
