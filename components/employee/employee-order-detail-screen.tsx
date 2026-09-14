@@ -222,7 +222,11 @@ export function EmployeeOrderDetailScreen() {
           </Button>
         </div>
       ) : orderGroup.isPhotoOrder ? (
-        <EmployeePhotoOrderDetail
+        <div className="space-y-4">
+          {orderGroup.orders.map((line) => (
+            <EmployeeDeliveryPackCard key={line.id} order={line} onDone={loadOrders} />
+          ))}
+          <EmployeePhotoOrderDetail
           group={orderGroup}
           onUpdateStatus={(orderId, status) =>
             handleUpdateLine(orderId, {
@@ -239,7 +243,8 @@ export function EmployeeOrderDetailScreen() {
             })
           }
           updatingOrderId={updatingOrderId}
-        />
+          />
+        </div>
       ) : (
         <div className="space-y-4">
           {orderGroup.orders.map((line) => (

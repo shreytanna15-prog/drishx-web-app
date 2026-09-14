@@ -83,8 +83,8 @@ export function DeliveryServicePicker({ value, onChange }: Props) {
   );
 }
 
-export function DeliverySummary({ order }: { order: { deliveryService?: { serviceName: string } | null; delivery?: { actualWeight: number | string; chargeableWeight: number | string; customerCharge: number | string } | null } }) {
-  if (!order.deliveryService && !order.delivery) return null;
+export function DeliverySummary({ order }: { order: { courierName?: string | null; trackingNumber?: string | null; deliveryService?: { serviceName: string } | null; delivery?: { actualWeight: number | string; chargeableWeight: number | string; customerCharge: number | string } | null } }) {
+  if (!order.deliveryService && !order.delivery && !order.courierName && !order.trackingNumber) return null;
   return (
     <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-4 text-sm">
       <h4 className="mb-1 font-extrabold text-[var(--brand-text)]">Delivery</h4>
@@ -101,6 +101,11 @@ export function DeliverySummary({ order }: { order: { deliveryService?: { servic
           Charge calculated after packing.
         </p>
       )}
+      {order.courierName?.trim() || order.trackingNumber?.trim() ? (
+        <p className="mt-1 font-medium text-[var(--brand-text-muted)]">
+          Courier: {order.courierName?.trim() || "—"} · Tracking: {order.trackingNumber?.trim() || "—"}
+        </p>
+      ) : null}
     </div>
   );
 }

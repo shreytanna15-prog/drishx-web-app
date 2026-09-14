@@ -254,6 +254,25 @@ export async function updateOrderStatus(
   return res.json() as Promise<OrderRecord>;
 }
 
+export async function dispatchOrder(
+  orderId: string,
+  courierName: string,
+  trackingNumber: string
+): Promise<{ order: OrderRecord; duplicateWarning?: string | null }> {
+  const res = await fetchWithRetry(`/api/orders/${orderId}/dispatch`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ courierName, trackingNumber }),
+  });
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? "Failed to dispatch order.");
+  }
+
+  return res.json() as Promise<{ order: OrderRecord; duplicateWarning?: string | null }>;
+}
+
 export async function cancelOrder(orderId: string): Promise<void> {
   const res = await fetchWithRetry(`/api/orders/${orderId}`, {
     method: "PUT",

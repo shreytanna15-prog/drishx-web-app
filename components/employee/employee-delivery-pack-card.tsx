@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fetchDeliveryServices, type DeliveryServiceOption } from "@/lib/delivery-api";
-import { updateOrderStatus } from "@/lib/orders-api";
+import { dispatchOrder, updateOrderStatus } from "@/lib/orders-api";
 import type { OrderTrackingStatus } from "@/lib/order-tracking";
 import type { OrderRecord } from "@/lib/types/orders";
 
@@ -20,6 +20,8 @@ export function EmployeeDeliveryPackCard({ order, onDone }: Props) {
     order.delivery?.actualWeight != null ? String(order.delivery.actualWeight) : ""
   );
   const [reason, setReason] = useState("");
+  const [courierName, setCourierName] = useState(order.courierName ?? "");
+  const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +45,8 @@ export function EmployeeDeliveryPackCard({ order, onDone }: Props) {
     setServiceId(order.deliveryServiceId ?? "");
     setWeight(order.delivery?.actualWeight != null ? String(order.delivery.actualWeight) : "");
     setReason("");
+    setCourierName(order.courierName ?? "");
+    setTrackingNumber(order.trackingNumber ?? "");
   }, [order]);
 
   const isPacked = order.status === "PACKED";
@@ -100,6 +104,24 @@ export function EmployeeDeliveryPackCard({ order, onDone }: Props) {
     }
   }
 
+  async function handleDispatch() {
+    if (!courierName.trim() || !trackingNumber.trim()) {
+      setError("Enter courier name and tracking number to dispatch.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await dispatchOrder(order.id, courierName.trim(), trackingNumber.trim());
+      if (res.duplicateWarning) setError(res.duplicateWarning);
+      await onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to dispatch.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (terminal) return null;
 
   return (
@@ -143,6 +165,9 @@ export function EmployeeDeliveryPackCard({ order, onDone }: Props) {
           <Button onClick={() => void handlePack()} disabled={busy} className="w-full rounded-xl">
             {busy ? "Saving…" : "Mark packed with weight"}
           </Button>
+          <p className="text-xs font-medium text-[var(--brand-text-muted)]">
+            Courier dispatch box appears here after the order becomes PACKED.
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -168,6 +193,24 @@ export function EmployeeDeliveryPackCard({ order, onDone }: Props) {
           >
             {busy ? "Saving…" : "Correct weight"}
           </Button>
+          <div className="border-t border-[var(--brand-card-border)] pt-2">
+            <p className="mb-1 text-xs font-bold text-[var(--brand-text)]">Dispatch — handover to courier</p>
+            <div className="space-y-2">
+              <Input
+                value={courierName}
+                onChange={(e) => setCourierName(e.target.value)}
+                placeholder="Courier, e.g. Sri Raj Courier"
+              />
+              <Input
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                placeholder="Tracking / AWB number"
+              />
+              <Button onClick={() => void handleDispatch()} disabled={busy} className="w-full rounded-xl">
+                {busy ? "Dispatching…" : "Dispatch order"}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
