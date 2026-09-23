@@ -63,6 +63,11 @@ export type OrderRecord = {
   cancelReason?: string | null;
   courierName?: string | null;
   trackingNumber?: string | null;
+  /** Courier dispatch slot decided at order placement (cutoff-aware). */
+  dispatchDate?: string | null;
+  /** True when the order was placed after the admin-configured dispatch cutoff. */
+  cutoffDeferred?: boolean;
+  dispatchOverridden?: boolean;
   deliveryServiceId?: string | null;
   deliveryService?: {
     id: string;

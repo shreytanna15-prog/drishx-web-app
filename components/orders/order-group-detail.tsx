@@ -27,6 +27,42 @@ type OrderGroupDetailProps = {
   onAlternateChanged?: () => void;
 };
 
+function formatDispatchDay(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-IN", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function ExpectedDispatchNote({
+  orders,
+}: {
+  orders: Array<{
+    status: string;
+    dispatchDate?: string | null;
+    cutoffDeferred?: boolean;
+  }>;
+}) {
+  const pending = orders.filter(
+    (order) =>
+      order.dispatchDate &&
+      !["DISPATCHED", "COMPLETED", "CANCELLED"].includes(order.status)
+  );
+  const dispatchDate = pending[0]?.dispatchDate;
+  if (!dispatchDate) return null;
+  const deferred = pending.some((order) => order.cutoffDeferred);
+  return (
+    <p className="mt-3 text-sm font-semibold text-[var(--brand-primary)]">
+      Expected dispatch: {formatDispatchDay(dispatchDate)}
+      {deferred ? " · placed after the daily dispatch cutoff" : ""}
+    </p>
+  );
+}
+
 export function OrderGroupDetail({
   group,
   onAlternateChanged,
@@ -76,6 +112,7 @@ export function OrderGroupDetail({
           <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
             {formatOrderDateTime(group.createdAt)}
           </p>
+          <ExpectedDispatchNote orders={group.orders} />
           <p className="mt-3 text-sm font-semibold text-[var(--brand-primary)]">
             Your order will be placed soon. Details are in your photo.
           </p>
@@ -128,6 +165,7 @@ export function OrderGroupDetail({
         <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
           {formatOrderDateTime(group.createdAt)}
         </p>
+        <ExpectedDispatchNote orders={group.orders} />
       </div>
 
       {orderReferenceUrl && !referenceLoadFailed ? (
