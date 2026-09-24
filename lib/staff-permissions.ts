@@ -9,6 +9,8 @@ export const STAFF_PERMISSIONS = [
   "returns.view",
   "inventory.view",
   "tasks.view",
+  "attendance.view",
+  "attendance.scan",
 ] as const;
 
 export type StaffPermission = (typeof STAFF_PERMISSIONS)[number];
@@ -30,6 +32,7 @@ export const EMPLOYEE_NAV_PERMISSIONS: Record<string, StaffPermission[] | null> 
   "/employee/returns": ["returns.view"],
   "/employee/procurement": ["procurement.view", "procurement.intake"],
   "/employee/inventory": ["inventory.view"],
+  "/employee/attendance": ["attendance.view"],
   "/employee/profile": null,
 };
 

@@ -3,6 +3,7 @@ import {
   FlaskConical,
   Home,
   Package,
+  QrCode,
   RotateCcw,
   ShoppingCart,
   User,
@@ -42,6 +43,12 @@ export const EMPLOYEE_DASHBOARD_NAV: EmployeeNavItem[] = [
     label: "Tasks",
     icon: Package,
     description: "Assigned tasks",
+  },
+  {
+    href: "/employee/attendance",
+    label: "Attendance",
+    icon: QrCode,
+    description: "Office check-in and history",
   },
   {
     href: "/employee/returns",
@@ -86,6 +93,9 @@ export function getVisibleEmployeeNav(permissions?: readonly string[] | null) {
     }
     if (item.href === "/employee/tasks") {
       return hasStaffPermission(permissions, "tasks.view");
+    }
+    if (item.href === "/employee/attendance") {
+      return hasStaffPermission(permissions, "attendance.view");
     }
     if (item.href === "/employee/returns") {
       return hasStaffPermission(permissions, "returns.view");
