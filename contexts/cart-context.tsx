@@ -11,7 +11,6 @@ import {
   type ReactNode,
 } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { getAuthHeaders } from "@/lib/auth-fetch";
 import {
   bulkUpsertCartLines,
   clearServerCart,
@@ -104,12 +103,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
   const syncVersionRef = useRef<Map<string, number>>(new Map());
 
-  const authHeaders = useMemo(() => {
-    if (!token) return null;
-    return getAuthHeaders();
-  }, [token]);
-
-  const useServerCart = Boolean(authHeaders && user?.role === "CUSTOMER");
+  // Use presence of session token only — cart-api uses authFetch so Bearer
+  // is always read live from storage (avoids freezing an expired header).
+  const useServerCart = Boolean(token && user?.role === "CUSTOMER");
 
   useEffect(() => {
     itemsRef.current = items;
@@ -127,20 +123,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const refreshCart = useCallback(async () => {
-    if (!useServerCart || !authHeaders) {
+    if (!useServerCart) {
       setItems([]);
       return;
     }
     setLoading(true);
     try {
-      const serverItems = await fetchCart(authHeaders);
+      const serverItems = await fetchCart();
       setItems(serverItems);
     } catch {
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [authHeaders, useServerCart]);
+  }, [useServerCart]);
 
   useEffect(() => {
     void refreshCart();
@@ -148,7 +144,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const flushLineSync = useCallback(
     async (cartLineId: string, version: number) => {
-      if (!useServerCart || !authHeaders) {
+      if (!useServerCart) {
         return;
       }
 
@@ -159,7 +155,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const entry = itemsRef.current.find((item) => item.cartLineId === cartLineId);
       if (!entry) {
         try {
-          await removeCartLine(cartLineId, authHeaders);
+          await removeCartLine(cartLineId);
         } catch {
           await refreshCart();
         }
@@ -169,8 +165,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       try {
         const { item: saved } = await upsertCartLine(
           toLensItem(entry),
-          entry.cartQuantity,
-          authHeaders
+          entry.cartQuantity
         );
         if (syncVersionRef.current.get(cartLineId) !== version) {
           return;
@@ -184,7 +179,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         await refreshCart();
       }
     },
-    [authHeaders, refreshCart, useServerCart]
+    [refreshCart, useServerCart]
   );
 
   const scheduleLineSync = useCallback(
@@ -230,12 +225,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return [...without, optimisticItem];
       });
 
-      if (!useServerCart || !authHeaders) {
+      if (!useServerCart) {
         return;
       }
 
       try {
-        const { item: saved } = await upsertCartLine(item, nextQty, authHeaders);
+        const { item: saved } = await upsertCartLine(item, nextQty);
         setItems((current) => {
           const without = current.filter(
             (entry) => entry.cartLineId !== cartLineId
@@ -254,7 +249,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     },
-    [applyItems, authHeaders, useServerCart]
+    [applyItems, useServerCart]
   );
 
   const removeFromCart = useCallback(
@@ -269,17 +264,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
         current.filter((entry) => entry.cartLineId !== cartLineId)
       );
 
-      if (!useServerCart || !authHeaders) {
+      if (!useServerCart) {
         return;
       }
 
       try {
-        await removeCartLine(cartLineId, authHeaders);
+        await removeCartLine(cartLineId);
       } catch {
         await refreshCart();
       }
     },
-    [applyItems, authHeaders, useServerCart]
+    [applyItems, useServerCart]
   );
 
   const removeLinesFromCart = useCallback(
@@ -303,21 +298,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
         current.filter((entry) => !idSet.has(entry.cartLineId))
       );
 
-      if (!useServerCart || !authHeaders) {
+      if (!useServerCart) {
         return;
       }
 
       try {
         await Promise.all(
           uniqueIds.map((cartLineId) =>
-            removeCartLine(cartLineId, authHeaders)
+            removeCartLine(cartLineId)
           )
         );
       } catch {
         await refreshCart();
       }
     },
-    [applyItems, authHeaders, useServerCart]
+    [applyItems, useServerCart]
   );
 
   const updateQuantity = useCallback(
@@ -379,8 +374,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
           clearTimeout(existingTimer);
           syncTimersRef.current.delete(cartLineId);
         }
-        if (useServerCart && authHeaders) {
-          void removeCartLine(cartLineId, authHeaders).catch(() => {
+        if (useServerCart) {
+          void removeCartLine(cartLineId).catch(() => {
             void refreshCart();
           });
         }
@@ -389,12 +384,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       scheduleLineSync(cartLineId);
     },
-    [applyItems, authHeaders, refreshCart, scheduleLineSync, useServerCart]
+    [applyItems, refreshCart, scheduleLineSync, useServerCart]
   );
 
   const flushWholesaleSync = useCallback(
     async (parentCartLineId: string, version: number) => {
-      if (!useServerCart || !authHeaders) {
+      if (!useServerCart) {
         return;
       }
 
@@ -407,7 +402,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       );
       if (!entry) {
         try {
-          await removeCartLine(parentCartLineId, authHeaders);
+          await removeCartLine(parentCartLineId);
         } catch {
           await refreshCart();
         }
@@ -437,8 +432,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             isBifocalLens: entry.wholesaleSpec.isBifocalLens,
             isSingleVision: entry.wholesaleSpec.isSingleVision,
             crossPower: entry.wholesaleSpec.crossPower,
-          },
-          authHeaders
+          }
         );
         if (syncVersionRef.current.get(parentCartLineId) !== version) {
           return;
@@ -452,7 +446,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         await refreshCart();
       }
     },
-    [authHeaders, refreshCart, useServerCart]
+    [refreshCart, useServerCart]
   );
 
   const scheduleWholesaleSync = useCallback(
@@ -515,8 +509,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
           clearTimeout(existingTimer);
           syncTimersRef.current.delete(parentCartLineId);
         }
-        if (useServerCart && authHeaders) {
-          void removeCartLine(parentCartLineId, authHeaders).catch(() => {
+        if (useServerCart) {
+          void removeCartLine(parentCartLineId).catch(() => {
             void refreshCart();
           });
         }
@@ -525,7 +519,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       scheduleWholesaleSync(parentCartLineId);
     },
-    [applyItems, authHeaders, refreshCart, scheduleWholesaleSync, useServerCart]
+    [applyItems, refreshCart, scheduleWholesaleSync, useServerCart]
   );
 
   const adjustWholesaleCellQuantity = useCallback(
@@ -561,17 +555,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     applyItems(() => []);
 
-    if (!useServerCart || !authHeaders) {
+    if (!useServerCart) {
       return;
     }
 
     try {
-      await clearServerCart(authHeaders);
+      await clearServerCart();
     } catch {
       await refreshCart();
       throw new Error("Failed to clear cart.");
     }
-  }, [applyItems, authHeaders, refreshCart, useServerCart]);
+  }, [applyItems, refreshCart, useServerCart]);
 
   const bulkSetCartQuantities = useCallback(
     async (lines: Array<{ item: LensItem; quantity: number }>) => {
@@ -603,12 +597,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return mergedSnapshot;
       });
 
-      if (!useServerCart || !authHeaders) {
+      if (!useServerCart) {
         return { savedCount: optimisticItems.length };
       }
 
       try {
-        const { count, message } = await bulkUpsertCartLines(lines, authHeaders);
+        const { count, message } = await bulkUpsertCartLines(lines);
         return { savedCount: count, message };
       } catch (err) {
         applyItems(() =>
@@ -617,18 +611,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     },
-    [applyItems, authHeaders, useServerCart]
+    [applyItems, useServerCart]
   );
 
   const addWholesaleBatchToCart = useCallback(
     async (input: UpsertWholesaleCartInput) => {
-      if (!useServerCart || !authHeaders) {
+      if (!useServerCart) {
         throw new Error("Sign in to add wholesale batches to your cart.");
       }
 
       const { item, expandedLineCount, message } = await upsertWholesaleCartBatch(
-        input,
-        authHeaders
+        input
       );
 
       applyItems((current) => {
@@ -638,7 +631,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       return { expandedLineCount, message };
     },
-    [applyItems, authHeaders, useServerCart]
+    [applyItems, useServerCart]
   );
 
   const itemCount = useMemo(

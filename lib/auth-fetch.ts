@@ -41,9 +41,17 @@ type RefreshResponse = {
 
 let refreshPromise: Promise<boolean> | null = null;
 let onAuthFailure: (() => void) | null = null;
+let onAccessTokenRefreshed: ((token: string) => void) | null = null;
 
 export function registerAuthFailureHandler(handler: () => void) {
   onAuthFailure = handler;
+}
+
+/** Keep React auth state in sync after a silent access-token refresh. */
+export function registerAccessTokenRefreshHandler(
+  handler: ((token: string) => void) | null
+) {
+  onAccessTokenRefreshed = handler;
 }
 
 function resolveAccessToken(data: RefreshResponse) {
@@ -86,6 +94,7 @@ export async function refreshAccessToken(): Promise<boolean> {
       if (data.user) {
         setAuthSession(nextToken, data.user);
       }
+      onAccessTokenRefreshed?.(nextToken);
       return true;
     } catch {
       return false;
@@ -117,7 +126,7 @@ function withAuthHeaders(init?: RequestInit): RequestInit {
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  if (init?.body && !headers.has("Content-Type")) {
+  if (init?.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   return { ...init, headers };

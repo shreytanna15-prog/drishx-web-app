@@ -17,6 +17,7 @@ import {
 } from "@/lib/auth-storage";
 import {
   logoutSession,
+  registerAccessTokenRefreshHandler,
   registerAuthFailureHandler,
 } from "@/lib/auth-fetch";
 import type { SafeUser } from "@/lib/types";
@@ -60,16 +61,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const storedToken = getAccessToken();
-    if (!storedToken) {
+    const beforeToken = getAccessToken();
+    if (!beforeToken) {
       await logout();
       return;
     }
 
     try {
       const currentUser = await fetchCurrentUser();
-      setAuthSession(storedToken, currentUser);
-      setToken(storedToken);
+      // Re-read after fetch — authFetch may have refreshed the access token.
+      const afterToken = getAccessToken() ?? beforeToken;
+      setAuthSession(afterToken, currentUser);
+      setToken(afterToken);
       setUser(currentUser);
     } catch {
       await logout();
@@ -83,6 +86,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.location.href = "/login?session=expired";
       }
     });
+    registerAccessTokenRefreshHandler((nextToken) => {
+      setToken(nextToken);
+    });
+    return () => {
+      registerAccessTokenRefreshHandler(null);
+    };
   }, [logout]);
 
   useEffect(() => {

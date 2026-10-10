@@ -1,3 +1,4 @@
+import { authFetch } from "@/lib/auth-fetch";
 import { buildCartLineId } from "@/lib/cart-utils";
 import { resolveCrossPowerMeta } from "@/lib/cross-power";
 import type { CartItem, LensItem, WholesaleSpec } from "@/lib/types/lens";
@@ -66,10 +67,11 @@ function mapServerItem(row: ServerCartItem): CartItem {
   };
 }
 
+/** @deprecated Headers are ignored; authFetch attaches a live Bearer token. */
 export async function fetchCart(
-  headers: Record<string, string>
+  _headers?: Record<string, string>
 ): Promise<CartItem[]> {
-  const response = await fetch("/api/cart", { headers, cache: "no-store" });
+  const response = await authFetch("/api/cart", { cache: "no-store" });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(result?.error || "Failed to load cart.");
@@ -78,20 +80,17 @@ export async function fetchCart(
   return items.map(mapServerItem);
 }
 
+/** @deprecated Headers are ignored; authFetch attaches a live Bearer token. */
 export async function upsertCartLine(
   item: LensItem,
   quantity: number,
-  headers: Record<string, string>
+  _headers?: Record<string, string>
 ): Promise<{ item: CartItem; message?: string }> {
   const cartLineKey = buildCartLineId(item);
   const lensType = item.lensType ?? "Progressive";
 
-  const response = await fetch("/api/cart", {
+  const response = await authFetch("/api/cart", {
     method: "POST",
-    headers: {
-      ...headers,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       lensType: toApiLensType(lensType),
       lensId: item.id,
@@ -145,9 +144,10 @@ function toBulkLineBody(item: LensItem, quantity: number) {
   };
 }
 
+/** @deprecated Headers are ignored; authFetch attaches a live Bearer token. */
 export async function bulkUpsertCartLines(
   lines: Array<{ item: LensItem; quantity: number }>,
-  headers: Record<string, string>
+  _headers?: Record<string, string>
 ): Promise<{ count: number; message?: string }> {
   if (lines.length === 0) {
     return { count: 0 };
@@ -158,12 +158,8 @@ export async function bulkUpsertCartLines(
 
   for (let offset = 0; offset < lines.length; offset += BULK_CART_CHUNK_SIZE) {
     const chunk = lines.slice(offset, offset + BULK_CART_CHUNK_SIZE);
-    const response = await fetch("/api/cart/bulk", {
+    const response = await authFetch("/api/cart/bulk", {
       method: "POST",
-      headers: {
-        ...headers,
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({
         lines: chunk.map((line) => toBulkLineBody(line.item, line.quantity)),
       }),
@@ -208,16 +204,13 @@ export type UpsertWholesaleCartInput = {
   crossPower?: number | null;
 };
 
+/** @deprecated Headers are ignored; authFetch attaches a live Bearer token. */
 export async function upsertWholesaleCartBatch(
   input: UpsertWholesaleCartInput,
-  headers: Record<string, string>
+  _headers?: Record<string, string>
 ): Promise<{ item: CartItem; expandedLineCount: number; message?: string }> {
-  const response = await fetch("/api/cart/wholesale", {
+  const response = await authFetch("/api/cart/wholesale", {
     method: "POST",
-    headers: {
-      ...headers,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(input),
   });
 
@@ -234,13 +227,14 @@ export async function upsertWholesaleCartBatch(
   };
 }
 
+/** @deprecated Headers are ignored; authFetch attaches a live Bearer token. */
 export async function removeCartLine(
   cartLineKey: string,
-  headers: Record<string, string>
+  _headers?: Record<string, string>
 ): Promise<void> {
-  const response = await fetch(
+  const response = await authFetch(
     `/api/cart?cartLineKey=${encodeURIComponent(cartLineKey)}`,
-    { method: "DELETE", headers }
+    { method: "DELETE" }
   );
   if (!response.ok) {
     const result = await response.json().catch(() => ({}));
@@ -248,16 +242,17 @@ export async function removeCartLine(
   }
 }
 
+/** @deprecated Headers are ignored; authFetch attaches a live Bearer token. */
 export async function clearServerCart(
-  headers: Record<string, string>
+  _headers?: Record<string, string>
 ): Promise<void> {
-  const response = await fetch("/api/cart", { method: "DELETE", headers });
+  const response = await authFetch("/api/cart", { method: "DELETE" });
   if (response.ok) {
     return;
   }
 
   const result = await response.json().catch(() => ({}));
-  const items = await fetchCart(headers).catch(() => [] as CartItem[]);
+  const items = await fetchCart().catch(() => [] as CartItem[]);
 
   if (items.length === 0) {
     return;
@@ -265,7 +260,7 @@ export async function clearServerCart(
 
   const results = await Promise.allSettled(
     items.map((item) =>
-      removeCartLine(item.cartLineKey ?? item.cartLineId, headers)
+      removeCartLine(item.cartLineKey ?? item.cartLineId)
     )
   );
 
