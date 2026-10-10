@@ -1,5 +1,9 @@
 import type { ApiError, LoginResponse, SafeUser, SignupResponse } from "./types";
-import { authFetch, AuthError } from "./auth-fetch";
+import {
+  authFetch,
+  AuthError,
+  type AuthErrorCode,
+} from "./auth-fetch";
 import { getAccessToken } from "./auth-storage";
 
 export { AuthError };
@@ -165,7 +169,16 @@ export async function fetchCurrentUser(): Promise<SafeUser> {
   });
 
   if (!res.ok) {
-    throw new AuthError(await parseError(res), "TOKEN_INVALID", res.status);
+    let message = "Unauthorized.";
+    let code: AuthErrorCode = "TOKEN_INVALID";
+    try {
+      const data = (await res.json()) as { error?: string; code?: AuthErrorCode };
+      if (data.error) message = data.error;
+      if (data.code) code = data.code;
+    } catch {
+      // keep defaults
+    }
+    throw new AuthError(message, code, res.status);
   }
 
   const data = (await res.json()) as { user: SafeUser };

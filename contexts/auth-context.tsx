@@ -10,13 +10,14 @@ import {
 } from "react";
 import { fetchCurrentUser } from "@/lib/api";
 import {
-  clearAuthSession,
   getAccessToken,
   getStoredUser,
   setAuthSession,
 } from "@/lib/auth-storage";
 import {
+  AuthError,
   logoutSession,
+  refreshAccessToken,
   registerAccessTokenRefreshHandler,
   registerAuthFailureHandler,
 } from "@/lib/auth-fetch";
@@ -33,6 +34,16 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function applyStoredSession(
+  setToken: (t: string | null) => void,
+  setUser: (u: SafeUser | null) => void
+) {
+  const token = getAccessToken();
+  const stored = getStoredUser();
+  if (token) setToken(token);
+  if (stored) setUser(stored);
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SafeUser | null>(null);
@@ -61,20 +72,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const beforeToken = getAccessToken();
+    let beforeToken = getAccessToken();
+
+    // Empty sessionStorage but refresh cookie may still be valid (new tab).
     if (!beforeToken) {
-      await logout();
-      return;
+      const outcome = await refreshAccessToken();
+      if (outcome.status === "transient") {
+        applyStoredSession(setToken, setUser);
+        return;
+      }
+      if (outcome.status !== "refreshed") {
+        await logout();
+        return;
+      }
+      beforeToken = getAccessToken();
+      if (!beforeToken) {
+        await logout();
+        return;
+      }
     }
 
     try {
       const currentUser = await fetchCurrentUser();
-      // Re-read after fetch — authFetch may have refreshed the access token.
       const afterToken = getAccessToken() ?? beforeToken;
       setAuthSession(afterToken, currentUser);
       setToken(afterToken);
       setUser(currentUser);
-    } catch {
+    } catch (err) {
+      // Non-auth failures (5xx / network) must not force logout.
+      if (!(err instanceof AuthError) || err.status !== 401) {
+        applyStoredSession(setToken, setUser);
+        return;
+      }
+
+      // authFetch may have already returned a 401 after a transient refresh.
+      // Re-check explicitly so blips never clear a still-valid refresh cookie.
+      const outcome = await refreshAccessToken();
+      if (outcome.status === "transient") {
+        applyStoredSession(setToken, setUser);
+        return;
+      }
+      if (outcome.status === "refreshed") {
+        try {
+          const currentUser = await fetchCurrentUser();
+          const afterToken = getAccessToken() ?? beforeToken;
+          setAuthSession(afterToken, currentUser);
+          setToken(afterToken);
+          setUser(currentUser);
+          return;
+        } catch {
+          await logout();
+          return;
+        }
+      }
       await logout();
     }
   }, [logout]);
@@ -95,17 +145,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [logout]);
 
   useEffect(() => {
-    const storedToken = getAccessToken();
-    const storedUser = getStoredUser();
+    let cancelled = false;
 
-    if (!storedToken || !storedUser) {
-      setIsLoading(false);
-      return;
+    async function boot() {
+      let storedToken = getAccessToken();
+      let storedUser = getStoredUser();
+
+      if (!storedToken) {
+        const outcome = await refreshAccessToken();
+        if (cancelled) return;
+        if (outcome.status === "refreshed") {
+          storedToken = getAccessToken();
+          storedUser = getStoredUser();
+        } else {
+          // auth_failed or transient — leave logged out; do not clear cookie here.
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      if (cancelled) return;
+
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        setUser(storedUser);
+      }
+
+      await refreshUser();
+      if (!cancelled) setIsLoading(false);
     }
 
-    setToken(storedToken);
-    setUser(storedUser);
-    refreshUser().finally(() => setIsLoading(false));
+    void boot();
+    return () => {
+      cancelled = true;
+    };
   }, [refreshUser]);
 
   const value = useMemo(
