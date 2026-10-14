@@ -9,13 +9,11 @@ import {
 } from "@/components/auth-layout";
 import { useAuth } from "@/contexts/auth-context";
 import { submitGstDetails } from "@/lib/api";
-import {
-  buildBusinessInfoHref,
-  buildGstDetailsHref,
-  buildPendingApprovalHref,
-} from "@/lib/auth-routing";
+import { buildPendingApprovalHref } from "@/lib/auth-routing";
 import {
   clearRegistrationDraft,
+  EMPTY_BUSINESS_INFO,
+  EMPTY_GST_INFO,
   getDraftForUser,
 } from "@/lib/registration-draft";
 
@@ -45,21 +43,13 @@ function RegistrationAddressesForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    // RW-07: missing draft sections are fine — empty defaults are used on submit.
     if (!userId) return;
-    const draft = getDraftForUser(userId, email);
-    if (!draft.business) {
-      router.replace(buildBusinessInfoHref(userId, email));
-      return;
-    }
-    if (!draft.gst) {
-      router.replace(buildGstDetailsHref(userId, email));
-    }
-  }, [userId, email, router]);
+  }, [userId]);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-
+  async function finalize(options: {
+    includeAddresses: boolean;
+  }) {
     if (!userId) {
       setError("Please sign up again to continue.");
       router.replace("/signup");
@@ -67,70 +57,60 @@ function RegistrationAddressesForm() {
     }
 
     const draft = getDraftForUser(userId, email);
-    if (!draft.business) {
-      router.replace(buildBusinessInfoHref(userId, email));
-      return;
-    }
-    if (!draft.gst) {
-      router.replace(buildGstDetailsHref(userId, email));
-      return;
-    }
+    const business = draft.business ?? EMPTY_BUSINESS_INFO;
+    const gst = draft.gst ?? EMPTY_GST_INFO;
 
-    if (
-      !billingLegalName.trim() ||
-      !billingAddress.trim() ||
-      !billingCity.trim() ||
-      !billingState.trim() ||
-      !billingPincode.trim() ||
-      !billingGstState.trim()
-    ) {
-      setError("Please complete all billing address fields.");
-      return;
-    }
-
-    const resolvedShipping = sameAsBilling
+    const billing = options.includeAddresses
       ? {
-          shippingLegalName: billingLegalName.trim(),
-          shippingAddress: billingAddress.trim(),
-          shippingCity: billingCity.trim(),
-          shippingState: billingState.trim(),
-          shippingPincode: billingPincode.trim(),
+          billingLegalName: billingLegalName.trim() || undefined,
+          billingAddress: billingAddress.trim() || undefined,
+          billingCity: billingCity.trim() || undefined,
+          billingState: billingState.trim() || undefined,
+          billingPincode: billingPincode.trim() || undefined,
+          billingGstState: billingGstState.trim() || undefined,
         }
-      : {
-          shippingLegalName: shippingLegalName.trim(),
-          shippingAddress: shippingAddress.trim(),
-          shippingCity: shippingCity.trim(),
-          shippingState: shippingState.trim(),
-          shippingPincode: shippingPincode.trim(),
-        };
+      : {};
 
-    if (
-      !resolvedShipping.shippingLegalName ||
-      !resolvedShipping.shippingAddress ||
-      !resolvedShipping.shippingCity ||
-      !resolvedShipping.shippingState ||
-      !resolvedShipping.shippingPincode
-    ) {
-      setError("Please complete all shipping address fields.");
-      return;
-    }
+    const shipping = options.includeAddresses
+      ? sameAsBilling
+        ? {
+            shippingLegalName: billingLegalName.trim() || undefined,
+            shippingAddress: billingAddress.trim() || undefined,
+            shippingCity: billingCity.trim() || undefined,
+            shippingState: billingState.trim() || undefined,
+            shippingPincode: billingPincode.trim() || undefined,
+          }
+        : {
+            shippingLegalName: shippingLegalName.trim() || undefined,
+            shippingAddress: shippingAddress.trim() || undefined,
+            shippingCity: shippingCity.trim() || undefined,
+            shippingState: shippingState.trim() || undefined,
+            shippingPincode: shippingPincode.trim() || undefined,
+          }
+      : {};
 
     setIsSubmitting(true);
+    setError("");
 
     try {
       const { user, token } = await submitGstDetails({
         userId,
-        ...draft.business,
-        addressLine2: draft.business.addressLine2 || undefined,
-        ...draft.gst,
-        tradeName: draft.gst.tradeName || undefined,
-        billingLegalName: billingLegalName.trim(),
-        billingAddress: billingAddress.trim(),
-        billingCity: billingCity.trim(),
-        billingState: billingState.trim(),
-        billingPincode: billingPincode.trim(),
-        billingGstState: billingGstState.trim(),
-        ...resolvedShipping,
+        shopName: business.shopName || undefined,
+        businessType: business.businessType || undefined,
+        addressLine1: business.addressLine1 || undefined,
+        addressLine2: business.addressLine2 || undefined,
+        city: business.city || undefined,
+        state: business.state || undefined,
+        pincode: business.pincode || undefined,
+        businessEmail: business.businessEmail || undefined,
+        shopPhoneNumber: business.shopPhoneNumber || undefined,
+        gstNumber: gst.gstNumber || undefined,
+        legalBusinessName: gst.legalBusinessName || undefined,
+        tradeName: gst.tradeName || undefined,
+        gstRegistrationState: gst.gstRegistrationState || undefined,
+        panNumber: gst.panNumber || undefined,
+        ...billing,
+        ...shipping,
       });
 
       clearRegistrationDraft();
@@ -143,23 +123,31 @@ function RegistrationAddressesForm() {
     }
   }
 
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    await finalize({ includeAddresses: true });
+  }
+
+  async function handleSkip() {
+    await finalize({ includeAddresses: false });
+  }
+
   return (
     <AuthLayout
       wide
       step={4}
       title="Billing & shipping"
-      subtitle="Provide billing and delivery addresses for your account."
+      subtitle="Addresses are optional. Skip to submit your registration for admin review."
     >
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => void handleSubmit(e)}>
         {error && <div className="auth-alert-error">{error}</div>}
 
         <AuthSectionTitle>Billing address</AuthSectionTitle>
 
-        <AuthField label="Legal name" htmlFor="billingLegalName">
+        <AuthField label="Legal name" htmlFor="billingLegalName" optional>
           <input
             id="billingLegalName"
             type="text"
-            required
             value={billingLegalName}
             onChange={(e) => setBillingLegalName(e.target.value)}
             className="auth-input"
@@ -167,10 +155,9 @@ function RegistrationAddressesForm() {
           />
         </AuthField>
 
-        <AuthField label="Address" htmlFor="billingAddress">
+        <AuthField label="Address" htmlFor="billingAddress" optional>
           <textarea
             id="billingAddress"
-            required
             rows={3}
             value={billingAddress}
             onChange={(e) => setBillingAddress(e.target.value)}
@@ -179,11 +166,10 @@ function RegistrationAddressesForm() {
           />
         </AuthField>
 
-        <AuthField label="City" htmlFor="billingCity">
+        <AuthField label="City" htmlFor="billingCity" optional>
           <input
             id="billingCity"
             type="text"
-            required
             value={billingCity}
             onChange={(e) => setBillingCity(e.target.value)}
             className="auth-input"
@@ -191,11 +177,10 @@ function RegistrationAddressesForm() {
           />
         </AuthField>
 
-        <AuthField label="State" htmlFor="billingState">
+        <AuthField label="State" htmlFor="billingState" optional>
           <input
             id="billingState"
             type="text"
-            required
             value={billingState}
             onChange={(e) => setBillingState(e.target.value)}
             className="auth-input"
@@ -203,12 +188,11 @@ function RegistrationAddressesForm() {
           />
         </AuthField>
 
-        <AuthField label="PIN" htmlFor="billingPincode">
+        <AuthField label="PIN" htmlFor="billingPincode" optional>
           <input
             id="billingPincode"
             type="text"
             inputMode="numeric"
-            required
             value={billingPincode}
             onChange={(e) => setBillingPincode(e.target.value)}
             className="auth-input"
@@ -216,11 +200,10 @@ function RegistrationAddressesForm() {
           />
         </AuthField>
 
-        <AuthField label="GST state" htmlFor="billingGstState">
+        <AuthField label="GST state" htmlFor="billingGstState" optional>
           <input
             id="billingGstState"
             type="text"
-            required
             value={billingGstState}
             onChange={(e) => setBillingGstState(e.target.value)}
             className="auth-input"
@@ -251,11 +234,10 @@ function RegistrationAddressesForm() {
 
         {!sameAsBilling ? (
           <>
-            <AuthField label="Legal name" htmlFor="shippingLegalName">
+            <AuthField label="Legal name" htmlFor="shippingLegalName" optional>
               <input
                 id="shippingLegalName"
                 type="text"
-                required
                 value={shippingLegalName}
                 onChange={(e) => setShippingLegalName(e.target.value)}
                 className="auth-input"
@@ -263,10 +245,9 @@ function RegistrationAddressesForm() {
               />
             </AuthField>
 
-            <AuthField label="Address" htmlFor="shippingAddress">
+            <AuthField label="Address" htmlFor="shippingAddress" optional>
               <textarea
                 id="shippingAddress"
-                required
                 rows={3}
                 value={shippingAddress}
                 onChange={(e) => setShippingAddress(e.target.value)}
@@ -275,11 +256,10 @@ function RegistrationAddressesForm() {
               />
             </AuthField>
 
-            <AuthField label="City" htmlFor="shippingCity">
+            <AuthField label="City" htmlFor="shippingCity" optional>
               <input
                 id="shippingCity"
                 type="text"
-                required
                 value={shippingCity}
                 onChange={(e) => setShippingCity(e.target.value)}
                 className="auth-input"
@@ -287,11 +267,10 @@ function RegistrationAddressesForm() {
               />
             </AuthField>
 
-            <AuthField label="State" htmlFor="shippingState">
+            <AuthField label="State" htmlFor="shippingState" optional>
               <input
                 id="shippingState"
                 type="text"
-                required
                 value={shippingState}
                 onChange={(e) => setShippingState(e.target.value)}
                 className="auth-input"
@@ -299,12 +278,11 @@ function RegistrationAddressesForm() {
               />
             </AuthField>
 
-            <AuthField label="PIN" htmlFor="shippingPincode">
+            <AuthField label="PIN" htmlFor="shippingPincode" optional>
               <input
                 id="shippingPincode"
                 type="text"
                 inputMode="numeric"
-                required
                 value={shippingPincode}
                 onChange={(e) => setShippingPincode(e.target.value)}
                 className="auth-input"
@@ -316,6 +294,14 @@ function RegistrationAddressesForm() {
 
         <button type="submit" disabled={isSubmitting} className="auth-button">
           {isSubmitting ? "Submitting..." : "Submit for approval"}
+        </button>
+        <button
+          type="button"
+          disabled={isSubmitting}
+          className="auth-link mt-3 w-full text-center"
+          onClick={() => void handleSkip()}
+        >
+          Skip addresses and submit
         </button>
       </form>
     </AuthLayout>

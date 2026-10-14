@@ -75,7 +75,7 @@ export async function signup(payload: {
   email: string;
   password: string;
   name: string;
-  businessName: string;
+  businessName?: string;
   mobileNumber: string;
   alternateMobileNumber?: string;
   whatsappNumber?: string;
@@ -87,7 +87,7 @@ export async function signup(payload: {
       email: payload.email.trim().toLowerCase(),
       password: payload.password,
       name: payload.name.trim(),
-      businessName: payload.businessName.trim(),
+      businessName: payload.businessName?.trim() || undefined,
       mobileNumber: payload.mobileNumber.trim(),
       alternateMobileNumber: payload.alternateMobileNumber?.trim() || undefined,
       whatsappNumber: payload.whatsappNumber?.trim() || undefined,
@@ -101,33 +101,34 @@ export async function signup(payload: {
   return res.json() as Promise<SignupResponse>;
 }
 
+/** RW-07: all fields except userId are optional on sparse registration submit. */
 export type GstDetailsPayload = {
   userId: string;
-  shopName: string;
-  businessType: string;
-  addressLine1: string;
+  shopName?: string;
+  businessType?: string;
+  addressLine1?: string;
   addressLine2?: string;
-  city: string;
-  state: string;
-  pincode: string;
-  businessEmail: string;
-  shopPhoneNumber: string;
-  gstNumber: string;
-  legalBusinessName: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  businessEmail?: string;
+  shopPhoneNumber?: string;
+  gstNumber?: string;
+  legalBusinessName?: string;
   tradeName?: string;
-  gstRegistrationState: string;
-  panNumber: string;
-  billingLegalName: string;
-  billingAddress: string;
-  billingCity: string;
-  billingState: string;
-  billingPincode: string;
-  billingGstState: string;
-  shippingLegalName: string;
-  shippingAddress: string;
-  shippingCity: string;
-  shippingState: string;
-  shippingPincode: string;
+  gstRegistrationState?: string;
+  panNumber?: string;
+  billingLegalName?: string;
+  billingAddress?: string;
+  billingCity?: string;
+  billingState?: string;
+  billingPincode?: string;
+  billingGstState?: string;
+  shippingLegalName?: string;
+  shippingAddress?: string;
+  shippingCity?: string;
+  shippingState?: string;
+  shippingPincode?: string;
 };
 
 export type GstDetailsResponse = {

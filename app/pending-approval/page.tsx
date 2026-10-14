@@ -6,7 +6,10 @@ import { Suspense, useCallback, useEffect, useRef } from "react";
 import { AuthLayout } from "@/components/auth-layout";
 import { useAuth } from "@/contexts/auth-context";
 import { fetchCurrentUser } from "@/lib/api";
-import { isCustomerApproved } from "@/lib/auth-routing";
+import {
+  buildBusinessInfoHref,
+  isCustomerApproved,
+} from "@/lib/auth-routing";
 
 const POLL_MS = 5000;
 
@@ -93,9 +96,19 @@ function PendingApprovalContent() {
             style={{ color: "var(--brand-text-muted)" }}
           >
             {token
-              ? "Checking approval... You will be signed in automatically when your account is ready."
+              ? user && !user.gstNumber
+                ? "Your account is incomplete (no GST yet). An admin can still review it, or you can add business details below."
+                : "Checking approval... You will be signed in automatically when your account is ready."
               : "Log in with your email to continue. Your account is waiting for admin approval."}
           </p>
+          {user && !user.gstNumber && user.id ? (
+            <Link
+              href={buildBusinessInfoHref(user.id, user.email)}
+              className="auth-link"
+            >
+              Complete business / GST details
+            </Link>
+          ) : null}
         </div>
       )}
 

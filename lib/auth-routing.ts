@@ -26,7 +26,12 @@ export function isCustomerApproved(user: SafeUser | null | undefined): boolean {
   if (!user || user.role !== "CUSTOMER") {
     return true;
   }
-  return Boolean(user.isApproved && user.approvalStatus === "APPROVED");
+  // RW-04: suspended customers keep APPROVED status with isActive=false.
+  return Boolean(
+    user.isApproved &&
+      user.approvalStatus === "APPROVED" &&
+      user.isActive
+  );
 }
 
 export function getCustomerNextRoute(user: SafeUser): CustomerRoute {
@@ -36,8 +41,10 @@ export function getCustomerNextRoute(user: SafeUser): CustomerRoute {
   if (user.approvalStatus === "REJECTED") {
     return "/pending-approval";
   }
+  // RW-07: incomplete profiles (no GST) wait for admin review; optional
+  // business/GST steps are no longer forced on every login.
   if (!user.gstNumber) {
-    return "/business-info";
+    return "/pending-approval";
   }
   if (!user.isApproved || user.approvalStatus !== "APPROVED") {
     return "/pending-approval";

@@ -5,8 +5,10 @@ import { FormEvent, Suspense, useEffect, useState } from "react";
 import { AuthField, AuthLayout } from "@/components/auth-layout";
 import { buildGstDetailsHref } from "@/lib/auth-routing";
 import {
+  EMPTY_BUSINESS_INFO,
   getDraftForUser,
   saveRegistrationDraft,
+  type RegistrationBusinessInfo,
 } from "@/lib/registration-draft";
 
 function BusinessInfoForm() {
@@ -43,47 +45,36 @@ function BusinessInfoForm() {
     }
   }, [userId, email]);
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-
+  function persistAndContinue(business: RegistrationBusinessInfo) {
     if (!userId) {
       setError("Please sign up again to continue.");
       router.replace("/signup");
       return;
     }
-
-    if (
-      !shopName.trim() ||
-      !businessType.trim() ||
-      !addressLine1.trim() ||
-      !city.trim() ||
-      !state.trim() ||
-      !pincode.trim() ||
-      !businessEmail.trim() ||
-      !shopPhoneNumber.trim()
-    ) {
-      setError("Please fill in all required business fields.");
-      return;
-    }
-
     const draft = getDraftForUser(userId, email);
-    saveRegistrationDraft({
-      ...draft,
-      business: {
-        shopName: shopName.trim(),
-        businessType: businessType.trim(),
-        addressLine1: addressLine1.trim(),
-        addressLine2: addressLine2.trim(),
-        city: city.trim(),
-        state: state.trim(),
-        pincode: pincode.trim(),
-        businessEmail: businessEmail.trim().toLowerCase(),
-        shopPhoneNumber: shopPhoneNumber.trim(),
-      },
-    });
-
+    saveRegistrationDraft({ ...draft, business });
     router.push(buildGstDetailsHref(userId, email));
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    persistAndContinue({
+      shopName: shopName.trim(),
+      businessType: businessType.trim(),
+      addressLine1: addressLine1.trim(),
+      addressLine2: addressLine2.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      pincode: pincode.trim(),
+      businessEmail: businessEmail.trim().toLowerCase(),
+      shopPhoneNumber: shopPhoneNumber.trim(),
+    });
+  }
+
+  function handleSkip() {
+    setError("");
+    persistAndContinue(EMPTY_BUSINESS_INFO);
   }
 
   return (
@@ -91,16 +82,15 @@ function BusinessInfoForm() {
       wide
       step={2}
       title="Business info"
-      subtitle="Tell us about your shop so we can set up your wholesale account."
+      subtitle="Shop details are optional — you can skip and add them later."
     >
       <form onSubmit={handleSubmit}>
         {error && <div className="auth-alert-error">{error}</div>}
 
-        <AuthField label="Shop name" htmlFor="shopName">
+        <AuthField label="Shop name" htmlFor="shopName" optional>
           <input
             id="shopName"
             type="text"
-            required
             value={shopName}
             onChange={(e) => setShopName(e.target.value)}
             className="auth-input"
@@ -108,11 +98,10 @@ function BusinessInfoForm() {
           />
         </AuthField>
 
-        <AuthField label="Business type" htmlFor="businessType">
+        <AuthField label="Business type" htmlFor="businessType" optional>
           <input
             id="businessType"
             type="text"
-            required
             value={businessType}
             onChange={(e) => setBusinessType(e.target.value)}
             className="auth-input"
@@ -120,11 +109,10 @@ function BusinessInfoForm() {
           />
         </AuthField>
 
-        <AuthField label="Address line 1" htmlFor="addressLine1">
+        <AuthField label="Address line 1" htmlFor="addressLine1" optional>
           <input
             id="addressLine1"
             type="text"
-            required
             value={addressLine1}
             onChange={(e) => setAddressLine1(e.target.value)}
             className="auth-input"
@@ -143,11 +131,10 @@ function BusinessInfoForm() {
           />
         </AuthField>
 
-        <AuthField label="City" htmlFor="city">
+        <AuthField label="City" htmlFor="city" optional>
           <input
             id="city"
             type="text"
-            required
             value={city}
             onChange={(e) => setCity(e.target.value)}
             className="auth-input"
@@ -155,11 +142,10 @@ function BusinessInfoForm() {
           />
         </AuthField>
 
-        <AuthField label="State" htmlFor="state">
+        <AuthField label="State" htmlFor="state" optional>
           <input
             id="state"
             type="text"
-            required
             value={state}
             onChange={(e) => setState(e.target.value)}
             className="auth-input"
@@ -167,12 +153,11 @@ function BusinessInfoForm() {
           />
         </AuthField>
 
-        <AuthField label="Pin code" htmlFor="pincode">
+        <AuthField label="Pin code" htmlFor="pincode" optional>
           <input
             id="pincode"
             type="text"
             inputMode="numeric"
-            required
             value={pincode}
             onChange={(e) => setPincode(e.target.value)}
             className="auth-input"
@@ -180,11 +165,10 @@ function BusinessInfoForm() {
           />
         </AuthField>
 
-        <AuthField label="Business contact email" htmlFor="businessEmail">
+        <AuthField label="Business contact email" htmlFor="businessEmail" optional>
           <input
             id="businessEmail"
             type="email"
-            required
             value={businessEmail}
             onChange={(e) => setBusinessEmail(e.target.value)}
             className="auth-input"
@@ -192,12 +176,11 @@ function BusinessInfoForm() {
           />
         </AuthField>
 
-        <AuthField label="Shop phone number" htmlFor="shopPhoneNumber">
+        <AuthField label="Shop phone number" htmlFor="shopPhoneNumber" optional>
           <input
             id="shopPhoneNumber"
             type="tel"
             inputMode="tel"
-            required
             value={shopPhoneNumber}
             onChange={(e) => setShopPhoneNumber(e.target.value)}
             className="auth-input"
@@ -207,6 +190,13 @@ function BusinessInfoForm() {
 
         <button type="submit" className="auth-button">
           Continue
+        </button>
+        <button
+          type="button"
+          className="auth-link mt-3 w-full text-center"
+          onClick={handleSkip}
+        >
+          Skip for now
         </button>
       </form>
     </AuthLayout>

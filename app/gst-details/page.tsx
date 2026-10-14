@@ -3,13 +3,13 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { AuthField, AuthLayout } from "@/components/auth-layout";
+import { buildRegistrationAddressesHref } from "@/lib/auth-routing";
 import {
-  buildBusinessInfoHref,
-  buildRegistrationAddressesHref,
-} from "@/lib/auth-routing";
-import {
+  EMPTY_GST_INFO,
   getDraftForUser,
   saveRegistrationDraft,
+  validateOptionalGstinPan,
+  type RegistrationGstInfo,
 } from "@/lib/registration-draft";
 
 function GstDetailsForm() {
@@ -29,10 +29,6 @@ function GstDetailsForm() {
   useEffect(() => {
     if (!userId) return;
     const draft = getDraftForUser(userId, email);
-    if (!draft.business) {
-      router.replace(buildBusinessInfoHref(userId, email));
-      return;
-    }
     if (draft.gst) {
       setGstNumber(draft.gst.gstNumber);
       setLegalBusinessName(draft.gst.legalBusinessName);
@@ -40,46 +36,41 @@ function GstDetailsForm() {
       setGstRegistrationState(draft.gst.gstRegistrationState);
       setPanNumber(draft.gst.panNumber);
     }
-  }, [userId, email, router]);
+  }, [userId, email]);
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-
+  function persistAndContinue(gst: RegistrationGstInfo) {
     if (!userId) {
       setError("Please sign up again to continue.");
       router.replace("/signup");
       return;
     }
-
-    if (
-      !gstNumber.trim() ||
-      !legalBusinessName.trim() ||
-      !gstRegistrationState.trim() ||
-      !panNumber.trim()
-    ) {
-      setError("GSTIN, legal business name, GST registration state, and PAN are required.");
-      return;
-    }
-
     const draft = getDraftForUser(userId, email);
-    if (!draft.business) {
-      router.replace(buildBusinessInfoHref(userId, email));
+    saveRegistrationDraft({ ...draft, gst });
+    router.push(buildRegistrationAddressesHref(userId, email));
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    const formatError = validateOptionalGstinPan({ gstNumber, panNumber });
+    if (formatError) {
+      setError(formatError);
       return;
     }
 
-    saveRegistrationDraft({
-      ...draft,
-      gst: {
-        gstNumber: gstNumber.trim().toUpperCase(),
-        legalBusinessName: legalBusinessName.trim(),
-        tradeName: tradeName.trim(),
-        gstRegistrationState: gstRegistrationState.trim(),
-        panNumber: panNumber.trim().toUpperCase(),
-      },
+    persistAndContinue({
+      gstNumber: gstNumber.trim().toUpperCase(),
+      legalBusinessName: legalBusinessName.trim(),
+      tradeName: tradeName.trim(),
+      gstRegistrationState: gstRegistrationState.trim(),
+      panNumber: panNumber.trim().toUpperCase(),
     });
+  }
 
-    router.push(buildRegistrationAddressesHref(userId, email));
+  function handleSkip() {
+    setError("");
+    persistAndContinue(EMPTY_GST_INFO);
   }
 
   return (
@@ -87,17 +78,16 @@ function GstDetailsForm() {
       wide
       step={3}
       title="GST information"
-      subtitle="Submit your GST details. Admin will review and approve your account."
+      subtitle="GST details are optional. Without GST your account stays incomplete until an admin reviews it."
     >
       <form onSubmit={handleSubmit}>
         {error && <div className="auth-alert-error">{error}</div>}
 
-        <AuthField label="GSTIN" htmlFor="gstNumber">
+        <AuthField label="GSTIN" htmlFor="gstNumber" optional>
           <input
             id="gstNumber"
             type="text"
             autoCapitalize="characters"
-            required
             value={gstNumber}
             onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
             className="auth-input"
@@ -105,11 +95,10 @@ function GstDetailsForm() {
           />
         </AuthField>
 
-        <AuthField label="Legal business name" htmlFor="legalBusinessName">
+        <AuthField label="Legal business name" htmlFor="legalBusinessName" optional>
           <input
             id="legalBusinessName"
             type="text"
-            required
             value={legalBusinessName}
             onChange={(e) => setLegalBusinessName(e.target.value)}
             className="auth-input"
@@ -128,11 +117,14 @@ function GstDetailsForm() {
           />
         </AuthField>
 
-        <AuthField label="GST registration state" htmlFor="gstRegistrationState">
+        <AuthField
+          label="GST registration state"
+          htmlFor="gstRegistrationState"
+          optional
+        >
           <input
             id="gstRegistrationState"
             type="text"
-            required
             value={gstRegistrationState}
             onChange={(e) => setGstRegistrationState(e.target.value)}
             className="auth-input"
@@ -140,12 +132,11 @@ function GstDetailsForm() {
           />
         </AuthField>
 
-        <AuthField label="PAN" htmlFor="panNumber">
+        <AuthField label="PAN" htmlFor="panNumber" optional>
           <input
             id="panNumber"
             type="text"
             autoCapitalize="characters"
-            required
             value={panNumber}
             onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
             className="auth-input"
@@ -155,6 +146,13 @@ function GstDetailsForm() {
 
         <button type="submit" className="auth-button">
           Continue
+        </button>
+        <button
+          type="button"
+          className="auth-link mt-3 w-full text-center"
+          onClick={handleSkip}
+        >
+          Skip for now
         </button>
       </form>
     </AuthLayout>

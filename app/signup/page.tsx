@@ -32,14 +32,8 @@ export default function SignupPage() {
     e.preventDefault();
     setError("");
 
-    if (
-      !name.trim() ||
-      !businessName.trim() ||
-      !mobileNumber.trim() ||
-      !email.trim() ||
-      !password.trim()
-    ) {
-      setError("Full name, business name, mobile, email, and password are required.");
+    if (!name.trim() || !mobileNumber.trim() || !email.trim() || !password.trim()) {
+      setError("Full name, mobile, email, and password are required.");
       return;
     }
 
@@ -56,7 +50,7 @@ export default function SignupPage() {
         email: normalizedEmail,
         password,
         name,
-        businessName,
+        businessName: businessName.trim() || undefined,
         mobileNumber,
         alternateMobileNumber,
         whatsappNumber,
@@ -81,7 +75,7 @@ export default function SignupPage() {
     <AuthLayout
       wide
       title="Create account"
-      subtitle="Join Drishx to shop and track orders"
+      subtitle="Join Drishx to shop and track orders. Business and GST details are optional."
       step={1}
     >
       <form onSubmit={handleSubmit}>
@@ -100,11 +94,10 @@ export default function SignupPage() {
           />
         </AuthField>
 
-        <AuthField label="Business name" htmlFor="businessName">
+        <AuthField label="Business name" htmlFor="businessName" optional>
           <input
             id="businessName"
             type="text"
-            required
             value={businessName}
             onChange={(e) => setBusinessName(e.target.value)}
             className="auth-input"
