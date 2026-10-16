@@ -9,7 +9,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EmployeeOrderListCard } from "@/components/employee/employee-order-list-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,7 +22,7 @@ import {
   type OrderListGroup,
 } from "@/lib/order-list-display";
 import { normalizeOrderStatus } from "@/lib/order-tracking";
-import { fetchOrders } from "@/lib/orders-api";
+import { useGetOrders } from "@/lib/modules/orders/query/use-get-orders";
 import type { OrderRecord } from "@/lib/types/orders";
 import { cn } from "@/lib/utils";
 
@@ -73,29 +73,47 @@ export function EmployeeOrdersScreen({
   variant = "standard",
 }: EmployeeOrdersScreenProps) {
   const isRx = variant === "rx";
-  const [orders, setOrders] = useState<OrderRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<StaffOrderFilter>("ALL");
+  const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [enriching, setEnriching] = useState(false);
+  const [enrichError, setEnrichError] = useState<string | null>(null);
 
-  const loadOrders = useCallback(async () => {
-    try {
-      setError(null);
-      const data = await fetchOrders();
-      const withStock = await enrichOrdersWithCatalogStock(data);
-      setOrders(withStock);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load orders.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const {
+    data: rawOrders,
+    loading,
+    refreshing,
+    error,
+    refetch,
+  } = useGetOrders();
 
+  // Catalog stock enrichment stays client-side after the shared orders fetch.
   useEffect(() => {
-    void loadOrders();
-  }, [loadOrders]);
+    if (loading && rawOrders === undefined) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      setEnriching(true);
+      setEnrichError(null);
+      try {
+        const withStock = await enrichOrdersWithCatalogStock(rawOrders ?? []);
+        if (!cancelled) setOrders(withStock);
+      } catch (err) {
+        if (!cancelled) {
+          setOrders([]);
+          setEnrichError(
+            err instanceof Error ? err.message : "Failed to load orders."
+          );
+        }
+      } finally {
+        if (!cancelled) setEnriching(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rawOrders, loading]);
 
   const orderGroups = useMemo(() => {
     const fulfillment = filterStaffFulfillmentOrders(orders);
@@ -110,6 +128,9 @@ export function EmployeeOrdersScreen({
       orderGroups.filter((group) => groupMatchesStaffFilter(group, activeFilter)),
     [orderGroups, activeFilter]
   );
+
+  const showLoading = (loading && rawOrders === undefined) || enriching;
+  const displayError = error?.message ?? enrichError;
 
   const emptyMessage =
     activeFilter === "ALL"
@@ -183,13 +204,12 @@ export function EmployeeOrdersScreen({
               size="icon"
               className="size-9 shrink-0 rounded-xl border-[var(--brand-input-border)]"
               onClick={() => {
-                setRefreshing(true);
-                void loadOrders();
+                void refetch();
               }}
-              disabled={loading || refreshing}
+              disabled={showLoading || refreshing}
               aria-label={isRx ? "Refresh RX orders" : "Refresh orders"}
             >
-              {refreshing ? (
+              {refreshing || enriching ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <RefreshCw className="size-4" />
@@ -219,20 +239,21 @@ export function EmployeeOrdersScreen({
           })}
         </div>
 
-        {loading ? (
+        {showLoading ? (
           <div className="space-y-3">
             <Skeleton className="h-40 rounded-2xl" />
             <Skeleton className="h-40 rounded-2xl" />
             <Skeleton className="h-40 rounded-2xl" />
           </div>
-        ) : error ? (
+        ) : displayError ? (
           <div className="rounded-2xl border border-[var(--brand-danger-border)] bg-[var(--brand-danger-bg)] px-4 py-8 text-center">
-            <p className="text-sm font-medium text-[var(--brand-danger)]">{error}</p>
+            <p className="text-sm font-medium text-[var(--brand-danger)]">
+              {displayError}
+            </p>
             <Button
               className="mt-4 rounded-xl"
               onClick={() => {
-                setLoading(true);
-                void loadOrders();
+                void refetch();
               }}
             >
               Retry

@@ -2,17 +2,16 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 import { ProfileSubpageHeader } from "@/components/profile/profile-screen";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/contexts/auth-context";
 import {
-  fetchInvoiceById,
   formatInvoiceAmount,
-  formatLensOrderDetails,
-  type InvoiceRecord,
+  formatInvoiceLensDetails,
+  presentInvoiceTaxDocument,
 } from "@/lib/invoices-api";
+import { useDownloadInvoicePdf } from "@/lib/modules/invoices/mutation/use-download-invoice-pdf";
+import { useGetInvoice } from "@/lib/modules/invoices/query/use-get-invoice";
 import { cn } from "@/lib/utils";
 
 function DetailBlock({
@@ -34,32 +33,47 @@ function DetailBlock({
 
 export function InvoiceDetailScreen() {
   const params = useParams<{ id: string }>();
-  const invoiceId = params.id;
-  const { token } = useAuth();
-  const [invoice, setInvoice] = useState<InvoiceRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const invoiceId = typeof params.id === "string" ? params.id : params.id?.[0];
 
-  const loadInvoice = useCallback(async () => {
-    if (!invoiceId) {
-      setError("Missing invoice id.");
-      setLoading(false);
+  const { data, loading, error, refetch } = useGetInvoice(invoiceId, {
+    enabled: Boolean(invoiceId),
+  });
+  const {
+    mutate: downloadTaxInvoice,
+    pending: downloading,
+    error: downloadError,
+  } = useDownloadInvoicePdf();
+
+  // Drop prior invoice while id changes so we never render stale details.
+  const invoice = data?.id === invoiceId ? data : undefined;
+  const missingId = !invoiceId;
+  const showLoading = Boolean(invoiceId) && (loading || (!invoice && !error));
+
+  async function handleDownloadTaxInvoice() {
+    if (!invoice || downloading) return;
+
+    // Open blank tab synchronously so popup blockers allow the later blob URL.
+    const popup =
+      typeof window !== "undefined"
+        ? window.open("about:blank", "_blank")
+        : null;
+
+    const taxDocument = await downloadTaxInvoice({
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+    });
+
+    if (!taxDocument) {
+      try {
+        popup?.close();
+      } catch {
+        // ignore
+      }
       return;
     }
-    try {
-      setError(null);
-      const data = await fetchInvoiceById(invoiceId, token);
-      setInvoice(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load invoice.");
-    } finally {
-      setLoading(false);
-    }
-  }, [invoiceId, token]);
 
-  useEffect(() => {
-    void loadInvoice();
-  }, [loadInvoice]);
+    presentInvoiceTaxDocument(taxDocument, popup);
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
@@ -68,7 +82,13 @@ export function InvoiceDetailScreen() {
         backHref="/profile/invoices"
       />
 
-      {loading ? (
+      {missingId ? (
+        <div className="rounded-2xl border border-(--brand-danger-border) bg-(--brand-danger-bg) px-4 py-8 text-center">
+          <p className="text-sm font-medium text-(--brand-danger)">
+            Missing invoice id.
+          </p>
+        </div>
+      ) : showLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-40 rounded-2xl" />
           <Skeleton className="h-56 rounded-2xl" />
@@ -76,9 +96,14 @@ export function InvoiceDetailScreen() {
       ) : error ? (
         <div className="rounded-2xl border border-(--brand-danger-border) bg-(--brand-danger-bg) px-4 py-8 text-center">
           <p className="text-sm font-medium text-(--brand-danger)">
-            {error}
+            {error.message}
           </p>
-          <Button className="mt-4 rounded-xl" onClick={() => void loadInvoice()}>
+          <Button
+            className="mt-4 rounded-xl"
+            onClick={() => {
+              void refetch();
+            }}
+          >
             Retry
           </Button>
         </div>
@@ -126,14 +151,17 @@ export function InvoiceDetailScreen() {
               })}
             </p>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <Button asChild className="rounded-xl" variant="outline">
-                <a
-                  href={`/api/invoices/${invoice.id}/pdf`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Download tax invoice
-                </a>
+              <Button
+                type="button"
+                className="rounded-xl"
+                variant="outline"
+                disabled={downloading}
+                aria-busy={downloading}
+                onClick={() => {
+                  void handleDownloadTaxInvoice();
+                }}
+              >
+                {downloading ? "Opening tax invoice…" : "Download tax invoice"}
               </Button>
               {invoice.orderId ? (
                 <Button asChild className="rounded-xl">
@@ -143,9 +171,18 @@ export function InvoiceDetailScreen() {
                 </Button>
               ) : null}
             </div>
+            {downloadError ? (
+              <p
+                className="mt-2 text-sm font-medium text-(--brand-danger)"
+                role="alert"
+              >
+                {downloadError.message}
+              </p>
+            ) : null}
           </section>
 
-          {(invoice.taxableAmount != null || (invoice.lines && invoice.lines.length > 0)) && (
+          {(invoice.taxableAmount != null ||
+            (invoice.lines && invoice.lines.length > 0)) && (
             <section className="rounded-2xl border border-(--brand-card-border) bg-(--brand-card) px-5 sm:px-6">
               <h3 className="py-4 text-sm font-extrabold uppercase tracking-wider text-(--brand-text-muted)">
                 Tax breakup
@@ -211,7 +248,7 @@ export function InvoiceDetailScreen() {
               />
               <DetailBlock
                 label="Lens details"
-                value={formatLensOrderDetails(invoice.order)}
+                value={formatInvoiceLensDetails(invoice)}
               />
               <DetailBlock
                 label="Order total"

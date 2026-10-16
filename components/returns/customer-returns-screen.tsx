@@ -8,17 +8,17 @@ import {
   RefreshCw,
   RotateCcw,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  fetchReturnRequests,
   formatReturnStatus,
   type ReturnRequestRecord,
   type ReturnRequestStatus,
   type ReturnRequestType,
 } from "@/lib/returns-api";
+import { useGetReturnRequests } from "@/lib/modules/returns/query/use-get-return-requests";
 import { cn } from "@/lib/utils";
 
 type FilterKey = "ALL" | "ACTIVE" | "HISTORY" | ReturnRequestType;
@@ -84,28 +84,10 @@ function itemSummary(request: ReturnRequestRecord) {
 }
 
 export function CustomerReturnsScreen() {
-  const [requests, setRequests] = useState<ReturnRequestRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("ALL");
 
-  const loadRequests = useCallback(async () => {
-    try {
-      setError(null);
-      const data = await fetchReturnRequests();
-      setRequests(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load returns.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadRequests();
-  }, [loadRequests]);
+  const { data: requests = [], loading, refreshing, error, refetch } =
+    useGetReturnRequests();
 
   const filtered = useMemo(() => {
     return requests.filter((request) => {
@@ -137,8 +119,7 @@ export function CustomerReturnsScreen() {
           className="size-9 shrink-0 rounded-xl border-[var(--brand-input-border)]"
           disabled={loading || refreshing}
           onClick={() => {
-            setRefreshing(true);
-            void loadRequests();
+            void refetch();
           }}
           aria-label="Refresh returns"
         >
@@ -173,12 +154,13 @@ export function CustomerReturnsScreen() {
 
       {error ? (
         <div className="rounded-2xl border border-[var(--brand-danger-border)] bg-[var(--brand-danger-bg)] px-4 py-8 text-center">
-          <p className="text-sm font-medium text-[var(--brand-danger)]">{error}</p>
+          <p className="text-sm font-medium text-[var(--brand-danger)]">
+            {error.message}
+          </p>
           <Button
             className="mt-4 rounded-xl"
             onClick={() => {
-              setLoading(true);
-              void loadRequests();
+              void refetch();
             }}
           >
             Retry

@@ -2,15 +2,13 @@
 
 import { ChevronDown, ChevronLeft, Loader2, RefreshCw, Search } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/contexts/auth-context";
 import {
   DEFAULT_INVOICE_SORT,
   filterAndSortInvoices,
-  fetchInvoices,
   formatInvoiceAmount,
   INVOICE_DATE_FILTERS,
   INVOICE_SORT_OPTIONS,
@@ -20,6 +18,7 @@ import {
   type InvoiceSortOption,
   type InvoiceStatusFilter,
 } from "@/lib/invoices-api";
+import { useGetInvoices } from "@/lib/modules/invoices/query/use-get-invoices";
 import { cn } from "@/lib/utils";
 
 function InvoiceStatusBadge({ status }: { status: string }) {
@@ -83,34 +82,13 @@ function chipClass(active: boolean) {
 }
 
 export function InvoicesScreen() {
-  const { token } = useAuth();
-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<InvoiceStatusFilter>("ALL");
   const [dateFilter, setDateFilter] = useState<InvoiceDateFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [sort, setSort] = useState<InvoiceSortOption>(DEFAULT_INVOICE_SORT);
 
-  const loadInvoices = useCallback(async () => {
-    try {
-      setError(null);
-      const data = await fetchInvoices(token);
-      setInvoices(data);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load invoices."
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    void loadInvoices();
-  }, [loadInvoices]);
+  const { data: invoices = [], loading, refreshing, error, refetch } =
+    useGetInvoices();
 
   const filtered = useMemo(
     () =>
@@ -157,8 +135,7 @@ export function InvoicesScreen() {
           size="icon"
           className="size-9 shrink-0 rounded-xl border-[var(--brand-input-border)]"
           onClick={() => {
-            setRefreshing(true);
-            void loadInvoices();
+            void refetch();
           }}
           disabled={loading || refreshing}
           aria-label="Refresh invoices"
@@ -239,13 +216,12 @@ export function InvoicesScreen() {
       ) : error ? (
         <div className="rounded-2xl border border-[var(--brand-danger-border)] bg-[var(--brand-danger-bg)] px-4 py-8 text-center">
           <p className="text-sm font-medium text-[var(--brand-danger)]">
-            {error}
+            {error.message}
           </p>
           <Button
             className="mt-4 rounded-xl"
             onClick={() => {
-              setLoading(true);
-              void loadInvoices();
+              void refetch();
             }}
           >
             Retry

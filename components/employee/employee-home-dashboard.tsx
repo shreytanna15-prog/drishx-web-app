@@ -10,7 +10,7 @@ import {
   Warehouse,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +32,7 @@ import {
   getPendingStaffTasks,
   type EmployeeHomeOverview,
 } from "@/lib/employee-home-stats";
-import { fetchOrders } from "@/lib/orders-api";
+import { useGetOrders } from "@/lib/modules/orders/query/use-get-orders";
 import { fetchMyTasks, type TaskRecord } from "@/lib/tasks-api";
 import type { OrderRecord } from "@/lib/types/orders";
 import { cn } from "@/lib/utils";
@@ -154,56 +154,90 @@ function CollapsiblePanel({
 
 export function EmployeeHomeDashboard() {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [overview, setOverview] = useState<EmployeeHomeOverview>({
-    tasksAssigned: "—",
-    tasksCompleted: "—",
-    ordersReceived: 0,
-    ordersPending: 0,
-  });
-  const [pendingTasks, setPendingTasks] = useState<TaskRecord[]>([]);
-  const [pendingOrders, setPendingOrders] = useState<OrderRecord[]>([]);
+  const {
+    data: orders = [],
+    loading: ordersLoading,
+    error: ordersError,
+    refetch: refetchOrders,
+  } = useGetOrders();
 
-  const loadDashboard = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const [tasks, setTasks] = useState<TaskRecord[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [tasksFailed, setTasksFailed] = useState(false);
+  const [tasksGeneration, setTasksGeneration] = useState(0);
 
-    let orders: OrderRecord[] = [];
-    let tasks: TaskRecord[] = [];
-    const failures: string[] = [];
-
-    // Load one at a time — parallel calls exhaust the hosted backend DB pool and return 500.
-    try {
-      orders = await fetchOrders();
-    } catch {
-      failures.push("orders");
-    }
-
-    try {
-      tasks = await fetchMyTasks();
-    } catch {
-      failures.push("tasks");
-    }
-
-    setOverview(computeEmployeeHomeOverview(orders, tasks));
-    setPendingTasks(getPendingStaffTasks(tasks).slice(0, 10));
-    setPendingOrders(getPendingStaffOrders(orders).slice(0, 8));
-
-    if (failures.length === 2) {
-      setError("Unable to load dashboard data from the backend.");
-    } else if (failures.length === 1) {
-      setError(
-        `Could not load ${failures[0]}. Showing the data that loaded successfully.`
-      );
-    }
-
-    setLoading(false);
-  }, []);
-
+  // Load tasks after orders settle — parallel GETs exhaust the hosted DB pool (500s).
   useEffect(() => {
-    void loadDashboard();
-  }, [loadDashboard]);
+    if (ordersLoading) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      setTasksLoading(true);
+      try {
+        const next = await fetchMyTasks();
+        if (!cancelled) {
+          setTasks(next);
+          setTasksFailed(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setTasks([]);
+          setTasksFailed(true);
+        }
+      } finally {
+        if (!cancelled) setTasksLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ordersLoading, orders, tasksGeneration]);
+
+  const loading = ordersLoading || tasksLoading;
+
+  const overview: EmployeeHomeOverview = useMemo(
+    () =>
+      loading
+        ? {
+            tasksAssigned: "—",
+            tasksCompleted: "—",
+            ordersReceived: 0,
+            ordersPending: 0,
+          }
+        : computeEmployeeHomeOverview(orders, tasks),
+    [loading, orders, tasks]
+  );
+
+  const pendingTasks = useMemo(
+    () => (loading ? [] : getPendingStaffTasks(tasks).slice(0, 10)),
+    [loading, tasks]
+  );
+
+  const pendingOrders: OrderRecord[] = useMemo(
+    () => (loading ? [] : getPendingStaffOrders(orders).slice(0, 8)),
+    [loading, orders]
+  );
+
+  const error = useMemo(() => {
+    const ordersFailed = Boolean(ordersError);
+    if (ordersFailed && tasksFailed) {
+      return "Unable to load dashboard data from the backend.";
+    }
+    if (ordersFailed) {
+      return "Could not load orders. Showing the data that loaded successfully.";
+    }
+    if (tasksFailed) {
+      return "Could not load tasks. Showing the data that loaded successfully.";
+    }
+    return null;
+  }, [ordersError, tasksFailed]);
+
+  const retryDashboard = useCallback(() => {
+    void refetchOrders();
+    setTasksGeneration((value) => value + 1);
+  }, [refetchOrders]);
 
   if (!user) return null;
 
@@ -239,7 +273,7 @@ export function EmployeeHomeDashboard() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => void loadDashboard()}
+              onClick={retryDashboard}
               className="rounded-xl border-[var(--brand-input-border)] font-semibold"
             >
               <RefreshCw className="size-4" />

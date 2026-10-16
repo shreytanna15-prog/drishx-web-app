@@ -7,7 +7,7 @@ import {
   Timer,
   XCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { OrderListCard } from "@/components/orders/order-list-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,8 +16,8 @@ import {
   groupOrdersForList,
   type OrderListGroup,
 } from "@/lib/order-list-display";
+import { useGetOrders } from "@/lib/modules/orders/query/use-get-orders";
 import { normalizeOrderStatus } from "@/lib/order-tracking";
-import { fetchOrders } from "@/lib/orders-api";
 import type { OrderRecord } from "@/lib/types/orders";
 import { cn } from "@/lib/utils";
 
@@ -60,33 +60,16 @@ function groupMatchesFilter(group: OrderListGroup, filter: FilterKey): boolean {
 
 export function MyOrdersScreen() {
   const { user } = useAuth();
-  const [orders, setOrders] = useState<OrderRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("ALL");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: orders = [], loading, error, refetch } = useGetOrders();
 
   const orderGroups = useMemo(
     () => groupOrdersForList(orders, user?.businessName, "Your company"),
     [orders, user?.businessName]
   );
-
-  const loadOrders = useCallback(async () => {
-    try {
-      setError(null);
-      const data = await fetchOrders();
-      setOrders(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load orders.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadOrders();
-  }, [loadOrders]);
 
   const filteredGroups = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -172,12 +155,13 @@ export function MyOrdersScreen() {
         </div>
       ) : error ? (
         <div className="rounded-2xl border border-[var(--brand-danger-border)] bg-[var(--brand-danger-bg)] px-4 py-8 text-center">
-          <p className="text-sm font-medium text-[var(--brand-danger)]">{error}</p>
+          <p className="text-sm font-medium text-[var(--brand-danger)]">
+            {error.message}
+          </p>
           <Button
             className="mt-4 rounded-xl"
             onClick={() => {
-              setLoading(true);
-              void loadOrders();
+              void refetch();
             }}
           >
             Retry

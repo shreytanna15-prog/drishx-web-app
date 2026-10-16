@@ -2,7 +2,7 @@
 
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { OrderGroupDetail } from "@/components/orders/order-group-detail";
 import { DeliverySummary } from "@/components/delivery/delivery-service-picker";
@@ -10,32 +10,18 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
 import { groupOrdersForList } from "@/lib/order-list-display";
-import { fetchOrders } from "@/lib/orders-api";
-import type { OrderRecord } from "@/lib/types/orders";
+import { useGetOrders } from "@/lib/modules/orders/query/use-get-orders";
 
+/**
+ * Order detail needs the full orders list so checkout-batch siblings can be
+ * grouped (status / tracking). Website has no compact customer batch endpoint;
+ * keep fetchOrders via useGetOrders (same contract as My Orders).
+ */
 export function OrderDetailScreen() {
   const params = useParams<{ id: string }>();
   const groupKey = decodeURIComponent(params.id);
   const { user } = useAuth();
-  const [orders, setOrders] = useState<OrderRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadOrders = useCallback(async () => {
-    try {
-      setError(null);
-      const data = await fetchOrders();
-      setOrders(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load order.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadOrders();
-  }, [loadOrders]);
+  const { data: orders = [], loading, error, refetch } = useGetOrders();
 
   const group = useMemo(() => {
     const groups = groupOrdersForList(orders, user?.businessName, "Your company");
@@ -74,8 +60,10 @@ export function OrderDetailScreen() {
         </div>
       ) : error ? (
         <div className="rounded-2xl border border-(--brand-danger-border) bg-(--brand-danger-bg) px-4 py-8 text-center">
-          <p className="text-sm font-medium text-(--brand-danger)">{error}</p>
-          <Button className="mt-4 rounded-xl" onClick={() => void loadOrders()}>
+          <p className="text-sm font-medium text-(--brand-danger)">
+            {error.message}
+          </p>
+          <Button className="mt-4 rounded-xl" onClick={() => void refetch()}>
             Retry
           </Button>
         </div>
@@ -90,7 +78,10 @@ export function OrderDetailScreen() {
         </div>
       ) : (
         <div className="space-y-4">
-          <OrderGroupDetail group={group} onAlternateChanged={() => void loadOrders()} />
+          <OrderGroupDetail
+            group={group}
+            onAlternateChanged={() => void refetch()}
+          />
           {group.orders.map((order) => (
             <DeliverySummary key={order.id} order={order} />
           ))}
