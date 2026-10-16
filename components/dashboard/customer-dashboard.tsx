@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ComponentType } from "react";
+import { useMemo, type ComponentType } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,17 +33,13 @@ import {
   computeCustomerOverviewTrends,
   EMPTY_OVERVIEW_TRENDS,
   type OverviewTrend,
-  type OverviewTrends,
 } from "@/lib/home-order-stats";
-import {
-  getLastOrderSummary,
-  type LastOrderSummary,
-} from "@/lib/last-order-summary";
+import { getLastOrderSummary } from "@/lib/last-order-summary";
 import {
   computeMostOrderedProducts,
   type MostOrderedProduct,
 } from "@/lib/most-ordered-products";
-import { fetchOrders } from "@/lib/orders-api";
+import { useGetOrders } from "@/lib/modules/orders/query/use-get-orders";
 import { cn } from "@/lib/utils";
 import { getCompanyDisplayName } from "@/lib/user-display";
 
@@ -214,47 +210,28 @@ function ProductRow({
 export function CustomerDashboard() {
   const router = useRouter();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [overview, setOverview] = useState({
-    total: 0,
-    inProgress: 0,
-    readyToShip: 0,
-    completed: 0,
-  });
-  const [overviewTrends, setOverviewTrends] =
-    useState<OverviewTrends>(EMPTY_OVERVIEW_TRENDS);
-  const [mostOrdered, setMostOrdered] = useState<MostOrderedProduct[]>([]);
-  const [lastOrder, setLastOrder] = useState<LastOrderSummary | null>(null);
+  // Preserve prior silent-failure UX: failed loads show empty overview (no banner).
+  const { data: orders = [], loading } = useGetOrders();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      try {
-        const orders = await fetchOrders();
-        if (cancelled) return;
-        setOverview(computeCustomerOrderOverview(orders));
-        setOverviewTrends(computeCustomerOverviewTrends(orders));
-        setMostOrdered(computeMostOrderedProducts(orders, 5));
-        setLastOrder(getLastOrderSummary(orders));
-      } catch {
-        if (!cancelled) {
-          setOverview({ total: 0, inProgress: 0, readyToShip: 0, completed: 0 });
-          setOverviewTrends(EMPTY_OVERVIEW_TRENDS);
-          setMostOrdered([]);
-          setLastOrder(null);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const overview = useMemo(
+    () =>
+      loading
+        ? { total: 0, inProgress: 0, readyToShip: 0, completed: 0 }
+        : computeCustomerOrderOverview(orders),
+    [loading, orders]
+  );
+  const overviewTrends = useMemo(
+    () => (loading ? EMPTY_OVERVIEW_TRENDS : computeCustomerOverviewTrends(orders)),
+    [loading, orders]
+  );
+  const mostOrdered = useMemo(
+    () => (loading ? [] : computeMostOrderedProducts(orders, 5)),
+    [loading, orders]
+  );
+  const lastOrder = useMemo(
+    () => (loading ? null : getLastOrderSummary(orders)),
+    [loading, orders]
+  );
 
   if (!user) return null;
 

@@ -2,16 +2,14 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
-  fetchReturnRequest,
   formatReturnPowerLine,
   formatReturnStatus,
-  type ReturnRequestRecord,
 } from "@/lib/returns-api";
+import { useGetReturnRequest } from "@/lib/modules/returns/query/use-get-return-request";
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -27,27 +25,14 @@ function formatDate(value: string) {
 
 export function CustomerReturnDetailScreen() {
   const params = useParams<{ id: string }>();
-  const [request, setRequest] = useState<ReturnRequestRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const returnId = typeof params?.id === "string" ? params.id : params?.id?.[0];
 
-  const load = useCallback(async () => {
-    const id = params?.id;
-    if (!id) return;
-    setLoading(true);
-    setError("");
-    try {
-      setRequest(await fetchReturnRequest(id));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load return request.");
-    } finally {
-      setLoading(false);
-    }
-  }, [params]);
+  const { data, loading, error } = useGetReturnRequest(returnId, {
+    enabled: Boolean(returnId),
+  });
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // Drop prior request while id changes so we never render stale details.
+  const request = data?.id === returnId ? data : undefined;
 
   const orderGroupKey =
     request?.primaryOrder?.checkoutBatchId?.trim() ||
@@ -76,7 +61,7 @@ export function CustomerReturnDetailScreen() {
 
       {error ? (
         <div className="rounded-2xl border border-[var(--brand-danger-border)] bg-[var(--brand-danger-bg)] px-4 py-3 text-sm text-[var(--brand-danger)]">
-          {error}
+          {error.message}
         </div>
       ) : null}
 

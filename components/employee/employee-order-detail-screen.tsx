@@ -8,7 +8,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   EmployeeOrderGroupDetail,
@@ -22,38 +22,34 @@ import {
   printEmployeeOrder,
 } from "@/lib/order-print";
 import type { OrderTrackingStatus } from "@/lib/order-tracking";
-import { fetchOrders, updateOrderStatus } from "@/lib/orders-api";
+import { updateOrderStatus } from "@/lib/orders-api";
+import { useGetOrders } from "@/lib/modules/orders/query/use-get-orders";
 import { EmployeeDeliveryPackCard } from "@/components/employee/employee-delivery-pack-card";
-import type { OrderRecord } from "@/lib/types/orders";
 
+/**
+ * Employee order detail needs the full assigned-orders list so checkout-batch
+ * siblings can be grouped. Website has no compact staff batch endpoint;
+ * keep fetchOrders via useGetOrders (same contract as the employee list).
+ */
 export function EmployeeOrderDetailScreen() {
   const params = useParams<{ id: string }>();
-  const groupKey = decodeURIComponent(params.id);
-  const [orders, setOrders] = useState<OrderRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const groupKey = decodeURIComponent(
+    typeof params.id === "string" ? params.id : params.id?.[0] ?? ""
+  );
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"print" | "download" | null>(null);
 
-  const loadOrders = useCallback(async () => {
-    try {
-      setError(null);
-      const data = await fetchOrders();
-      setOrders(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load order.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadOrders();
-  }, [loadOrders]);
+  const {
+    data: orders = [],
+    loading,
+    refreshing,
+    error,
+    refetch,
+  } = useGetOrders({ enabled: Boolean(groupKey) });
 
   const orderGroup = useMemo(() => {
+    if (!groupKey) return null;
+
     const targetKey =
       groupKey ||
       orders.find((order) => order.id === groupKey)?.checkoutBatchId?.trim() ||
@@ -87,7 +83,7 @@ export function EmployeeOrderDetailScreen() {
           payload.status,
           payload.pickedQuantity
         );
-        await loadOrders();
+        await refetch();
       } catch (err) {
         window.alert(
           err instanceof Error ? err.message : "Failed to update order."
@@ -96,7 +92,7 @@ export function EmployeeOrderDetailScreen() {
         setUpdatingOrderId(null);
       }
     },
-    [loadOrders]
+    [refetch]
   );
 
   const handlePrintOrder = useCallback(async () => {
@@ -180,8 +176,7 @@ export function EmployeeOrderDetailScreen() {
               size="icon"
               className="size-9 rounded-xl border-[var(--brand-input-border)]"
               onClick={() => {
-                setRefreshing(true);
-                void loadOrders();
+                void refetch();
               }}
               disabled={loading || refreshing || exporting !== null}
               aria-label="Refresh order"
@@ -207,8 +202,15 @@ export function EmployeeOrderDetailScreen() {
         </div>
       ) : error ? (
         <div className="rounded-2xl border border-[var(--brand-danger-border)] bg-[var(--brand-danger-bg)] px-4 py-8 text-center">
-          <p className="text-sm font-medium text-[var(--brand-danger)]">{error}</p>
-          <Button className="mt-4 rounded-xl" onClick={() => void loadOrders()}>
+          <p className="text-sm font-medium text-[var(--brand-danger)]">
+            {error.message}
+          </p>
+          <Button
+            className="mt-4 rounded-xl"
+            onClick={() => {
+              void refetch();
+            }}
+          >
             Retry
           </Button>
         </div>
@@ -224,31 +226,39 @@ export function EmployeeOrderDetailScreen() {
       ) : orderGroup.isPhotoOrder ? (
         <div className="space-y-4">
           {orderGroup.orders.map((line) => (
-            <EmployeeDeliveryPackCard key={line.id} order={line} onDone={loadOrders} />
+            <EmployeeDeliveryPackCard
+              key={line.id}
+              order={line}
+              onDone={() => void refetch()}
+            />
           ))}
           <EmployeePhotoOrderDetail
-          group={orderGroup}
-          onUpdateStatus={(orderId, status) =>
-            handleUpdateLine(orderId, {
-              status,
-              pickedQuantity: (() => {
-                const order = orderGroup.orders.find(
-                  (entry) => entry.id === orderId
-                );
-                const value = order?.pickedQuantity;
-                return typeof value === "number" && Number.isFinite(value)
-                  ? Math.floor(value)
-                  : 0;
-              })(),
-            })
-          }
-          updatingOrderId={updatingOrderId}
+            group={orderGroup}
+            onUpdateStatus={(orderId, status) =>
+              handleUpdateLine(orderId, {
+                status,
+                pickedQuantity: (() => {
+                  const order = orderGroup.orders.find(
+                    (entry) => entry.id === orderId
+                  );
+                  const value = order?.pickedQuantity;
+                  return typeof value === "number" && Number.isFinite(value)
+                    ? Math.floor(value)
+                    : 0;
+                })(),
+              })
+            }
+            updatingOrderId={updatingOrderId}
           />
         </div>
       ) : (
         <div className="space-y-4">
           {orderGroup.orders.map((line) => (
-            <EmployeeDeliveryPackCard key={line.id} order={line} onDone={loadOrders} />
+            <EmployeeDeliveryPackCard
+              key={line.id}
+              order={line}
+              onDone={() => void refetch()}
+            />
           ))}
           <EmployeeOrderGroupDetail
             group={orderGroup}

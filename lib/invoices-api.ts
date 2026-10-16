@@ -19,6 +19,12 @@ export type InvoiceOrder = {
   totalAmount: number | string;
   status: string;
   createdAt: string;
+  /** Customer-selected prescription at checkout (not catalog defaults). */
+  sph?: number | string | null;
+  cyl?: number | string | null;
+  axis?: number | null;
+  add?: number | string | null;
+  eye?: string | null;
   singleVisionLens?: {
     sph: number | string;
     cyl: number | string | null;
@@ -102,6 +108,165 @@ export async function fetchInvoiceById(
   return result as InvoiceRecord;
 }
 
+/** Printable tax-invoice payload from GET /api/invoices/:id/pdf (HTML, not binary PDF). */
+export type InvoiceTaxDocument = {
+  html: string;
+  contentType: string;
+  filename: string;
+};
+
+/** Same-origin BFF path — never put tokens in the URL. */
+export function invoiceTaxDocumentPath(invoiceId: string): string {
+  return `/api/invoices/${encodeURIComponent(invoiceId)}/pdf`;
+}
+
+export function sanitizeInvoiceTaxFilename(invoiceNumber?: string): string {
+  const base = (invoiceNumber?.trim() || "tax-invoice").replace(
+    /[/\\?%*:|"<>]/g,
+    "-"
+  );
+  return /\.html?$/i.test(base) ? base : `${base}.html`;
+}
+
+export function filenameFromContentDisposition(
+  header: string | null | undefined,
+  fallbackInvoiceNumber?: string
+): string {
+  if (header) {
+    const utf8Match = /filename\*=(?:UTF-8''|utf-8'')([^;]+)/i.exec(header);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1].trim().replace(/^"|"$/g, ""));
+      } catch {
+        // fall through to plain filename / fallback
+      }
+    }
+    const plainMatch = /filename="((?:\\.|[^"\\])*)"|filename=([^;]+)/i.exec(
+      header
+    );
+    if (plainMatch) {
+      const raw = (plainMatch[1] ?? plainMatch[2] ?? "").trim();
+      if (raw) return raw.replace(/^"|"$/g, "");
+    }
+  }
+  return sanitizeInvoiceTaxFilename(fallbackInvoiceNumber);
+}
+
+/**
+ * Authenticated fetch of the tax invoice document (printable HTML).
+ * Uses authFetch for Bearer + silent refresh. Does not open windows or show UI.
+ */
+export async function downloadInvoicePdf(
+  invoiceId: string,
+  invoiceNumber?: string
+): Promise<InvoiceTaxDocument> {
+  const path = invoiceTaxDocumentPath(invoiceId);
+  if (path.includes("?") || /access_token|token=/i.test(path)) {
+    throw new Error("Invalid tax invoice path.");
+  }
+
+  const response = await authFetch(path, { cache: "no-store" });
+  if (!response.ok) {
+    let message = "Failed to open tax invoice.";
+    try {
+      const data = (await response.json()) as { error?: string };
+      if (data.error) message = data.error;
+    } catch {
+      // keep default message
+    }
+    throw new Error(message);
+  }
+
+  const contentType =
+    response.headers.get("content-type")?.split(";")[0]?.trim() ||
+    "text/html";
+  const html = await response.text();
+  const filename = filenameFromContentDisposition(
+    response.headers.get("content-disposition"),
+    invoiceNumber
+  );
+
+  return { html, contentType, filename };
+}
+
+/** Default delay before revoking a blob object URL after opening/downloading. */
+export const INVOICE_TAX_DOCUMENT_OBJECT_URL_REVOKE_MS = 60_000;
+
+export function createInvoiceTaxDocumentObjectUrl(
+  html: string,
+  contentType: string
+): string {
+  const type = contentType.includes("html")
+    ? contentType
+    : "text/html;charset=utf-8";
+  return URL.createObjectURL(new Blob([html], { type }));
+}
+
+export function revokeInvoiceTaxDocumentObjectUrl(objectUrl: string): void {
+  URL.revokeObjectURL(objectUrl);
+}
+
+/**
+ * Show a fetched tax document: prefer an already-opened blank tab, else download fallback.
+ * Schedules object-URL cleanup; does not navigate to the authenticated API path.
+ */
+export function presentInvoiceTaxDocument(
+  taxDocument: InvoiceTaxDocument,
+  popup: Window | null,
+  options?: {
+    revokeAfterMs?: number;
+    schedule?: typeof setTimeout;
+    revoke?: (url: string) => void;
+  }
+): {
+  objectUrl: string;
+  openedInPopup: boolean;
+  usedDownloadFallback: boolean;
+} {
+  const objectUrl = createInvoiceTaxDocumentObjectUrl(
+    taxDocument.html,
+    taxDocument.contentType
+  );
+  const schedule = options?.schedule ?? setTimeout;
+  const revoke = options?.revoke ?? revokeInvoiceTaxDocumentObjectUrl;
+  const revokeAfterMs =
+    options?.revokeAfterMs ?? INVOICE_TAX_DOCUMENT_OBJECT_URL_REVOKE_MS;
+
+  let openedInPopup = false;
+
+  if (popup && !popup.closed) {
+    try {
+      popup.location.replace(objectUrl);
+      openedInPopup = true;
+    } catch {
+      try {
+        popup.close();
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  let usedDownloadFallback = false;
+  if (!openedInPopup && typeof globalThis.document !== "undefined") {
+    const anchor = globalThis.document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = taxDocument.filename;
+    anchor.rel = "noreferrer";
+    anchor.target = "_blank";
+    globalThis.document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    usedDownloadFallback = true;
+  }
+
+  schedule(() => {
+    revoke(objectUrl);
+  }, revokeAfterMs);
+
+  return { objectUrl, openedInPopup, usedDownloadFallback };
+}
+
 export function formatInvoiceAmount(value: number | string): string {
   const num = Number(value);
   if (!Number.isFinite(num)) {
@@ -110,23 +275,91 @@ export function formatInvoiceAmount(value: number | string): string {
   return num.toLocaleString("en-IN");
 }
 
+function formatPrescriptionParts(parts: {
+  sph?: number | string | null;
+  cyl?: number | string | null;
+  axis?: number | null;
+  add?: number | string | null;
+  eye?: string | null;
+}): string | null {
+  const tokens: string[] = [];
+  if (parts.sph != null && parts.sph !== "") tokens.push(`SPH ${parts.sph}`);
+  if (parts.cyl != null && parts.cyl !== "") tokens.push(`CYL ${parts.cyl}`);
+  if (parts.axis != null) tokens.push(`AXIS ${parts.axis}`);
+  if (parts.add != null && parts.add !== "") tokens.push(`ADD ${parts.add}`);
+  const eye = typeof parts.eye === "string" ? parts.eye.trim() : "";
+  if (eye) tokens.push(`Eye ${eye}`);
+  return tokens.length ? tokens.join(", ") : null;
+}
+
+/**
+ * Lens details for an order: prefer checkout prescription on the order,
+ * then catalog lens defaults. Prefer {@link formatInvoiceLensDetails} for
+ * issued invoices so the UI matches the tax document snapshot.
+ */
 export function formatLensOrderDetails(order: InvoiceOrder | undefined): string {
   if (!order) {
     return "—";
   }
+
+  const fromOrder = formatPrescriptionParts({
+    sph: order.sph,
+    cyl: order.cyl,
+    axis: order.axis,
+    add: order.add,
+    eye: order.eye,
+  });
+  if (fromOrder) return fromOrder;
+
   if (order.progressiveLens) {
     const lens = order.progressiveLens;
-    return `SPH ${lens.sph}, CYL ${lens.cyl ?? "—"}, ADD ${lens.add}, Eye ${lens.eye}`;
+    return (
+      formatPrescriptionParts({
+        sph: lens.sph,
+        cyl: lens.cyl,
+        axis: lens.axis,
+        add: lens.add,
+        eye: lens.eye,
+      }) ?? "—"
+    );
   }
   if (order.kryptokLens) {
     const lens = order.kryptokLens;
-    return `SPH ${lens.sph}, CYL ${lens.cyl ?? "—"}, ADD ${lens.add}`;
+    return (
+      formatPrescriptionParts({
+        sph: lens.sph,
+        cyl: lens.cyl,
+        axis: lens.axis,
+        add: lens.add,
+      }) ?? "—"
+    );
   }
   if (order.singleVisionLens) {
     const lens = order.singleVisionLens;
-    return `SPH ${lens.sph}, CYL ${lens.cyl ?? "—"}`;
+    return (
+      formatPrescriptionParts({
+        sph: lens.sph,
+        cyl: lens.cyl,
+      }) ?? "—"
+    );
   }
-  return order.lensType;
+  return order.lensType || "—";
+}
+
+/**
+ * FIN-01: Prefer frozen InvoiceLine.powerLabel (matches tax PDF), then order
+ * prescription fields, then catalog lens defaults.
+ */
+export function formatInvoiceLensDetails(invoice: {
+  lines?: Array<{ powerLabel?: string | null }> | null;
+  order?: InvoiceOrder | null;
+}): string {
+  const labels = (invoice.lines ?? [])
+    .map((line) => line.powerLabel?.trim())
+    .filter((label): label is string => Boolean(label));
+  if (labels.length === 1) return labels[0]!;
+  if (labels.length > 1) return labels.join("; ");
+  return formatLensOrderDetails(invoice.order ?? undefined);
 }
 
 export type InvoiceStatusFilter = "ALL" | "PAID" | "UNPAID" | "ISSUED" | "PARTIALLY_PAID";
