@@ -2,7 +2,12 @@
 
 import { ChevronDown, ChevronLeft, Loader2, RefreshCw, Search } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  QueryEmptyState,
+  QueryErrorState,
+  QueryLoadMoreButton,
+} from "@/components/query-list-states";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,6 +15,7 @@ import {
   DEFAULT_INVOICE_SORT,
   filterAndSortInvoices,
   formatInvoiceAmount,
+  invoiceDateFilterToRange,
   INVOICE_DATE_FILTERS,
   INVOICE_SORT_OPTIONS,
   INVOICE_STATUS_FILTERS,
@@ -18,8 +24,11 @@ import {
   type InvoiceSortOption,
   type InvoiceStatusFilter,
 } from "@/lib/invoices-api";
+import { usePaginatedListState } from "@/lib/hooks/use-paginated-list-state";
 import { useGetInvoices } from "@/lib/modules/invoices/query/use-get-invoices";
 import { cn } from "@/lib/utils";
+
+const PAGE_SIZE = 20;
 
 function InvoiceStatusBadge({ status }: { status: string }) {
   const paid = status === "PAID";
@@ -85,20 +94,48 @@ export function InvoicesScreen() {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatusFilter>("ALL");
   const [dateFilter, setDateFilter] = useState<InvoiceDateFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [sort, setSort] = useState<InvoiceSortOption>(DEFAULT_INVOICE_SORT);
 
-  const { data: invoices = [], loading, refreshing, error, refetch } =
-    useGetInvoices();
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQ(searchQuery.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [searchQuery]);
 
+  // Server accepts concrete InvoiceStatus; legacy UNPAID is client-filtered.
+  const serverStatus =
+    statusFilter === "ALL" || statusFilter === "UNPAID"
+      ? undefined
+      : statusFilter;
+  const dateRange = invoiceDateFilterToRange(dateFilter);
+
+  const listResetKey = `${statusFilter}|${dateFilter}|${debouncedQ}`;
+  const { page, setPage, items, onPageSuccess } =
+    usePaginatedListState<InvoiceRecord>(listResetKey);
+
+  const { data, loading, refreshing, error, refetch } = useGetInvoices(
+    {
+      page,
+      limit: PAGE_SIZE,
+      status: serverStatus,
+      q: debouncedQ || undefined,
+      dateFrom: dateRange.dateFrom,
+      dateTo: dateRange.dateTo,
+    },
+    { onSuccess: onPageSuccess }
+  );
+
+  // Sort (+ legacy UNPAID) remain client-side on pages loaded so far.
+  // Date range is applied server-side via dateFrom/dateTo.
   const filtered = useMemo(
     () =>
-      filterAndSortInvoices(invoices, {
-        status: statusFilter,
-        date: dateFilter,
-        search: searchQuery,
+      filterAndSortInvoices(items, {
+        status: statusFilter === "UNPAID" ? "UNPAID" : "ALL",
+        date: "ALL",
+        search: "",
         sort,
       }),
-    [invoices, statusFilter, dateFilter, searchQuery, sort]
+    [items, statusFilter, sort]
   );
 
   const filtersActive =
@@ -106,11 +143,14 @@ export function InvoicesScreen() {
     dateFilter !== "ALL" ||
     searchQuery.trim().length > 0;
   const emptyMessage =
-    invoices.length === 0
+    items.length === 0
       ? "No invoices found."
       : filtersActive
         ? "No invoices match these filters."
         : "No invoices found.";
+
+  const showInitialLoading = loading && page === 1 && items.length === 0;
+  const hasMore = Boolean(data?.hasMore);
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
@@ -135,6 +175,7 @@ export function InvoicesScreen() {
           size="icon"
           className="size-9 shrink-0 rounded-xl border-[var(--brand-input-border)]"
           onClick={() => {
+            setPage(1);
             void refetch();
           }}
           disabled={loading || refreshing}
@@ -200,44 +241,40 @@ export function InvoicesScreen() {
           ))}
         </div>
 
-        {!loading && !error ? (
+        {!showInitialLoading && !error ? (
           <p className="text-xs font-semibold text-[var(--brand-text-muted)]">
             {filtered.length} invoice{filtered.length === 1 ? "" : "s"}
+            {hasMore ? " (load more for older)" : ""}
           </p>
         ) : null}
       </div>
 
-      {loading ? (
+      {showInitialLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-24 rounded-2xl" />
           <Skeleton className="h-24 rounded-2xl" />
           <Skeleton className="h-24 rounded-2xl" />
         </div>
       ) : error ? (
-        <div className="rounded-2xl border border-[var(--brand-danger-border)] bg-[var(--brand-danger-bg)] px-4 py-8 text-center">
-          <p className="text-sm font-medium text-[var(--brand-danger)]">
-            {error.message}
-          </p>
-          <Button
-            className="mt-4 rounded-xl"
-            onClick={() => {
-              void refetch();
-            }}
-          >
-            Retry
-          </Button>
-        </div>
+        <QueryErrorState
+          message={error.message}
+          onRetry={() => {
+            setPage(1);
+            void refetch();
+          }}
+        />
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 py-16 text-center">
-          <p className="text-sm font-medium text-[var(--brand-text-muted)]">
-            {emptyMessage}
-          </p>
-        </div>
+        <QueryEmptyState message={emptyMessage} />
       ) : (
         <div className="space-y-3">
           {filtered.map((invoice) => (
             <InvoiceCard key={invoice.id} invoice={invoice} />
           ))}
+          <QueryLoadMoreButton
+            hasMore={hasMore}
+            loading={loading || refreshing}
+            onLoadMore={() => setPage((p) => p + 1)}
+          />
         </div>
       )}
     </div>

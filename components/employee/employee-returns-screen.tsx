@@ -6,19 +6,24 @@ import {
   Loader2,
   Package,
   RefreshCw,
-  RotateCcw,
   UserRound,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 
+import {
+  QueryEmptyState,
+  QueryErrorState,
+  QueryLoadMoreButton,
+} from "@/components/query-list-states";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePaginatedListState } from "@/lib/hooks/use-paginated-list-state";
 import {
-  fetchReturnRequests,
   formatReturnStatus,
   type ReturnRequestRecord,
   type ReturnRequestStatus,
 } from "@/lib/returns-api";
+import { useGetReturnRequests } from "@/lib/modules/returns/query/use-get-return-requests";
 import { cn } from "@/lib/utils";
 
 type FilterKey = "ALL" | ReturnRequestStatus;
@@ -30,6 +35,8 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "MORE_INFO_REQUIRED", label: "More info" },
   { key: "CLOSED", label: "Closed" },
 ];
+
+const PAGE_SIZE = 20;
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -77,33 +84,21 @@ function itemSummary(request: ReturnRequestRecord) {
 }
 
 export function EmployeeReturnsScreen() {
-  const [requests, setRequests] = useState<ReturnRequestRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("ALL");
+  const { page, setPage, items, onPageSuccess } =
+    usePaginatedListState<ReturnRequestRecord>(activeFilter);
 
-  const loadRequests = useCallback(async () => {
-    try {
-      setError(null);
-      const data = await fetchReturnRequests();
-      setRequests(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load returns.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const { data, loading, refreshing, error, refetch } = useGetReturnRequests(
+    {
+      page,
+      limit: PAGE_SIZE,
+      status: activeFilter === "ALL" ? undefined : activeFilter,
+    },
+    { onSuccess: onPageSuccess }
+  );
 
-  useEffect(() => {
-    void loadRequests();
-  }, [loadRequests]);
-
-  const filtered = useMemo(() => {
-    if (activeFilter === "ALL") return requests;
-    return requests.filter((request) => request.status === activeFilter);
-  }, [activeFilter, requests]);
+  const showInitialLoading = loading && page === 1 && items.length === 0;
+  const hasMore = Boolean(data?.hasMore);
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 space-y-5">
@@ -123,8 +118,8 @@ export function EmployeeReturnsScreen() {
           className="size-9 shrink-0 rounded-xl border-[var(--brand-input-border)]"
           disabled={loading || refreshing}
           onClick={() => {
-            setRefreshing(true);
-            void loadRequests();
+            setPage(1);
+            void refetch();
           }}
           aria-label="Refresh returns"
         >
@@ -157,39 +152,28 @@ export function EmployeeReturnsScreen() {
         })}
       </div>
 
-      {error ? (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-8 text-center text-sm text-rose-300">
-          {error}
-          <div className="mt-4">
-            <Button
-              className="rounded-xl"
-              onClick={() => {
-                setLoading(true);
-                void loadRequests();
-              }}
-            >
-              Retry
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {loading ? (
+      {showInitialLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-32 w-full rounded-2xl" />
           <Skeleton className="h-32 w-full rounded-2xl" />
         </div>
-      ) : !error && filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[var(--brand-card-border)] bg-[var(--brand-card)] px-6 py-16 text-center">
-          <RotateCcw className="mx-auto mb-3 size-10 text-[var(--brand-text-muted)]" />
-          <p className="font-semibold text-[var(--brand-text)]">No return requests</p>
+      ) : error ? (
+        <QueryErrorState
+          message={error.message}
+          onRetry={() => {
+            setPage(1);
+            void refetch();
+          }}
+        />
+      ) : items.length === 0 ? (
+        <QueryEmptyState message="No return requests">
           <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
             Returns appear here after admin approval and assignment.
           </p>
-        </div>
-      ) : !error ? (
+        </QueryEmptyState>
+      ) : (
         <div className="space-y-3">
-          {filtered.map((request) => (
+          {items.map((request) => (
             <Link
               key={request.id}
               href={`/employee/returns/${request.id}`}
@@ -240,8 +224,13 @@ export function EmployeeReturnsScreen() {
               </p>
             </Link>
           ))}
+          <QueryLoadMoreButton
+            hasMore={hasMore}
+            loading={loading || refreshing}
+            onLoadMore={() => setPage((p) => p + 1)}
+          />
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

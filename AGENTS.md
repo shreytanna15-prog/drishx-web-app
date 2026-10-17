@@ -12,6 +12,6 @@ Read the matching skill **before** substantial work:
 
 | When working on… | Skill |
 |------------------|--------|
-| Client fetch / mutate / loading / errors | `drishx-client-api` |
+| Client fetch / mutate / lists / pagination / loading / errors | `drishx-client-api` |
 
 See `.agents/README.md`. After clone on Windows: `powershell -File .agents\link-skills.ps1`

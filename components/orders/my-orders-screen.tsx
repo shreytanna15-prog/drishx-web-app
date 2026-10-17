@@ -7,11 +7,12 @@ import {
   Timer,
   XCircle,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { OrderListCard } from "@/components/orders/order-list-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
+import { usePaginatedListState } from "@/lib/hooks/use-paginated-list-state";
 import {
   groupOrdersForList,
   type OrderListGroup,
@@ -33,6 +34,16 @@ const FILTER_OPTIONS: {
   { key: "COMPLETED", label: "Completed", icon: CheckCircle2 },
   { key: "CANCELLED", label: "Cancelled", icon: XCircle },
 ];
+
+const IN_PROGRESS_STATUS =
+  "PENDING,PICKING,PACKED,DISPATCHED,PARTIALLY_FULFILLED,AWAITING_PROCUREMENT";
+
+function statusParamForFilter(filter: FilterKey): string | undefined {
+  if (filter === "ALL") return undefined;
+  if (filter === "COMPLETED") return "COMPLETED";
+  if (filter === "CANCELLED") return "CANCELLED";
+  return IN_PROGRESS_STATUS;
+}
 
 function isInProgressStatus(status: string): boolean {
   const normalized = normalizeOrderStatus(status);
@@ -63,26 +74,45 @@ export function MyOrdersScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("ALL");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
 
-  const { data: orders = [], loading, error, refetch } = useGetOrders();
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQ(searchQuery.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [searchQuery]);
 
-  const orderGroups = useMemo(
-    () => groupOrdersForList(orders, user?.businessName, "Your company"),
-    [orders, user?.businessName]
+  const listResetKey = `${activeFilter}|${debouncedQ}`;
+  const { page, setPage, items, onPageSuccess } =
+    usePaginatedListState<OrderRecord>(listResetKey);
+
+  const {
+    data,
+    loading,
+    refreshing,
+    error,
+    refetch,
+  } = useGetOrders(
+    {
+      page,
+      limit: 20,
+      status: statusParamForFilter(activeFilter),
+      q: debouncedQ || undefined,
+    },
+    { onSuccess: onPageSuccess }
   );
 
+  const orderGroups = useMemo(
+    () => groupOrdersForList(items, user?.businessName, "Your company"),
+    [items, user?.businessName]
+  );
+
+  // Server already filtered by status/q; keep group-level match for multi-line batches.
   const filteredGroups = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return orderGroups.filter((group) => {
-      if (!groupMatchesFilter(group, activeFilter)) return false;
-      if (!q) return true;
-      return (
-        group.displayOrderId.toLowerCase().includes(q) ||
-        group.companyName.toLowerCase().includes(q) ||
-        group.status.label.toLowerCase().includes(q)
-      );
-    });
-  }, [orderGroups, activeFilter, searchQuery]);
+    return orderGroups.filter((group) => groupMatchesFilter(group, activeFilter));
+  }, [orderGroups, activeFilter]);
+
+  const showInitialLoading = loading && page === 1 && items.length === 0;
+  const hasMore = Boolean(data?.hasMore);
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
@@ -147,7 +177,7 @@ export function MyOrdersScreen() {
         })}
       </div>
 
-      {loading ? (
+      {showInitialLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-40 rounded-2xl" />
           <Skeleton className="h-40 rounded-2xl" />
@@ -181,6 +211,16 @@ export function MyOrdersScreen() {
           {filteredGroups.map((group) => (
             <OrderListCard key={group.key} group={group} />
           ))}
+          {hasMore ? (
+            <Button
+              variant="outline"
+              className="w-full rounded-xl"
+              disabled={loading || refreshing}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              {loading || refreshing ? "Loading…" : "Load more"}
+            </Button>
+          ) : null}
         </div>
       )}
     </div>

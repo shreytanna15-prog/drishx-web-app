@@ -10,18 +10,17 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
 import { groupOrdersForList } from "@/lib/order-list-display";
-import { useGetOrders } from "@/lib/modules/orders/query/use-get-orders";
+import { useGetOrderGroup } from "@/lib/modules/orders/query/use-get-order-group";
 
 /**
- * Order detail needs the full orders list so checkout-batch siblings can be
- * grouped (status / tracking). Website has no compact customer batch endpoint;
- * keep fetchOrders via useGetOrders (same contract as My Orders).
+ * Order detail loads the checkout batch (or single order) via batchId / detail GET —
+ * not the full unbounded orders list (RW-11 Phase B).
  */
 export function OrderDetailScreen() {
   const params = useParams<{ id: string }>();
   const groupKey = decodeURIComponent(params.id);
   const { user } = useAuth();
-  const { data: orders = [], loading, error, refetch } = useGetOrders();
+  const { data: orders = [], loading, error, refetch } = useGetOrderGroup(groupKey);
 
   const group = useMemo(() => {
     const groups = groupOrdersForList(orders, user?.businessName, "Your company");
@@ -78,13 +77,8 @@ export function OrderDetailScreen() {
         </div>
       ) : (
         <div className="space-y-4">
-          <OrderGroupDetail
-            group={group}
-            onAlternateChanged={() => void refetch()}
-          />
-          {group.orders.map((order) => (
-            <DeliverySummary key={order.id} order={order} />
-          ))}
+          <OrderGroupDetail group={group} />
+          <DeliverySummary order={group.orders[0]!} />
         </div>
       )}
     </div>

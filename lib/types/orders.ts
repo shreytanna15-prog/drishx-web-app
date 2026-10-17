@@ -47,6 +47,8 @@ export type OrderRecord = {
   orderNumber?: number | null;
   checkoutBatchId?: string | null;
   orderImageUrl?: string | null;
+  /** List summary flag — signed URL only on detail GET (RW-11 Phase B). */
+  hasOrderImage?: boolean;
   lensType: ApiLensType;
   lineType?: CartLineType | null;
   wholesaleSpec?: WholesaleSpec | null;

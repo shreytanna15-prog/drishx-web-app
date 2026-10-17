@@ -130,6 +130,9 @@ export function EmployeeProcurementScreen() {
 
   const [mode, setMode] = useState<ScreenMode>("orders");
   const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersHasMore, setOrdersHasMore] = useState(false);
+  const [loadingMoreOrders, setLoadingMoreOrders] = useState(false);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
@@ -172,19 +175,36 @@ export function EmployeeProcurementScreen() {
     onCancel: onCancelDialog,
   } = useBrandConfirm();
 
-  const loadOrders = useCallback(async () => {
+  const loadOrders = useCallback(async (page = 1, append = false) => {
     try {
       setOrdersError(null);
-      const data = await fetchOrders();
-      const withStock = await enrichOrdersWithCatalogStock(data);
-      setOrders(withStock);
+      if (append) setLoadingMoreOrders(true);
+      const result = await fetchOrders({
+        status: "AWAITING_PROCUREMENT",
+        page,
+        limit: 30,
+      });
+      const withStock = await enrichOrdersWithCatalogStock(result.items);
+      setOrdersHasMore(result.hasMore);
+      setOrdersPage(result.page);
+      setOrders((prev) => {
+        if (!append || result.page <= 1) return withStock;
+        const seen = new Set(prev.map((o) => o.id));
+        const merged = [...prev];
+        for (const row of withStock) {
+          if (!seen.has(row.id)) merged.push(row);
+        }
+        return merged;
+      });
     } catch (err) {
       setOrdersError(
         err instanceof Error ? err.message : "Failed to load procurement orders."
       );
+      if (!append) setOrders([]);
     } finally {
       setLoadingOrders(false);
       setRefreshing(false);
+      setLoadingMoreOrders(false);
     }
   }, []);
 
@@ -224,17 +244,21 @@ export function EmployeeProcurementScreen() {
   }, [lensFilter, lensSearch]);
 
   useEffect(() => {
-    if (mode === "orders") {
+    if (mode !== "orders") return;
+    const t = window.setTimeout(() => {
       setLoadingOrders(true);
-      void loadOrders();
-    }
+      void loadOrders(1, false);
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [mode, loadOrders]);
 
   useEffect(() => {
-    if (mode === "history") {
+    if (mode !== "history") return;
+    const t = window.setTimeout(() => {
       setLoadingHistory(true);
       void loadHistory();
-    }
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [mode, loadHistory]);
 
   useEffect(() => {
@@ -517,7 +541,7 @@ export function EmployeeProcurementScreen() {
               onClick={() => {
                 if (mode === "orders") {
                   setRefreshing(true);
-                  void loadOrders();
+                  void loadOrders(1, false);
                 } else {
                   setLoadingHistory(true);
                   void loadHistory();
@@ -574,7 +598,7 @@ export function EmployeeProcurementScreen() {
                   className="mt-3 rounded-xl"
                   onClick={() => {
                     setLoadingOrders(true);
-                    void loadOrders();
+                    void loadOrders(1, false);
                   }}
                 >
                   Retry
@@ -591,16 +615,33 @@ export function EmployeeProcurementScreen() {
                 </p>
               </div>
             ) : (
-              procurementGroups.map((group) => (
-                <EmployeeProcurementOrderCard
-                  key={group.key}
-                  group={group}
-                  onProductPress={(order) => {
-                    setSelectedOrder(order);
-                    setSheetOpen(true);
-                  }}
-                />
-              ))
+              <>
+                {procurementGroups.map((group) => (
+                  <EmployeeProcurementOrderCard
+                    key={group.key}
+                    group={group}
+                    onProductPress={(order) => {
+                      setSelectedOrder(order);
+                      setSheetOpen(true);
+                    }}
+                  />
+                ))}
+                {ordersHasMore ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full rounded-xl"
+                    disabled={loadingMoreOrders}
+                    onClick={() => void loadOrders(ordersPage + 1, true)}
+                  >
+                    {loadingMoreOrders ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      "Load more orders"
+                    )}
+                  </Button>
+                ) : null}
+              </>
             )}
           </div>
         ) : null}
@@ -1029,7 +1070,7 @@ export function EmployeeProcurementScreen() {
           setSelectedOrder(null);
         }}
         onSuccess={() => {
-          void loadOrders();
+          void loadOrders(1, false);
         }}
       />
 

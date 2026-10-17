@@ -2,19 +2,39 @@
 
 import { QUERY_REGISTRY } from "@/lib/constants/api-registry";
 import { useApiQuery } from "@/lib/hooks/use-api-query";
-import { fetchOrders } from "@/lib/orders-api";
+import {
+  fetchOrders,
+  type ListOrdersParams,
+  type PaginatedOrders,
+} from "@/lib/orders-api";
 import type { QueryOptions } from "@/lib/types/api-client";
-import type { OrderRecord } from "@/lib/types/orders";
 
 /**
- * Gold-standard orders query (drishx-client-api).
- * Wraps existing fetchOrders — no transport calls in screens.
+ * Paginated orders list (RW-11 Phase B).
+ * Params first; deps include every request-changing field.
  */
-export function useGetOrders(options?: QueryOptions<OrderRecord[]>) {
+export function useGetOrders(
+  params?: ListOrdersParams,
+  options?: QueryOptions<PaginatedOrders>
+) {
   return useApiQuery(
     QUERY_REGISTRY.getOrders,
-    () => fetchOrders(),
-    [],
+    () => fetchOrders(params),
+    [
+      params?.page,
+      params?.limit,
+      params?.status,
+      params?.q,
+      params?.userId,
+      params?.batchId,
+      params?.employeeId,
+      params?.lineType,
+      params?.orderKind,
+      params?.scope,
+      params?.assigneeId,
+      params?.dateFrom,
+      params?.dateTo,
+    ],
     options
   );
 }

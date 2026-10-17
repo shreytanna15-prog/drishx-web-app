@@ -29,17 +29,11 @@ import { CatalogSearchBar } from "@/components/shop/catalog-search-bar";
 import { useAuth } from "@/contexts/auth-context";
 import { CLIENT_HOME_CATEGORIES } from "@/lib/home-categories";
 import {
-  computeCustomerOrderOverview,
-  computeCustomerOverviewTrends,
   EMPTY_OVERVIEW_TRENDS,
   type OverviewTrend,
 } from "@/lib/home-order-stats";
-import { getLastOrderSummary } from "@/lib/last-order-summary";
-import {
-  computeMostOrderedProducts,
-  type MostOrderedProduct,
-} from "@/lib/most-ordered-products";
-import { useGetOrders } from "@/lib/modules/orders/query/use-get-orders";
+import type { MostOrderedProduct } from "@/lib/most-ordered-products";
+import { useGetOrdersOverview } from "@/lib/modules/orders/query/use-get-orders-overview";
 import { cn } from "@/lib/utils";
 import { getCompanyDisplayName } from "@/lib/user-display";
 
@@ -211,26 +205,29 @@ export function CustomerDashboard() {
   const router = useRouter();
   const { user } = useAuth();
   // Preserve prior silent-failure UX: failed loads show empty overview (no banner).
-  const { data: orders = [], loading } = useGetOrders();
+  const { data, loading } = useGetOrdersOverview();
+
+  const customer =
+    data && data.role === "CUSTOMER" ? data : null;
 
   const overview = useMemo(
     () =>
-      loading
+      loading || !customer
         ? { total: 0, inProgress: 0, readyToShip: 0, completed: 0 }
-        : computeCustomerOrderOverview(orders),
-    [loading, orders]
+        : customer.overview,
+    [loading, customer]
   );
   const overviewTrends = useMemo(
-    () => (loading ? EMPTY_OVERVIEW_TRENDS : computeCustomerOverviewTrends(orders)),
-    [loading, orders]
+    () => (loading || !customer ? EMPTY_OVERVIEW_TRENDS : customer.trends),
+    [loading, customer]
   );
-  const mostOrdered = useMemo(
-    () => (loading ? [] : computeMostOrderedProducts(orders, 5)),
-    [loading, orders]
+  const mostOrdered: MostOrderedProduct[] = useMemo(
+    () => (loading || !customer ? [] : customer.topProducts),
+    [loading, customer]
   );
   const lastOrder = useMemo(
-    () => (loading ? null : getLastOrderSummary(orders)),
-    [loading, orders]
+    () => (loading || !customer ? null : customer.lastOrder),
+    [loading, customer]
   );
 
   if (!user) return null;

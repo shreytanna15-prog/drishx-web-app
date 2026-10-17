@@ -1,4 +1,5 @@
 import { authFetch } from "@/lib/auth-fetch";
+import type { Paginated } from "@/lib/types/api-client";
 
 export type InvoiceUser = {
   id: string;
@@ -81,17 +82,64 @@ export type InvoiceRecord = {
 };
 
 
+export type ListInvoicesParams = {
+  page?: number;
+  limit?: number;
+  status?: string;
+  q?: string;
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+export type PaginatedInvoices = Paginated<InvoiceRecord>;
+
+export function buildInvoicesQueryString(params?: ListInvoicesParams): string {
+  const qs = new URLSearchParams();
+  if (!params) return "";
+  if (params.page != null) qs.set("page", String(params.page));
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  if (params.status?.trim()) qs.set("status", params.status.trim());
+  if (params.q?.trim()) qs.set("q", params.q.trim());
+  if (params.dateFrom?.trim()) qs.set("dateFrom", params.dateFrom.trim());
+  if (params.dateTo?.trim()) qs.set("dateTo", params.dateTo.trim());
+  const s = qs.toString();
+  return s ? `?${s}` : "";
+}
+
+export function normalizeInvoicesListResponse(data: unknown): PaginatedInvoices {
+  if (Array.isArray(data)) {
+    return {
+      items: data as InvoiceRecord[],
+      page: 1,
+      limit: data.length,
+      hasMore: false,
+      total: data.length,
+    };
+  }
+  const body = data as Partial<PaginatedInvoices> | null;
+  const items = Array.isArray(body?.items) ? body.items : [];
+  return {
+    items,
+    page: typeof body?.page === "number" ? body.page : 1,
+    limit: typeof body?.limit === "number" ? body.limit : items.length,
+    hasMore: Boolean(body?.hasMore),
+    total: typeof body?.total === "number" ? body.total : undefined,
+  };
+}
+
+/** Paginated summary list (RW-11 Phase C). */
 export async function fetchInvoices(
-  _token?: string | null
-): Promise<InvoiceRecord[]> {
-  const response = await authFetch("/api/invoices", {
-    cache: "no-store",
-  });
+  params?: ListInvoicesParams
+): Promise<PaginatedInvoices> {
+  const response = await authFetch(
+    `/api/invoices${buildInvoicesQueryString(params)}`,
+    { cache: "no-store" }
+  );
   if (!response.ok) {
     const result = await response.json().catch(() => ({}));
     throw new Error(result?.error || "Failed to load invoices.");
   }
-  return response.json() as Promise<InvoiceRecord[]>;
+  return normalizeInvoicesListResponse(await response.json());
 }
 
 export async function fetchInvoiceById(
@@ -411,6 +459,26 @@ function startOfLocalDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+/** Map UI date presets to API dateFrom/dateTo (ISO). */
+export function invoiceDateFilterToRange(
+  filter: InvoiceDateFilter,
+  now = new Date()
+): { dateFrom?: string; dateTo?: string } {
+  if (filter === "ALL") return {};
+  const dateTo = now.toISOString();
+  if (filter === "THIS_MONTH") {
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { dateFrom: from.toISOString(), dateTo };
+  }
+  if (filter === "THIS_YEAR") {
+    const from = new Date(now.getFullYear(), 0, 1);
+    return { dateFrom: from.toISOString(), dateTo };
+  }
+  const from = startOfLocalDay(now);
+  from.setDate(from.getDate() - (filter === "LAST_30" ? 29 : 89));
+  return { dateFrom: from.toISOString(), dateTo };
+}
+
 export function matchesInvoiceDateFilter(
   issuedAt: string,
   filter: InvoiceDateFilter,
@@ -419,20 +487,10 @@ export function matchesInvoiceDateFilter(
   if (filter === "ALL") return true;
   const issued = new Date(issuedAt);
   if (Number.isNaN(issued.getTime())) return false;
-
-  if (filter === "THIS_MONTH") {
-    return (
-      issued.getFullYear() === now.getFullYear() &&
-      issued.getMonth() === now.getMonth()
-    );
-  }
-  if (filter === "THIS_YEAR") {
-    return issued.getFullYear() === now.getFullYear();
-  }
-
-  const from = startOfLocalDay(now);
-  from.setDate(from.getDate() - (filter === "LAST_30" ? 29 : 89));
-  return issued >= from;
+  const range = invoiceDateFilterToRange(filter, now);
+  if (range.dateFrom && issued < new Date(range.dateFrom)) return false;
+  if (range.dateTo && issued > new Date(range.dateTo)) return false;
+  return true;
 }
 
 export function matchesInvoiceSearch(

@@ -1,88 +1,74 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { ProfileSubpageHeader } from "@/components/profile/profile-screen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { authFetch } from "@/lib/auth-fetch";
 import { formatInvoiceAmount } from "@/lib/invoices-api";
-
-type OutstandingPayload = {
-  outstanding: number;
-  invoices: Array<{
-    id: string;
-    invoiceNumber: string;
-    amountOutstanding: number | string;
-    status: string;
-  }>;
-};
+import { useGetOutstandingReceivables } from "@/lib/modules/finance/query/use-get-outstanding-receivables";
+import { useSubmitPaymentClaim } from "@/lib/modules/finance/mutation/use-submit-payment-claim";
 
 export function OutstandingPaymentsScreen() {
-  const [data, setData] = useState<OutstandingPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [amount, setAmount] = useState("");
   const [reference, setReference] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
-  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await authFetch("/api/finance/receivables", { cache: "no-store" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load.");
-      setData(json);
-      setError("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const {
+    data,
+    loading,
+    error: loadError,
+    refetch,
+  } = useGetOutstandingReceivables();
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function submitClaim(e: FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setMessage("");
-    try {
-      const res = await authFetch("/api/finance/payments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "claim",
-          amount: Number(amount),
-          mode: "UPI",
-          reference,
-          invoiceIds: selected.length ? selected : undefined,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Claim failed.");
+  const {
+    mutate: submitClaim,
+    pending: submitting,
+    error: claimError,
+  } = useSubmitPaymentClaim({
+    onSuccess: () => {
       setMessage("Payment claim submitted. Admin will confirm shortly.");
       setAmount("");
       setReference("");
       setSelected([]);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Claim failed.");
-    } finally {
-      setSubmitting(false);
-    }
+      void refetch();
+    },
+  });
+
+  const error = claimError?.message || loadError?.message || "";
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setMessage("");
+    void submitClaim({
+      amount: Number(amount),
+      mode: "UPI",
+      reference,
+      invoiceIds: selected.length ? selected : undefined,
+    });
   }
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
       <ProfileSubpageHeader title="Outstanding / Payments" backHref="/profile" />
       {error ? (
-        <p className="mb-4 text-sm text-[var(--brand-danger)]">{error}</p>
+        <p className="mb-4 text-sm text-[var(--brand-danger)]">
+          {error}
+          {loadError ? (
+            <>
+              {" "}
+              <button
+                type="button"
+                className="underline"
+                onClick={() => void refetch()}
+              >
+                Retry
+              </button>
+            </>
+          ) : null}
+        </p>
       ) : null}
       {loading || !data ? (
         <Skeleton className="h-40 rounded-2xl" />
@@ -129,7 +115,7 @@ export function OutstandingPaymentsScreen() {
             </ul>
           </section>
           <form
-            onSubmit={submitClaim}
+            onSubmit={onSubmit}
             className="space-y-3 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-5"
           >
             <h3 className="text-sm font-bold">Submit payment claim</h3>

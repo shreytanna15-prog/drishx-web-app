@@ -83,13 +83,19 @@ export function ReturnRequestPanel({ group }: { group: OrderListGroup }) {
 
   async function loadHistory() {
     try {
-      const all = await fetchReturnRequests();
-      const orderIds = new Set(group.orders.map((order) => order.id));
-      setHistory(
-        all.filter((request) =>
-          request.items.some((item) => orderIds.has(item.originalOrderId))
+      const orderIds = group.orders.map((order) => order.id).filter(Boolean);
+      const pages = await Promise.all(
+        orderIds.map((orderId) =>
+          fetchReturnRequests({ page: 1, limit: 30, orderId })
         )
       );
+      const byId = new Map<string, (typeof pages)[number]["items"][number]>();
+      for (const page of pages) {
+        for (const request of page.items) {
+          byId.set(request.id, request);
+        }
+      }
+      setHistory([...byId.values()]);
       setHistoryLoaded(true);
     } catch {
       setHistoryLoaded(true);

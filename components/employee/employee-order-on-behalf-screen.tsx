@@ -143,6 +143,10 @@ export function EmployeeOrderOnBehalfScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const [customers, setCustomers] = useState<CustomerCompany[]>([]);
+  const [customersPage, setCustomersPage] = useState(1);
+  const [customersHasMore, setCustomersHasMore] = useState(false);
+  const [loadingMoreCustomers, setLoadingMoreCustomers] = useState(false);
+  const [debouncedCustomerSearch, setDebouncedCustomerSearch] = useState("");
   const [products, setProducts] = useState<LensItem[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [hasMoreProducts, setHasMoreProducts] = useState(true);
@@ -151,6 +155,8 @@ export function EmployeeOrderOnBehalfScreen() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
     null
   );
+  const [selectedCustomerCache, setSelectedCustomerCache] =
+    useState<CustomerCompany | null>(null);
   const [selectedLines, setSelectedLines] = useState<SelectedLine[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterOption>("All");
   const [customerSearch, setCustomerSearch] = useState("");
@@ -206,37 +212,66 @@ export function EmployeeOrderOnBehalfScreen() {
     productSearch,
   ]);
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const customerRows = await fetchCustomerCompanies();
-      setCustomers(customerRows);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load data.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    const timer = setTimeout(
+      () => setDebouncedCustomerSearch(customerSearch.trim()),
+      300
+    );
+    return () => clearTimeout(timer);
+  }, [customerSearch]);
 
-  const selectedCustomer = useMemo(
-    () => customers.find((c) => c.id === selectedCustomerId) ?? null,
-    [customers, selectedCustomerId]
+  const loadCustomers = useCallback(
+    async (page: number, replace: boolean) => {
+      try {
+        if (replace) {
+          setLoading(true);
+          setError(null);
+        } else {
+          setLoadingMoreCustomers(true);
+        }
+        const result = await fetchCustomerCompanies({
+          page,
+          limit: 30,
+          q: debouncedCustomerSearch || undefined,
+        });
+        setCustomersHasMore(result.hasMore);
+        setCustomersPage(result.page);
+        setCustomers((prev) => {
+          if (replace || result.page <= 1) return result.items;
+          const seen = new Set(prev.map((c) => c.id));
+          const merged = [...prev];
+          for (const row of result.items) {
+            if (!seen.has(row.id)) merged.push(row);
+          }
+          return merged;
+        });
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load customers.");
+        if (replace) setCustomers([]);
+      } finally {
+        setLoading(false);
+        setLoadingMoreCustomers(false);
+      }
+    },
+    [debouncedCustomerSearch]
   );
 
-  const filteredCustomers = useMemo(() => {
-    const q = customerSearch.trim().toLowerCase();
-    if (!q) return customers;
-    return customers.filter((c) =>
-      `${c.businessName ?? ""} ${c.name ?? ""} ${c.email}`
-        .toLowerCase()
-        .includes(q)
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void loadCustomers(1, true);
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [loadCustomers]);
+
+  const selectedCustomer = useMemo(() => {
+    if (!selectedCustomerId) return null;
+    return (
+      customers.find((c) => c.id === selectedCustomerId) ??
+      (selectedCustomerCache?.id === selectedCustomerId
+        ? selectedCustomerCache
+        : null)
     );
-  }, [customers, customerSearch]);
+  }, [customers, selectedCustomerId, selectedCustomerCache]);
 
   useEffect(() => {
     const timer = setTimeout(
@@ -481,7 +516,7 @@ export function EmployeeOrderOnBehalfScreen() {
     return (
       <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center">
         <p className="text-sm font-medium text-[var(--brand-danger)]">{error}</p>
-        <Button className="rounded-xl" onClick={() => void loadData()}>
+        <Button className="rounded-xl" onClick={() => void loadCustomers(1, true)}>
           Retry
         </Button>
       </div>
@@ -532,36 +567,54 @@ export function EmployeeOrderOnBehalfScreen() {
             </div>
 
             <div className="space-y-2.5">
-              {filteredCustomers.length === 0 ? (
+              {customers.length === 0 ? (
                 <div className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-4 py-10 text-center">
                   <p className="text-sm text-[var(--brand-text-muted)]">
                     No companies match your search.
                   </p>
                 </div>
               ) : (
-                filteredCustomers.map((customer) => {
-                  const active = customer.id === selectedCustomerId;
-                  return (
-                    <button
-                      key={customer.id}
+                <>
+                  {customers.map((customer) => {
+                    const active = customer.id === selectedCustomerId;
+                    return (
+                      <button
+                        key={customer.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCustomerId(customer.id);
+                          setSelectedCustomerCache(customer);
+                        }}
+                        className={cn(
+                          "w-full rounded-xl border px-4 py-3 text-left transition-colors",
+                          active
+                            ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/12"
+                            : "border-[var(--brand-card-border)] bg-[var(--brand-card)] hover:border-[var(--brand-primary)]/35"
+                        )}
+                      >
+                        <p className="text-sm font-bold text-[var(--brand-text)]">
+                          {customerLabel(customer)}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[var(--brand-text-muted)]">
+                          {customer.email}
+                        </p>
+                      </button>
+                    );
+                  })}
+                  {customersHasMore ? (
+                    <Button
                       type="button"
-                      onClick={() => setSelectedCustomerId(customer.id)}
-                      className={cn(
-                        "w-full rounded-xl border px-4 py-3 text-left transition-colors",
-                        active
-                          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/12"
-                          : "border-[var(--brand-card-border)] bg-[var(--brand-card)] hover:border-[var(--brand-primary)]/35"
-                      )}
+                      variant="outline"
+                      className="w-full rounded-xl"
+                      disabled={loadingMoreCustomers}
+                      onClick={() =>
+                        void loadCustomers(customersPage + 1, false)
+                      }
                     >
-                      <p className="text-sm font-bold text-[var(--brand-text)]">
-                        {customerLabel(customer)}
-                      </p>
-                      <p className="mt-0.5 text-xs text-[var(--brand-text-muted)]">
-                        {customer.email}
-                      </p>
-                    </button>
-                  );
-                })
+                      {loadingMoreCustomers ? "Loading…" : "Load more companies"}
+                    </Button>
+                  ) : null}
+                </>
               )}
             </div>
 

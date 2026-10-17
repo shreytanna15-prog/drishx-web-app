@@ -7,7 +7,7 @@ Cursor discovery: **`.cursor/skills/`** junctions into each skill (run `link-ski
 
 | Skill | Use for |
 |-------|---------|
-| `drishx-client-api` | Client fetch/mutation hooks, loading & error (no React Query) |
+| `drishx-client-api` | Client fetch/mutation hooks, list pagination (`Paginated`), summary vs detail, loading & error (no React Query) |
 
 ## Link after clone (Windows)
 

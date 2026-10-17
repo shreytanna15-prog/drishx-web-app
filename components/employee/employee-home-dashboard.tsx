@@ -10,7 +10,7 @@ import {
   Warehouse,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
+import { useCallback, useMemo, useState, type ComponentType } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,16 +24,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
 import { getStaffRoleLabel } from "@/lib/auth-routing";
 import {
-  computeEmployeeHomeOverview,
   formatOrderShortId,
   formatOrderStatusLabel,
   getOrderCustomerLabel,
-  getPendingStaffOrders,
-  getPendingStaffTasks,
   type EmployeeHomeOverview,
 } from "@/lib/employee-home-stats";
-import { useGetOrders } from "@/lib/modules/orders/query/use-get-orders";
-import { fetchMyTasks, type TaskRecord } from "@/lib/tasks-api";
+import { useGetOrdersOverview } from "@/lib/modules/orders/query/use-get-orders-overview";
 import type { OrderRecord } from "@/lib/types/orders";
 import { cn } from "@/lib/utils";
 import { getDisplayName } from "@/lib/user-display";
@@ -154,90 +150,45 @@ function CollapsiblePanel({
 
 export function EmployeeHomeDashboard() {
   const { user } = useAuth();
-  const {
-    data: orders = [],
-    loading: ordersLoading,
-    error: ordersError,
-    refetch: refetchOrders,
-  } = useGetOrders();
+  const { data, loading, error: overviewError, refetch } = useGetOrdersOverview();
 
-  const [tasks, setTasks] = useState<TaskRecord[]>([]);
-  const [tasksLoading, setTasksLoading] = useState(true);
-  const [tasksFailed, setTasksFailed] = useState(false);
-  const [tasksGeneration, setTasksGeneration] = useState(0);
-
-  // Load tasks after orders settle — parallel GETs exhaust the hosted DB pool (500s).
-  useEffect(() => {
-    if (ordersLoading) return;
-
-    let cancelled = false;
-
-    void (async () => {
-      setTasksLoading(true);
-      try {
-        const next = await fetchMyTasks();
-        if (!cancelled) {
-          setTasks(next);
-          setTasksFailed(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setTasks([]);
-          setTasksFailed(true);
-        }
-      } finally {
-        if (!cancelled) setTasksLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [ordersLoading, orders, tasksGeneration]);
-
-  const loading = ordersLoading || tasksLoading;
+  const staff = data && data.role !== "CUSTOMER" ? data : null;
 
   const overview: EmployeeHomeOverview = useMemo(
     () =>
-      loading
+      loading || !staff
         ? {
             tasksAssigned: "—",
             tasksCompleted: "—",
             ordersReceived: 0,
             ordersPending: 0,
           }
-        : computeEmployeeHomeOverview(orders, tasks),
-    [loading, orders, tasks]
+        : {
+            tasksAssigned: String(staff.tasksAssigned),
+            tasksCompleted: String(staff.tasksCompleted),
+            ordersReceived: staff.ordersReceived,
+            ordersPending: staff.ordersPending,
+          },
+    [loading, staff]
   );
 
   const pendingTasks = useMemo(
-    () => (loading ? [] : getPendingStaffTasks(tasks).slice(0, 10)),
-    [loading, tasks]
+    () => (loading || !staff ? [] : staff.pendingTasks),
+    [loading, staff]
   );
 
-  const pendingOrders: OrderRecord[] = useMemo(
-    () => (loading ? [] : getPendingStaffOrders(orders).slice(0, 8)),
-    [loading, orders]
+  const pendingOrders = useMemo(
+    () => (loading || !staff ? [] : staff.pendingOrders),
+    [loading, staff]
   );
 
-  const error = useMemo(() => {
-    const ordersFailed = Boolean(ordersError);
-    if (ordersFailed && tasksFailed) {
-      return "Unable to load dashboard data from the backend.";
-    }
-    if (ordersFailed) {
-      return "Could not load orders. Showing the data that loaded successfully.";
-    }
-    if (tasksFailed) {
-      return "Could not load tasks. Showing the data that loaded successfully.";
-    }
-    return null;
-  }, [ordersError, tasksFailed]);
+  const error = overviewError
+    ? "Unable to load dashboard data from the backend."
+    : null;
 
   const retryDashboard = useCallback(() => {
-    void refetchOrders();
-    setTasksGeneration((value) => value + 1);
-  }, [refetchOrders]);
+    void refetch();
+  }, [refetch]);
 
   if (!user) return null;
 
@@ -404,7 +355,9 @@ export function EmployeeHomeDashboard() {
               </div>
             ) : pendingOrders.length > 0 ? (
               <ul className="space-y-2">
-                {pendingOrders.map((order) => (
+                {pendingOrders.map((order) => {
+                  const asRecord = order as unknown as OrderRecord;
+                  return (
                   <li key={order.id}>
                     <Link
                       href={`/employee/orders/${encodeURIComponent(order.checkoutBatchId?.trim() || order.id)}`}
@@ -415,14 +368,15 @@ export function EmployeeHomeDashboard() {
                           {formatOrderShortId(order.id)}
                         </p>
                         <p className="truncate text-xs font-medium text-[var(--brand-text-muted)]">
-                          {getOrderCustomerLabel(order)} ·{" "}
+                          {getOrderCustomerLabel(asRecord)} ·{" "}
                           {formatOrderStatusLabel(order.status)}
                         </p>
                       </div>
                       <ChevronRight className="size-4 shrink-0 text-[var(--brand-text-muted)]" />
                     </Link>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             ) : (
               <p className="text-sm font-medium text-[var(--brand-text-muted)]">

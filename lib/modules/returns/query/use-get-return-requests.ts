@@ -4,17 +4,26 @@ import { QUERY_REGISTRY } from "@/lib/constants/api-registry";
 import { useApiQuery } from "@/lib/hooks/use-api-query";
 import {
   fetchReturnRequests,
-  type ReturnRequestRecord,
+  type ListReturnsParams,
+  type PaginatedReturns,
 } from "@/lib/returns-api";
 import type { QueryOptions } from "@/lib/types/api-client";
 
 export function useGetReturnRequests(
-  options?: QueryOptions<ReturnRequestRecord[]>
+  params?: ListReturnsParams,
+  options?: QueryOptions<PaginatedReturns>
 ) {
   return useApiQuery(
     QUERY_REGISTRY.getReturnRequests,
-    () => fetchReturnRequests(),
-    [],
+    () => fetchReturnRequests(params),
+    [
+      params?.page,
+      params?.limit,
+      params?.status,
+      params?.orderId,
+      params?.q,
+      params?.requestType,
+    ],
     options
   );
 }

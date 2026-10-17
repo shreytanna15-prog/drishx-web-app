@@ -9,14 +9,13 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EmployeeOrderListCard } from "@/components/employee/employee-order-list-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { mergePaginatedItems, usePaginatedListState } from "@/lib/hooks/use-paginated-list-state";
 import {
   enrichOrdersWithCatalogStock,
-  filterNonRxOrders,
-  filterRxOrders,
   filterStaffFulfillmentOrders,
   groupOrdersForList,
   type OrderListGroup,
@@ -74,54 +73,72 @@ export function EmployeeOrdersScreen({
 }: EmployeeOrdersScreenProps) {
   const isRx = variant === "rx";
   const [activeFilter, setActiveFilter] = useState<StaffOrderFilter>("ALL");
-  const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [enriching, setEnriching] = useState(false);
   const [enrichError, setEnrichError] = useState<string | null>(null);
+  const listResetKey = `${activeFilter}|${isRx ? "rx" : "std"}`;
+  const { page, setPage, items: orders, setItems: setOrders } =
+    usePaginatedListState<OrderRecord>(listResetKey);
+
+  const [enrichEpoch, setEnrichEpoch] = useState(0);
+  const [enrichEpochKey, setEnrichEpochKey] = useState(listResetKey);
+  if (listResetKey !== enrichEpochKey) {
+    setEnrichEpochKey(listResetKey);
+    setEnrichEpoch((e) => e + 1);
+  }
+  const enrichEpochRef = useRef(enrichEpoch);
+  useEffect(() => {
+    enrichEpochRef.current = enrichEpoch;
+  }, [enrichEpoch]);
+
+  const staffStatus =
+    activeFilter === "ALL"
+      ? undefined
+      : FILTER_STATUSES[activeFilter].join(",");
 
   const {
-    data: rawOrders,
+    data: rawPage,
     loading,
     refreshing,
     error,
     refetch,
-  } = useGetOrders();
-
-  // Catalog stock enrichment stays client-side after the shared orders fetch.
-  useEffect(() => {
-    if (loading && rawOrders === undefined) return;
-
-    let cancelled = false;
-
-    void (async () => {
-      setEnriching(true);
-      setEnrichError(null);
-      try {
-        const withStock = await enrichOrdersWithCatalogStock(rawOrders ?? []);
-        if (!cancelled) setOrders(withStock);
-      } catch (err) {
-        if (!cancelled) {
-          setOrders([]);
-          setEnrichError(
-            err instanceof Error ? err.message : "Failed to load orders."
-          );
-        }
-      } finally {
-        if (!cancelled) setEnriching(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [rawOrders, loading]);
+  } = useGetOrders(
+    {
+      page,
+      limit: 30,
+      status: staffStatus,
+      scope: isRx ? "rx_lab" : "catalog",
+    },
+    {
+      // Catalog stock enrichment stays client-side after the shared orders fetch.
+      onSuccess: (pageData) => {
+        const startedEpoch = enrichEpochRef.current;
+        setEnriching(true);
+        setEnrichError(null);
+        void (async () => {
+          try {
+            const withStock = await enrichOrdersWithCatalogStock(pageData.items);
+            if (startedEpoch !== enrichEpochRef.current) return;
+            setOrders((prev) =>
+              mergePaginatedItems(prev, { page: pageData.page, items: withStock })
+            );
+          } catch (err) {
+            if (startedEpoch !== enrichEpochRef.current) return;
+            setOrders([]);
+            setEnrichError(
+              err instanceof Error ? err.message : "Failed to load orders."
+            );
+          } finally {
+            if (startedEpoch === enrichEpochRef.current) setEnriching(false);
+          }
+        })();
+      },
+    }
+  );
 
   const orderGroups = useMemo(() => {
     const fulfillment = filterStaffFulfillmentOrders(orders);
-    const scoped = isRx
-      ? filterRxOrders(fulfillment)
-      : filterNonRxOrders(fulfillment);
-    return groupOrdersForList(scoped);
-  }, [orders, isRx]);
+    return groupOrdersForList(fulfillment);
+  }, [orders]);
 
   const filteredGroups = useMemo(
     () =>
@@ -129,8 +146,10 @@ export function EmployeeOrdersScreen({
     [orderGroups, activeFilter]
   );
 
-  const showLoading = (loading && rawOrders === undefined) || enriching;
+  const showLoading =
+    (loading && page === 1 && orders.length === 0) || (enriching && page === 1);
   const displayError = error?.message ?? enrichError;
+  const hasMore = Boolean(rawPage?.hasMore);
 
   const emptyMessage =
     activeFilter === "ALL"
@@ -271,6 +290,16 @@ export function EmployeeOrdersScreen({
             {filteredGroups.map((group) => (
               <EmployeeOrderListCard key={group.key} group={group} />
             ))}
+            {hasMore ? (
+              <Button
+                variant="outline"
+                className="w-full rounded-xl"
+                disabled={loading || refreshing || enriching}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                {loading || refreshing || enriching ? "Loading…" : "Load more"}
+              </Button>
+            ) : null}
           </div>
         )}
       </div>

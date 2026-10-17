@@ -5,16 +5,20 @@
 
 export const QUERY_REGISTRY = {
   getOrders: "getOrders",
+  getOrderGroup: "getOrderGroup",
+  getOrdersOverview: "getOrdersOverview",
   getCart: "getCart",
   getInvoices: "getInvoices",
   getInvoice: "getInvoice",
   getReturnRequests: "getReturnRequests",
   getReturnRequest: "getReturnRequest",
+  getOutstandingReceivables: "getOutstandingReceivables",
 } as const;
 
 export const MUTATION_REGISTRY = {
   updateCart: "updateCart",
   downloadInvoicePdf: "downloadInvoicePdf",
+  submitPaymentClaim: "submitPaymentClaim",
 } as const;
 
 export type QueryRegistryKey =

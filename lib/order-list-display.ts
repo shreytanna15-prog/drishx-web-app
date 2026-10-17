@@ -358,11 +358,10 @@ export function isCrossOrder(order: OrderRecord): boolean {
 }
 
 function isPhotoOrder(order: OrderRecord): boolean {
-  return (
-    Boolean(order.orderImageUrl?.trim()) &&
-    !isColorLensOrder(order) &&
-    !isRxOrder(order)
+  const hasImage = Boolean(
+    order.hasOrderImage || order.orderImageUrl?.trim()
   );
+  return hasImage && !isColorLensOrder(order) && !isRxOrder(order);
 }
 
 export function getGroupStatusDisplay(

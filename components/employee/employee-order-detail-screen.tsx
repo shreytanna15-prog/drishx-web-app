@@ -23,13 +23,12 @@ import {
 } from "@/lib/order-print";
 import type { OrderTrackingStatus } from "@/lib/order-tracking";
 import { updateOrderStatus } from "@/lib/orders-api";
-import { useGetOrders } from "@/lib/modules/orders/query/use-get-orders";
+import { useGetOrderGroup } from "@/lib/modules/orders/query/use-get-order-group";
 import { EmployeeDeliveryPackCard } from "@/components/employee/employee-delivery-pack-card";
 
 /**
- * Employee order detail needs the full assigned-orders list so checkout-batch
- * siblings can be grouped. Website has no compact staff batch endpoint;
- * keep fetchOrders via useGetOrders (same contract as the employee list).
+ * Employee order detail loads checkout-batch siblings via batchId / detail GET
+ * (RW-11 Phase B) — not the full unbounded orders list.
  */
 export function EmployeeOrderDetailScreen() {
   const params = useParams<{ id: string }>();
@@ -45,18 +44,17 @@ export function EmployeeOrderDetailScreen() {
     refreshing,
     error,
     refetch,
-  } = useGetOrders({ enabled: Boolean(groupKey) });
+  } = useGetOrderGroup(groupKey);
 
   const orderGroup = useMemo(() => {
     if (!groupKey) return null;
 
-    const targetKey =
-      groupKey ||
-      orders.find((order) => order.id === groupKey)?.checkoutBatchId?.trim() ||
-      groupKey;
-
     // Match Orders list: never include procurement lines in fulfillment detail.
     const staffOrders = filterStaffFulfillmentOrders(orders);
+
+    const targetKey =
+      staffOrders.find((order) => order.id === groupKey)?.checkoutBatchId?.trim() ||
+      groupKey;
 
     const batch = staffOrders.filter(
       (order) => (order.checkoutBatchId?.trim() || order.id) === targetKey

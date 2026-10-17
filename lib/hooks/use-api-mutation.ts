@@ -10,12 +10,13 @@ import type { MutationOptions } from "@/lib/types/api-client";
 
 export type UseApiMutationResult<TData, TVariables> = {
   mutate: (variables: TVariables) => Promise<TData | undefined>;
+  data: TData | undefined;
   pending: boolean;
   error: Error | null;
 };
 
 /**
- * Shared write hook — mutate(variables) → pending / error.
+ * Shared write hook — mutate(variables) → pending / data / error.
  * AuthError skips onError UI; transport owns refresh / redirect.
  */
 export function useApiMutation<TData, TVariables = null>(
@@ -23,6 +24,7 @@ export function useApiMutation<TData, TVariables = null>(
   options?: MutationOptions<TData, TVariables>
 ): UseApiMutationResult<TData, TVariables> {
   const [pending, setPending] = useState(false);
+  const [data, setData] = useState<TData | undefined>(undefined);
   const [error, setError] = useState<Error | null>(null);
 
   const mutatorRef = useRef(mutator);
@@ -58,6 +60,7 @@ export function useApiMutation<TData, TVariables = null>(
       ) {
         return undefined;
       }
+      setData(result);
       setError(null);
       onSuccessRef.current?.(result, variables);
       return result;
@@ -86,5 +89,5 @@ export function useApiMutation<TData, TVariables = null>(
     }
   }, []);
 
-  return { mutate, pending, error };
+  return { mutate, data, pending, error };
 }

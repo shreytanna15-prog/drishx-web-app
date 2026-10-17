@@ -1,5 +1,6 @@
 import { fetchWithRetry } from "./fetch-with-retry";
 import { getAuthHeaders } from "./auth-fetch";
+import type { Paginated } from "@/lib/types/api-client";
 import type { LensType } from "./types/lens";
 
 export type ReturnRequestType = "RETURN" | "REPLACEMENT";
@@ -93,14 +94,66 @@ export const RETURN_REASON_OPTIONS: Array<{ value: ReturnReason; label: string }
   { value: "OTHER", label: "Other" },
 ];
 
-export async function fetchReturnRequests(): Promise<ReturnRequestRecord[]> {
-  const res = await fetchWithRetry("/api/returns", {
-    headers: getAuthHeaders(),
-    cache: "no-store",
-  });
+export type ListReturnsParams = {
+  page?: number;
+  limit?: number;
+  /** Single status or CSV of statuses. */
+  status?: string;
+  orderId?: string;
+  q?: string;
+  requestType?: string;
+};
+
+export type PaginatedReturns = Paginated<ReturnRequestRecord>;
+
+export function buildReturnsQueryString(params?: ListReturnsParams): string {
+  const qs = new URLSearchParams();
+  if (!params) return "";
+  if (params.page != null) qs.set("page", String(params.page));
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  if (params.status?.trim()) qs.set("status", params.status.trim());
+  if (params.orderId?.trim()) qs.set("orderId", params.orderId.trim());
+  if (params.q?.trim()) qs.set("q", params.q.trim());
+  if (params.requestType?.trim()) qs.set("requestType", params.requestType.trim());
+  const s = qs.toString();
+  return s ? `?${s}` : "";
+}
+
+export function normalizeReturnsListResponse(data: unknown): PaginatedReturns {
+  if (Array.isArray(data)) {
+    return {
+      items: data as ReturnRequestRecord[],
+      page: 1,
+      limit: data.length,
+      hasMore: false,
+      total: data.length,
+    };
+  }
+  const body = data as Partial<PaginatedReturns> | null;
+  const items = Array.isArray(body?.items) ? body.items : [];
+  return {
+    items,
+    page: typeof body?.page === "number" ? body.page : 1,
+    limit: typeof body?.limit === "number" ? body.limit : items.length,
+    hasMore: Boolean(body?.hasMore),
+    total: typeof body?.total === "number" ? body.total : undefined,
+  };
+}
+
+/** Paginated summary list (RW-11 Phase C). */
+export async function fetchReturnRequests(
+  params?: ListReturnsParams
+): Promise<PaginatedReturns> {
+  const res = await fetchWithRetry(
+    `/api/returns${buildReturnsQueryString(params)}`,
+    {
+      headers: getAuthHeaders(),
+      cache: "no-store",
+    }
+  );
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error || "Failed to load return requests.");
-  return Array.isArray(data) ? (data as ReturnRequestRecord[]) : [];
+  return normalizeReturnsListResponse(data);
 }
 
 export async function fetchReturnRequest(

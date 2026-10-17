@@ -13,3 +13,12 @@ export type MutationOptions<TData, TVariables> = {
   onSuccess?: (data: TData, variables: TVariables) => void;
   onError?: (error: Error, variables: TVariables) => void;
 };
+
+/** Standard list envelope for table/list endpoints. */
+export type Paginated<T> = {
+  items: T[];
+  page: number;
+  limit: number;
+  hasMore: boolean;
+  total?: number;
+};
