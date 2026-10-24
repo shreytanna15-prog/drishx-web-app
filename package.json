@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3001",
     "prebuild": "node -e \"require('fs').rmSync('.next/dev',{recursive:true,force:true})\"",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "deploy:trigger": "node scripts/trigger-vercel-deploy.mjs"
