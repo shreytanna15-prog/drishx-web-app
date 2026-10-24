@@ -13,7 +13,7 @@ import {
 import { OrderNotesDisplay } from "@/components/orders/order-notes-display";
 import { OrderStatusPill } from "@/components/orders/order-status-pill";
 import { OrderTrackingHorizontal } from "@/components/orders/order-tracking-horizontal";
-import { EmployeeOrderRangeSheet } from "@/components/employee/employee-order-range-sheet";
+import { EmployeeOrderRangeModal } from "@/components/employee/employee-order-range-modal";
 import { BrandConfirmDialog } from "@/components/shared/brand-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { useBrandConfirm } from "@/hooks/use-brand-confirm";
@@ -706,7 +706,7 @@ export function EmployeeOrderGroupDetail({
           <AlternatePowerPanel key={`alt-${order.id}`} order={order} mode="staff" />
         ))}
 
-      <EmployeeOrderRangeSheet
+      <EmployeeOrderRangeModal
         open={sheetOpen}
         modal={!confirmOpen}
         line={selectedLine}

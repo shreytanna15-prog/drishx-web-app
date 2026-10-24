@@ -5,13 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   formatMoneyInput,
   formatPowerLabel,
@@ -43,19 +43,19 @@ function formatPowerCell(value: number | null | undefined): string {
   }
   return formatPowerLabel(Number(value));
 }
-type EmployeeProcurementProductSheetProps = {
+type EmployeeProcurementProductModalProps = {
   open: boolean;
   order: OrderRecord | null;
   onClose: () => void;
   onSuccess: () => void;
 };
 
-export function EmployeeProcurementProductSheet({
+export function EmployeeProcurementProductModal({
   open,
   order,
   onClose,
   onSuccess,
-}: EmployeeProcurementProductSheetProps) {
+}: EmployeeProcurementProductModalProps) {
   const [quantity, setQuantity] = useState("1");
   const [costPrice, setCostPrice] = useState("");
   const [totalPrice, setTotalPrice] = useState("");
@@ -177,26 +177,23 @@ export function EmployeeProcurementProductSheet({
   }
 
   return (
-    <Sheet
+    <Dialog
       open={open}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
     >
-      <SheetContent
-        side="right"
-        className="w-full border-[var(--brand-card-border)] bg-[var(--brand-card)] sm:max-w-md"
-      >
-        <SheetHeader className="text-left">
-          <SheetTitle className="text-[var(--brand-text)]">
+      <DialogContent className="border-[var(--brand-card-border)] bg-[var(--brand-card)] sm:max-w-lg">
+        <DialogHeader className="pr-12 text-left">
+          <DialogTitle className="text-[var(--brand-text)]">
             Add purchase
-          </SheetTitle>
-          <SheetDescription className="text-[var(--brand-text-muted)]">
+          </DialogTitle>
+          <DialogDescription className="text-[var(--brand-text-muted)]">
             {productLabel || "Record stock intake for this order line."}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-2">
           {lensItem ? (
             <div className="rounded-xl border border-[var(--brand-card-border)] bg-[var(--brand-background)] p-3">
               <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-muted)]">
@@ -346,7 +343,7 @@ export function EmployeeProcurementProductSheet({
           ) : null}
         </div>
 
-        <SheetFooter className="px-4 pb-4">
+        <DialogFooter className="border-t border-[var(--brand-card-border)] px-4 pb-4 pt-3">
           <Button
             onClick={() => void handleSubmit()}
             disabled={submitting}
@@ -358,8 +355,8 @@ export function EmployeeProcurementProductSheet({
               "Record purchase"
             )}
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

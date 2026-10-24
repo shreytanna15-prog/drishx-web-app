@@ -11,12 +11,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { PowerLineRow } from "@/lib/order-detail-display";
 import { getHalfPairs } from "@/lib/order-line-update";
 import {
@@ -49,7 +49,7 @@ function formatPairCountLabel(count: number): string {
   return `${count} Pair${count === 1 ? "" : "s"}`;
 }
 
-type EmployeeOrderRangeSheetProps = {
+type EmployeeOrderRangeModalProps = {
   open: boolean;
   modal?: boolean;
   line: PowerLineRow | null;
@@ -62,7 +62,7 @@ type EmployeeOrderRangeSheetProps = {
   updating?: boolean;
 };
 
-export function EmployeeOrderRangeSheet({
+export function EmployeeOrderRangeModal({
   open,
   modal = true,
   line,
@@ -70,7 +70,7 @@ export function EmployeeOrderRangeSheet({
   onClose,
   onUpdate,
   updating = false,
-}: EmployeeOrderRangeSheetProps) {
+}: EmployeeOrderRangeModalProps) {
   const ordered = line?.ordered ?? 0;
   const currentPicked = line?.picked ?? 0;
   const [pickedQuantity, setPickedQuantity] = useState(0);
@@ -116,34 +116,32 @@ export function EmployeeOrderRangeSheet({
   if (!line) return null;
 
   return (
-    <Sheet open={open} modal={modal} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent
-        side="bottom"
+    <Dialog open={open} modal={modal} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent
         showCloseButton={false}
-        overlayClassName="bg-black/60 backdrop-blur-[2px]"
-        className="max-h-[94vh] overflow-hidden rounded-t-[28px] border-0 bg-[var(--brand-background)] p-0 shadow-[0_-20px_60px_-20px_rgba(0,0,0,0.45)] sm:mx-auto sm:max-w-md"
+        overlayClassName="bg-black/40"
+        className="max-h-[90vh] overflow-hidden rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-background)] p-0 shadow-[0_24px_64px_-24px_rgba(0,0,0,0.55)] sm:max-w-lg"
       >
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[var(--brand-primary)]/16 to-transparent"
         />
 
-        <div className="relative flex max-h-[94vh] flex-col">
-          <div className="flex shrink-0 items-center justify-between px-5 pb-2 pt-3">
-            <div className="mx-auto h-1 w-12 rounded-full bg-[var(--brand-card-border)]" />
+        <div className="relative flex min-h-0 max-h-[90vh] flex-1 flex-col">
+          <div className="flex shrink-0 items-center justify-end px-5 pb-2 pt-3">
             <button
               type="button"
               onClick={onClose}
               disabled={updating}
               aria-label="Close"
-              className="absolute right-4 top-3 flex size-9 items-center justify-center rounded-full border border-[var(--brand-card-border)] bg-[var(--brand-card)] text-[var(--brand-text-muted)] transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-text)]"
+              className="flex size-9 items-center justify-center rounded-full border border-[var(--brand-card-border)] bg-[var(--brand-card)] text-[var(--brand-text-muted)] transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-text)]"
             >
               <X className="size-4" />
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-5 pb-4">
-            <SheetHeader className="space-y-0 p-0 text-left">
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
+            <DialogHeader className="space-y-0 p-0 text-left">
               <div className="overflow-hidden rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] shadow-[var(--brand-card-shadow)]">
                 <div className="h-1 bg-gradient-to-r from-[#f5ad42] via-[#f0a132] to-[#e8941f]" />
                 <div className="flex items-start gap-3 p-4">
@@ -151,7 +149,7 @@ export function EmployeeOrderRangeSheet({
                     <PackageCheck className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <SheetTitle className="text-xl font-extrabold leading-tight text-[var(--brand-text)]">
+                    <DialogTitle className="text-xl font-extrabold leading-tight text-[var(--brand-text)]">
                       {line.sphCylLabel}
                       {line.eye ? (
                         <span className="text-[var(--brand-primary)]">
@@ -159,10 +157,10 @@ export function EmployeeOrderRangeSheet({
                           · {line.eye}
                         </span>
                       ) : null}
-                    </SheetTitle>
-                    <SheetDescription className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
+                    </DialogTitle>
+                    <DialogDescription className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
                       Update picked quantity and fulfillment status
-                    </SheetDescription>
+                    </DialogDescription>
                   </div>
                 </div>
 
@@ -172,7 +170,7 @@ export function EmployeeOrderRangeSheet({
                   <StatCell label="Left" value={String(remaining)} />
                 </div>
               </div>
-            </SheetHeader>
+            </DialogHeader>
 
             <section className="mt-4 overflow-hidden rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)]">
               <div className="flex items-center justify-between border-b border-[var(--brand-card-border)] px-4 py-3">
@@ -336,8 +334,8 @@ export function EmployeeOrderRangeSheet({
             </div>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 

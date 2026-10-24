@@ -6,6 +6,8 @@ type AuthLayoutProps = {
   subtitle: string;
   children: React.ReactNode;
   wide?: boolean;
+  /** Login: stable desktop min-height; card expands when OTP/error content grows. */
+  compact?: boolean;
   step?: 1 | 2 | 3 | 4 | 5;
   totalSteps?: 3 | 4 | 5;
   showLogo?: boolean;
@@ -27,6 +29,7 @@ export function AuthLayout({
   subtitle,
   children,
   wide,
+  compact,
   step,
   totalSteps = 5,
   showLogo = true,
@@ -34,13 +37,28 @@ export function AuthLayout({
   panelTitle = DEFAULT_PANEL.title,
   panelDescription = DEFAULT_PANEL.description,
 }: AuthLayoutProps) {
+  const stageClass = [
+    "auth-stage",
+    wide ? "auth-stage--wide" : "",
+    compact ? "auth-stage--compact" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const shellClass = [
+    "auth-shell",
+    wide ? "auth-shell--wide" : "",
+    compact ? "auth-shell--compact" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div className="auth-page">
       <div className="auth-page__glow auth-page__glow--a" aria-hidden />
       <div className="auth-page__glow auth-page__glow--b" aria-hidden />
       <div className="auth-page__rings" aria-hidden />
 
-      <div className={`auth-stage${wide ? " auth-stage--wide" : ""}`}>
+      <div className={stageClass}>
         <aside className="auth-brand-panel">
           <div className="auth-brand-panel__mark">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -74,14 +92,14 @@ export function AuthLayout({
           </p>
         </aside>
 
-        <div className={`auth-shell${wide ? " auth-shell--wide" : ""}`}>
+        <div className={shellClass}>
           {showLogo ? (
             <div className="auth-shell__logo">
               <BrandLogo href="/" size="sm" />
             </div>
           ) : null}
 
-          <div className="auth-card">
+          <div className={`auth-card${compact ? " auth-card--compact" : ""}`}>
             <div className="auth-card__accent" aria-hidden />
 
             {step !== undefined ? (

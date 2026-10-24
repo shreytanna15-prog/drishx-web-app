@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmployeeProcurementOrderCard } from "@/components/employee/employee-procurement-order-card";
-import { EmployeeProcurementProductSheet } from "@/components/employee/employee-procurement-product-sheet";
+import { EmployeeProcurementProductModal } from "@/components/employee/employee-procurement-product-modal";
 import { InventoryProductCard } from "@/components/employee/inventory-product-card";
 import { LensProductDetailScreen } from "@/components/shop/lens-product-detail-screen";
 import { BrandConfirmDialog } from "@/components/shared/brand-confirm-dialog";
@@ -1062,7 +1062,7 @@ export function EmployeeProcurementScreen() {
         ) : null}
       </div>
 
-      <EmployeeProcurementProductSheet
+      <EmployeeProcurementProductModal
         open={sheetOpen}
         order={selectedOrder}
         onClose={() => {

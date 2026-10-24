@@ -156,149 +156,166 @@ export default function LoginPage() {
   return (
     <AuthLayout
       title="Welcome back"
-      subtitle={
-        mode === "otp"
-          ? "Sign in with the mobile number on your account."
-          : "Sign in with email and password (customers or staff)."
-      }
+      subtitle="Sign in with mobile OTP or email and password."
+      compact
       panelEyebrow="Customer portal"
       panelTitle="Your lens workflow, ready when you are."
       panelDescription="Access orders, inventory-backed fulfillment, and company tools in one place."
     >
-      <div
-        style={{
-          display: "flex",
-          gap: "0.5rem",
-          marginBottom: "1rem",
-        }}
-      >
-        <button
-          type="button"
-          className={mode === "otp" ? "auth-button" : "auth-button-outline"}
-          style={{ flex: 1 }}
-          onClick={() => {
-            setMode("otp");
-            setError("");
-          }}
-        >
-          Mobile OTP
-        </button>
-        <button
-          type="button"
-          className={mode === "password" ? "auth-button" : "auth-button-outline"}
-          style={{ flex: 1 }}
-          onClick={() => {
-            setMode("password");
-            setError("");
-          }}
-        >
-          Email & password
-        </button>
-      </div>
+      <div className="auth-login">
+        <div className="auth-login__modes" role="tablist" aria-label="Login method">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "otp"}
+            className={
+              mode === "otp"
+                ? "auth-login__mode auth-login__mode--active"
+                : "auth-login__mode"
+            }
+            onClick={() => {
+              setMode("otp");
+              setError("");
+            }}
+          >
+            Mobile OTP
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "password"}
+            className={
+              mode === "password"
+                ? "auth-login__mode auth-login__mode--active"
+                : "auth-login__mode"
+            }
+            onClick={() => {
+              setMode("password");
+              setError("");
+            }}
+          >
+            Email & password
+          </button>
+        </div>
 
-      {error && <div className="auth-alert-error">{error}</div>}
+        <div className="auth-login__body">
+          {error ? (
+            <div className="auth-alert-error" role="alert">
+              {error}
+            </div>
+          ) : null}
 
-      {mode === "otp" ? (
-        <form
-          onSubmit={otpSent ? handleVerifyOtp : handleSendOtp}
-          className="auth-form"
-        >
-          <AuthField label="Mobile number" htmlFor="mobile">
-            <input
-              id="mobile"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              required
-              value={mobileNumber}
-              onChange={(e) => setMobileNumber(e.target.value)}
-              className="auth-input"
-              placeholder="10-digit mobile number"
-              disabled={otpSent && isSubmitting}
-            />
-          </AuthField>
-
-          {otpSent ? (
-            <>
-              <AuthField label="OTP" htmlFor="otp">
+          {mode === "otp" ? (
+            <form
+              onSubmit={otpSent ? handleVerifyOtp : handleSendOtp}
+              className="auth-form"
+            >
+              <AuthField label="Mobile number" htmlFor="mobile">
                 <input
-                  id="otp"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
+                  id="mobile"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
                   required
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
+                  value={mobileNumber}
+                  onChange={(e) => setMobileNumber(e.target.value)}
                   className="auth-input"
-                  placeholder="6-digit code"
+                  placeholder="10-digit mobile number"
+                  disabled={otpSent && isSubmitting}
                 />
               </AuthField>
-            </>
-          ) : null}
 
-          <button type="submit" disabled={isSubmitting} className="auth-button">
-            {isSubmitting
-              ? "Please wait..."
-              : otpSent
-                ? "Verify & sign in"
-                : "Send OTP"}
-          </button>
+              {otpSent ? (
+                <AuthField label="OTP" htmlFor="otp">
+                  <input
+                    id="otp"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    required
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    className="auth-input"
+                    placeholder="6-digit code"
+                  />
+                </AuthField>
+              ) : null}
 
-          {otpSent ? (
-            <button
-              type="button"
-              className="auth-button-outline"
-              style={{ marginTop: "0.5rem", width: "100%" }}
-              disabled={isSubmitting}
-              onClick={() => {
-                setOtpSent(false);
-                setOtpCode("");
-                setError("");
-              }}
-            >
-              Change mobile number
-            </button>
-          ) : null}
-        </form>
-      ) : (
-        <form onSubmit={handlePasswordLogin} className="auth-form">
-          <AuthField label="Email" htmlFor="email">
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="auth-input"
-              placeholder="you@example.com"
-            />
-          </AuthField>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="auth-button"
+              >
+                {isSubmitting
+                  ? "Please wait..."
+                  : otpSent
+                    ? "Verify & sign in"
+                    : "Send OTP"}
+              </button>
 
-          <AuthField label="Password" htmlFor="password">
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="auth-input"
-              placeholder="Enter your password"
-            />
-          </AuthField>
+              {otpSent ? (
+                <button
+                  type="button"
+                  className="auth-button-outline"
+                  style={{ marginTop: "0.5rem", width: "100%" }}
+                  disabled={isSubmitting}
+                  onClick={() => {
+                    setOtpSent(false);
+                    setOtpCode("");
+                    setError("");
+                  }}
+                >
+                  Change mobile number
+                </button>
+              ) : null}
+            </form>
+          ) : (
+            <form onSubmit={handlePasswordLogin} className="auth-form">
+              <AuthField label="Email" htmlFor="email">
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="auth-input"
+                  placeholder="you@example.com"
+                />
+              </AuthField>
 
-          <button type="submit" disabled={isSubmitting} className="auth-button">
-            {isSubmitting ? "Signing in..." : "Sign in to Drishx"}
-          </button>
-        </form>
-      )}
+              <AuthField label="Password" htmlFor="password">
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="auth-input"
+                  placeholder="Enter your password"
+                />
+              </AuthField>
 
-      <AuthFooterLink
-        text="Don't have an account?"
-        linkText="Create account"
-        href="/signup"
-      />
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="auth-button"
+              >
+                {isSubmitting ? "Signing in..." : "Sign in to Drishx"}
+              </button>
+            </form>
+          )}
+        </div>
+
+        <div className="auth-login__footer">
+          <AuthFooterLink
+            text="Don't have an account?"
+            linkText="Create account"
+            href="/signup"
+          />
+        </div>
+      </div>
     </AuthLayout>
   );
 }
