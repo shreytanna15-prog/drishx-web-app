@@ -6,11 +6,13 @@ import { ProfileSubpageHeader } from "@/components/profile/profile-screen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/auth-context";
 import { formatInvoiceAmount } from "@/lib/invoices-api";
 import { useGetOutstandingReceivables } from "@/lib/modules/finance/query/use-get-outstanding-receivables";
 import { useSubmitPaymentClaim } from "@/lib/modules/finance/mutation/use-submit-payment-claim";
 
 export function OutstandingPaymentsScreen() {
+  const { user } = useAuth();
   const [amount, setAmount] = useState("");
   const [reference, setReference] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
@@ -22,6 +24,16 @@ export function OutstandingPaymentsScreen() {
     error: loadError,
     refetch,
   } = useGetOutstandingReceivables();
+
+  const creditLimit =
+    user?.creditLimit != null && user.creditLimit !== ""
+      ? Number(user.creditLimit)
+      : null;
+  const outstanding = data?.outstanding ?? 0;
+  const availableCredit =
+    creditLimit != null && Number.isFinite(creditLimit)
+      ? Math.max(0, creditLimit - outstanding)
+      : null;
 
   const {
     mutate: submitClaim,
@@ -74,7 +86,37 @@ export function OutstandingPaymentsScreen() {
         <Skeleton className="h-40 rounded-2xl" />
       ) : (
         <div className="space-y-4">
-          <section className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-5">
+          <section className="rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] p-5 space-y-3">
+            {user?.pricingTierCode ? (
+              <p className="text-xs text-[var(--brand-text-muted)]">
+                Pricing tier {user.pricingTierCode}
+                {user.accountAction && user.accountAction !== "NONE"
+                  ? ` · ${user.accountAction.replace(/_/g, " ")}`
+                  : ""}
+              </p>
+            ) : null}
+            {creditLimit != null ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase text-[var(--brand-label)]">
+                    Credit limit
+                  </p>
+                  <p className="text-lg font-bold text-[var(--brand-text)]">
+                    {formatInvoiceAmount(creditLimit)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-[var(--brand-label)]">
+                    Available credit
+                  </p>
+                  <p className="text-lg font-bold text-[var(--brand-text)]">
+                    {availableCredit != null
+                      ? formatInvoiceAmount(availableCredit)
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+            ) : null}
             <p className="text-xs uppercase text-[var(--brand-label)]">
               Total outstanding
             </p>

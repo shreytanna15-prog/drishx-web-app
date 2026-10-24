@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import {
   ProfileSubpageHeader,
@@ -55,6 +56,15 @@ export function CompanyProfileScreen() {
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-6 sm:px-6 sm:py-8">
       <ProfileSubpageHeader title="Company Profile" />
+
+      <div className="flex justify-end">
+        <Link
+          href="/edit-profile"
+          className="text-sm font-semibold text-[var(--brand-primary)] underline-offset-2 hover:underline"
+        >
+          Edit profile
+        </Link>
+      </div>
 
       <Section title="Account">
         <DetailRow label="Customer Name" value={user.name || user.email} />

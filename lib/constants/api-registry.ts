@@ -19,6 +19,11 @@ export const MUTATION_REGISTRY = {
   updateCart: "updateCart",
   downloadInvoicePdf: "downloadInvoicePdf",
   submitPaymentClaim: "submitPaymentClaim",
+  sendMobileOtp: "sendMobileOtp",
+  verifyMobileOtp: "verifyMobileOtp",
+  sendEmailOtp: "sendEmailOtp",
+  verifyEmailOtp: "verifyEmailOtp",
+  updateCustomerProfile: "updateCustomerProfile",
 } as const;
 
 export type QueryRegistryKey =

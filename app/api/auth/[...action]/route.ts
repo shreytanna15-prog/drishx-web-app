@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBackendUrl } from "@/lib/backend-url";
 
-async function proxyAuthRequest(req: NextRequest, action: string) {
+async function proxyAuthRequest(req: NextRequest, action: string[]) {
   const backendUrl = getBackendUrl();
-  const targetUrl = `${backendUrl}/api/auth/${action}${req.nextUrl.search}`;
+  const authPath = action.join("/");
+  const targetUrl = `${backendUrl}/api/auth/${authPath}${req.nextUrl.search}`;
 
   const headers = new Headers();
   const contentType = req.headers.get("content-type");
@@ -69,7 +70,7 @@ async function proxyAuthRequest(req: NextRequest, action: string) {
 
 export async function GET(
   req: NextRequest,
-  context: { params: Promise<{ action: string }> }
+  context: { params: Promise<{ action: string[] }> }
 ) {
   const { action } = await context.params;
   return proxyAuthRequest(req, action);
@@ -77,7 +78,7 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  context: { params: Promise<{ action: string }> }
+  context: { params: Promise<{ action: string[] }> }
 ) {
   const { action } = await context.params;
   return proxyAuthRequest(req, action);
@@ -85,7 +86,7 @@ export async function POST(
 
 export async function PUT(
   req: NextRequest,
-  context: { params: Promise<{ action: string }> }
+  context: { params: Promise<{ action: string[] }> }
 ) {
   const { action } = await context.params;
   return proxyAuthRequest(req, action);
@@ -93,7 +94,7 @@ export async function PUT(
 
 export async function PATCH(
   req: NextRequest,
-  context: { params: Promise<{ action: string }> }
+  context: { params: Promise<{ action: string[] }> }
 ) {
   const { action } = await context.params;
   return proxyAuthRequest(req, action);
@@ -101,7 +102,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  context: { params: Promise<{ action: string }> }
+  context: { params: Promise<{ action: string[] }> }
 ) {
   const { action } = await context.params;
   return proxyAuthRequest(req, action);

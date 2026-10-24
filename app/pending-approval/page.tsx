@@ -16,7 +16,7 @@ const POLL_MS = 5000;
 function PendingApprovalContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { token, user, login, logout, updateUser } = useAuth();
+  const { token, user, login, updateUser } = useAuth();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const email = user?.email ?? searchParams.get("email") ?? "";
@@ -46,15 +46,14 @@ function PendingApprovalContent() {
         return;
       }
 
+      // Phase E: rejected customers stay signed in so they can edit & resubmit.
       if (currentUser.approvalStatus === "REJECTED") {
         stopPolling();
-        logout();
-        router.replace("/login");
       }
     } catch {
       // Keep polling on transient network errors
     }
-  }, [token, updateUser, login, router, logout, stopPolling]);
+  }, [token, updateUser, login, router, stopPolling]);
 
   useEffect(() => {
     if (isRejected) return;
@@ -76,7 +75,7 @@ function PendingApprovalContent() {
         isRejected
           ? rejectionReason ||
             "Your account was rejected by admin. Contact support or sign up again."
-          : "Your registration details were submitted successfully. An admin must approve your account before you can use the portal."
+          : "Your account is pending admin approval. Self-serve orders stay frozen until you are approved."
       }
     >
       {email ? (
@@ -97,9 +96,9 @@ function PendingApprovalContent() {
           >
             {token
               ? user && !user.gstNumber
-                ? "Your account is incomplete (no GST yet). An admin can still review it, or you can add business details below."
-                : "Checking approval... You will be signed in automatically when your account is ready."
-              : "Log in with your email to continue. Your account is waiting for admin approval."}
+                ? "Your account is incomplete (no GST yet). An admin can still review it, or you can add business details below. Ordering stays frozen until approval."
+                : "Checking approval… You will be signed in automatically when ready. Ordering stays frozen until then."
+              : "Log in to continue. Your account is waiting for admin approval — ordering stays frozen until then."}
           </p>
           {user && !user.gstNumber && user.id ? (
             <Link
@@ -114,14 +113,28 @@ function PendingApprovalContent() {
 
       {isRejected && (
         <div className="mt-2 flex flex-col gap-3">
-          <Link href="/signup" className="auth-button">
+          {token ? (
+            <Link href="/edit-profile" className="auth-button">
+              Edit profile
+            </Link>
+          ) : (
+            <Link href="/login" className="auth-button">
+              Log in to edit profile
+            </Link>
+          )}
+          <Link href="/signup" className="auth-link" style={{ textAlign: "center" }}>
             Sign up again
-          </Link>
-          <Link href="/login" className="auth-link" style={{ textAlign: "center" }}>
-            Back to login
           </Link>
         </div>
       )}
+
+      {!isRejected && token ? (
+        <p className="mt-4 text-center">
+          <Link href="/edit-profile" className="auth-link">
+            Edit profile
+          </Link>
+        </p>
+      ) : null}
     </AuthLayout>
   );
 }
