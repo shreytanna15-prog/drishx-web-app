@@ -68,13 +68,17 @@ const LENS_TYPE_ICONS = {
 export function RxOrderScreen() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [onBehalfContext] = useState(() => {
-    if (typeof window === "undefined") return null;
+  // sessionStorage is unavailable during SSR; hydrate after mount so on-behalf
+  // userId is present when Place Order runs (useState init stays null from SSR).
+  const [onBehalfContext, setOnBehalfContext] = useState<
+    ReturnType<typeof getOnBehalfCustomOrderContext>
+  >(null);
+  useEffect(() => {
     if (!window.location.pathname.startsWith("/employee/orders/on-behalf/")) {
-      return null;
+      return;
     }
-    return getOnBehalfCustomOrderContext();
-  });
+    setOnBehalfContext(getOnBehalfCustomOrderContext());
+  }, []);
   const onBehalfUserId = onBehalfContext?.userId;
 
   const [lensType, setLensType] = useState<RxLensTypeId>("single-vision");
@@ -277,6 +281,10 @@ export function RxOrderScreen() {
         prescriptionImageUrl = upload.storedImageUrl || upload.imageUrl;
       }
 
+      // Re-read at submit time in case state hydrated late or was cleared elsewhere.
+      const submitOnBehalfUserId =
+        onBehalfUserId ?? getOnBehalfCustomOrderContext()?.userId ?? undefined;
+
       const result = await placeRxOrder({
         lensType,
         orderFor,
@@ -290,11 +298,11 @@ export function RxOrderScreen() {
         remarks: remarks.trim() || null,
         remarkTags,
         prescriptionImageUrl,
-        ...(onBehalfUserId ? { userId: onBehalfUserId } : {}),
+        ...(submitOnBehalfUserId ? { userId: submitOnBehalfUserId } : {}),
       });
 
       if (result.success) {
-        if (onBehalfUserId) {
+        if (submitOnBehalfUserId) {
           clearOnBehalfCustomOrderContext();
         }
         setOrderPlacedMessage(result.message);

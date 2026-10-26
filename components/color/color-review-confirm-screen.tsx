@@ -2,7 +2,7 @@
 
 import { Loader2, Palette } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useColorLensOrder } from "@/components/color/use-color-lens-order";
 import {
   ColorCard,
@@ -55,13 +55,15 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
 export function ColorReviewConfirmScreen() {
   const order = useColorLensOrder();
   const basePath = useColorLensBasePath();
-  const [onBehalfContext] = useState(() => {
-    if (typeof window === "undefined") return null;
+  const [onBehalfContext, setOnBehalfContext] = useState<
+    ReturnType<typeof getOnBehalfCustomOrderContext>
+  >(null);
+  useEffect(() => {
     if (!window.location.pathname.startsWith("/employee/orders/on-behalf/")) {
-      return null;
+      return;
     }
-    return getOnBehalfCustomOrderContext();
-  });
+    setOnBehalfContext(getOnBehalfCustomOrderContext());
+  }, []);
   const onBehalfUserId = onBehalfContext?.userId;
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderPlacedMessage, setOrderPlacedMessage] = useState<string | null>(null);
@@ -98,17 +100,20 @@ export function ColorReviewConfirmScreen() {
     setPlacingOrder(true);
     setError(null);
     try {
+      const submitOnBehalfUserId =
+        onBehalfUserId ?? getOnBehalfCustomOrderContext()?.userId ?? undefined;
+
       const result = await placeColorLensOrder({
         ...order,
         colorName,
         colorHex,
         prescription,
         materialId,
-        ...(onBehalfUserId ? { userId: onBehalfUserId } : {}),
+        ...(submitOnBehalfUserId ? { userId: submitOnBehalfUserId } : {}),
       });
 
       if (result.success) {
-        if (onBehalfUserId) {
+        if (submitOnBehalfUserId) {
           clearOnBehalfCustomOrderContext();
         }
         setOrderPlacedMessage(result.message);
