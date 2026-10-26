@@ -12,6 +12,10 @@ type CartCheckoutBarProps = {
   disabled?: boolean;
   onPlaceOrder: () => void;
   className?: string;
+  tierCode?: string | null;
+  tierDiscountPercent?: number | null;
+  tierDiscountAmount?: number | null;
+  payableTotal?: number | null;
 };
 
 export function CartCheckoutBar({
@@ -22,7 +26,19 @@ export function CartCheckoutBar({
   disabled = false,
   onPlaceOrder,
   className,
+  tierCode,
+  tierDiscountPercent,
+  tierDiscountAmount,
+  payableTotal,
 }: CartCheckoutBarProps) {
+  const showTier =
+    typeof tierDiscountPercent === "number" &&
+    tierDiscountPercent > 0 &&
+    typeof tierDiscountAmount === "number" &&
+    tierDiscountAmount > 0;
+  const displayTotal =
+    showTier && typeof payableTotal === "number" ? payableTotal : totalPrice;
+
   return (
     <div
       className={cn(
@@ -44,8 +60,17 @@ export function CartCheckoutBar({
           <p className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
             {productCount} product{productCount === 1 ? "" : "s"} · {countLabel}
           </p>
+          {showTier ? (
+            <div className="mt-2 space-y-0.5 text-sm text-[var(--brand-text-muted)]">
+              <p>Subtotal ₹{totalPrice.toLocaleString("en-IN")}</p>
+              <p>
+                Tier {tierCode ?? ""} discount ({tierDiscountPercent}%) −₹
+                {tierDiscountAmount!.toLocaleString("en-IN")}
+              </p>
+            </div>
+          ) : null}
           <p className="mt-1 text-3xl font-extrabold tracking-tight text-[var(--brand-primary)] sm:text-[2rem]">
-            ₹{totalPrice.toLocaleString("en-IN")}
+            ₹{displayTotal.toLocaleString("en-IN")}
           </p>
         </div>
 

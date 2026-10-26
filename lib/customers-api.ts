@@ -31,7 +31,7 @@ type CustomerResponse = {
 
 function buildCustomersQueryString(params?: ListCustomersParams): string {
   const qs = new URLSearchParams();
-  qs.set("status", params?.status?.trim() || "approved");
+  qs.set("status", params?.status?.trim() || "orderable");
   if (params?.activeOnly !== false) qs.set("activeOnly", "1");
   qs.set("page", String(params?.page ?? 1));
   qs.set("limit", String(params?.limit ?? 30));
@@ -104,7 +104,7 @@ export async function fetchCustomerCompanies(
       ...params,
       page,
       limit,
-      status: params?.status ?? "approved",
+      status: params?.status ?? "orderable",
       activeOnly: params?.activeOnly !== false,
     })}`,
     {

@@ -29,6 +29,7 @@ import {
 import type { CartPowerLine } from "@/lib/cart-display";
 import { mapCheckoutErrorMessage } from "@/lib/checkout-errors";
 import { createOrder, ORDER_NOTES_MAX_LENGTH, wholesaleCheckout } from "@/lib/orders-api";
+import { applyTierDiscountDisplay } from "@/lib/pricing-tier-display";
 import { DeliveryServicePicker } from "@/components/delivery/delivery-service-picker";
 import { cn } from "@/lib/utils";
 
@@ -77,6 +78,14 @@ export function CartScreen() {
   const qtyLabel = "Pairs";
   const qtySummaryLabel = "Pairs";
   const countLabel = `${summary.pairCount} pair${summary.pairCount === 1 ? "" : "s"}`;
+  const tierBreakdown = useMemo(
+    () =>
+      applyTierDiscountDisplay(
+        totalPrice,
+        user?.pricingTierDiscountPercent ?? null
+      ),
+    [totalPrice, user?.pricingTierDiscountPercent]
+  );
 
   async function handleClearCart() {
     const confirmed = await confirm({
@@ -462,6 +471,10 @@ export function CartScreen() {
           placingOrder={placingOrder}
           disabled={false}
           onPlaceOrder={() => void handlePlaceOrder()}
+          tierCode={user?.pricingTierCode}
+          tierDiscountPercent={tierBreakdown.discountPercent}
+          tierDiscountAmount={tierBreakdown.discountAmount}
+          payableTotal={tierBreakdown.afterDiscount}
           className={cn(
             "sticky z-20",
             "bottom-[calc(4.5rem+env(safe-area-inset-bottom))] md:bottom-4"

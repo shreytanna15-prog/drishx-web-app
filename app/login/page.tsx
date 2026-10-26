@@ -210,6 +210,17 @@ export default function LoginPage() {
               onSubmit={otpSent ? handleVerifyOtp : handleSendOtp}
               className="auth-form"
             >
+              <p
+                style={{
+                  marginBottom: "0.75rem",
+                  fontSize: "0.875rem",
+                  opacity: 0.8,
+                  lineHeight: 1.4,
+                }}
+              >
+                Admin-created or walk-in accounts: sign in with the registered
+                mobile number (OTP). No password required.
+              </p>
               <AuthField label="Mobile number" htmlFor="mobile">
                 <input
                   id="mobile"

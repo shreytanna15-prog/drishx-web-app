@@ -39,6 +39,7 @@ import {
   EMPLOYEE_ON_BEHALF_WHITE_PATH,
   setOnBehalfCustomOrderContext,
 } from "@/lib/on-behalf-custom-order";
+import { EmployeeWalkInCreatePanel } from "@/components/employee/employee-walk-in-create-panel";
 
 type Step = "customer" | "shop";
 type SelectedLine = { lens: LensItem; quantity: number };
@@ -554,6 +555,18 @@ export function EmployeeOrderOnBehalfScreen() {
 
         {step === "customer" ? (
           <div className="space-y-5">
+            <EmployeeWalkInCreatePanel
+              onCreated={(customer) => {
+                setSelectedCustomerId(customer.id);
+                setSelectedCustomerCache(customer);
+                setCustomers((prev) => {
+                  if (prev.some((c) => c.id === customer.id)) return prev;
+                  return [customer, ...prev];
+                });
+                setStep("shop");
+              }}
+            />
+
             <div>
               <h2 className="mb-3 text-base font-bold text-[var(--brand-text)]">
                 1) Choose company
