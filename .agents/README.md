@@ -1,7 +1,6 @@
-# Project agent skills (drishx-website)
+# Project agent skills (drishx-web-app)
 
-Canonical folder: **`.agents/skills/`**.  
-Cursor discovery: **`.cursor/skills/`** junctions into each skill (run `link-skills.ps1`).
+Skills live in **`.agents/skills/`** as markdown (`SKILL.md` + optional references).
 
 ## DrishX-specific skills
 
@@ -9,8 +8,4 @@ Cursor discovery: **`.cursor/skills/`** junctions into each skill (run `link-ski
 |-------|---------|
 | `drishx-client-api` | Client fetch/mutation hooks, list pagination (`Paginated`), summary vs detail, loading & error (no React Query) |
 
-## Link after clone (Windows)
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .agents\link-skills.ps1
-```
+Custom DrishX skills are hand-maintained under `.agents/skills/drishx-*`.
