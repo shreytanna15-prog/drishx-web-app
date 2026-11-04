@@ -200,7 +200,7 @@ export function filterStaffFulfillmentOrders(
   );
 }
 
-/** Catalog / color / photo fulfillment list — excludes prescription RX orders. */
+/** Catalog / color / legacy image rows — excludes prescription RX orders. */
 export function filterNonRxOrders(orders: OrderRecord[]): OrderRecord[] {
   return orders.filter((order) => !isRxOrder(order));
 }
@@ -440,7 +440,7 @@ export function groupOrdersForList(
         totalAmount: 0,
         readyProductCount: 0,
         procurementProductCount: 0,
-        status: { label: "Photo order", variant: "progress" },
+        status: getGroupStatusDisplay([order]),
         isPhotoOrder: true,
         photoUrl: order.orderImageUrl?.trim() || null,
       });

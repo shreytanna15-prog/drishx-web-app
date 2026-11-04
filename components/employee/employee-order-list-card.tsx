@@ -105,7 +105,7 @@ export function EmployeeOrderListCard({ group }: { group: OrderListGroup }) {
         <div className="mt-2.5 flex flex-wrap gap-2">
           {group.isPhotoOrder ? (
             <OrderTypeBadge
-              label="Photo order"
+              label="Image attached"
               className="border-[var(--brand-primary)]/35 bg-[var(--brand-primary)]/14 text-[var(--brand-primary)]"
             />
           ) : null}
@@ -133,7 +133,7 @@ export function EmployeeOrderListCard({ group }: { group: OrderListGroup }) {
       {group.isPhotoOrder ? (
         <Link href={href} className="mt-3 block">
           <p className="text-sm font-semibold text-[var(--brand-text-muted)]">
-            Prescription photo order · details in image
+            Image attached · details in image
           </p>
         </Link>
       ) : (
