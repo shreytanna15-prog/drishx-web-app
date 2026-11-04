@@ -135,7 +135,7 @@ export function OrderListCard({ group }: { group: OrderListGroup }) {
 
       {group.isPhotoOrder ? (
         <p className="mt-3 text-sm font-semibold text-[var(--brand-primary)]">
-          Photo order submitted · your order will be placed soon
+          Image attached · our team will follow up
         </p>
       ) : (
         <div className="mt-3 flex items-end justify-between gap-3">

@@ -71,6 +71,7 @@ export async function login(
   };
 }
 
+/** @deprecated RW-12 — Path A is mobile OTP (`otp-api`). Password signup returns 410. */
 export async function signup(payload: {
   email: string;
   password: string;

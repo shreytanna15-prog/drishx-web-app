@@ -114,7 +114,7 @@ export function OrderGroupDetail({
           </p>
           <ExpectedDispatchNote orders={group.orders} />
           <p className="mt-3 text-sm font-semibold text-[var(--brand-primary)]">
-            Your order will be placed soon. Details are in your photo.
+            Image attached · our team will follow up. Details are in your image.
           </p>
         </div>
 
@@ -123,7 +123,7 @@ export function OrderGroupDetail({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={photoUri}
-              alt="Prescription photo"
+              alt="Attached order image"
               className="size-full object-contain"
               onError={() => setFailedPhotoUrl(photoUri)}
             />
@@ -132,7 +132,7 @@ export function OrderGroupDetail({
           <div className="flex h-52 flex-col items-center justify-center gap-2 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)]">
             <ImageOff className="size-10 text-[var(--brand-text-muted)]" />
             <p className="px-4 text-center text-sm text-[var(--brand-text-muted)]">
-              {photoUri ? "Could not load prescription photo" : "Photo unavailable"}
+              {photoUri ? "Could not load attached image" : "Image unavailable"}
             </p>
           </div>
         )}

@@ -319,7 +319,7 @@ export function EmployeePhotoOrderDetail({
           {formatOrderDateTime(group.createdAt)}
         </p>
         <p className="mt-3 text-sm font-semibold text-[var(--brand-text-muted)]">
-          Product details are in the prescription photo below.
+          Product details are in the attached image below.
         </p>
       </div>
 
@@ -328,7 +328,7 @@ export function EmployeePhotoOrderDetail({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={photoUri}
-            alt="Prescription photo"
+            alt="Attached order image"
             className="size-full object-contain"
             onError={() => setPhotoLoadFailed(true)}
           />
@@ -337,7 +337,7 @@ export function EmployeePhotoOrderDetail({
         <div className="flex h-52 flex-col items-center justify-center gap-2 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)]">
           <ImageOff className="size-10 text-[var(--brand-text-muted)]" />
           <p className="px-4 text-center text-sm text-[var(--brand-text-muted)]">
-            {photoUri ? "Could not load prescription photo" : "Photo unavailable"}
+            {photoUri ? "Could not load attached image" : "Image unavailable"}
           </p>
         </div>
       )}
@@ -573,7 +573,7 @@ export function EmployeeOrderGroupDetail({
           <div className="mt-2.5 flex flex-wrap gap-2">
             {group.isPhotoOrder ? (
               <span className="rounded-lg border border-[var(--brand-primary)]/35 bg-[var(--brand-primary)]/14 px-2.5 py-1 text-xs font-bold text-[var(--brand-primary)]">
-                Photo order
+                Image attached
               </span>
             ) : null}
             {hasCrossOrder ? (

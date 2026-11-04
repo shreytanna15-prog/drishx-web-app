@@ -87,7 +87,7 @@ export function buildEmployeeOrderPrintHtml(group: OrderListGroup): string {
     .join("");
 
   const photoBlock = group.isPhotoOrder
-    ? `<p class="photo-note">Prescription photo order — see attached image in the app.</p>`
+    ? `<p class="photo-note">Image attached — see image in the app.</p>`
     : "";
 
   const notesBlock = notes
