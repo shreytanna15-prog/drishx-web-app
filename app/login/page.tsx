@@ -17,6 +17,12 @@ import {
 } from "@/lib/auth-routing";
 import { sendMobileOtp, verifyMobileOtp } from "@/lib/otp-api";
 import type { SafeUser } from "@/lib/types";
+import {
+  authLoginBodySchema,
+  otpCodeSchema,
+  otpLoginMobileSchema,
+} from "@/lib/validation/auth-login";
+import { safeParseMessage } from "@/lib/validation/parse";
 
 type LoginMode = "otp" | "password";
 
@@ -74,18 +80,20 @@ export default function LoginPage() {
   async function handlePasswordLogin(e: FormEvent) {
     e.preventDefault();
     setError("");
-    if (!email.trim() || !password.trim()) {
-      setError("Email and password are required.");
+    const loginError = safeParseMessage(authLoginBodySchema, { email, password });
+    if (loginError) {
+      setError(loginError);
       return;
     }
+    const parsed = authLoginBodySchema.parse({ email, password });
     setIsSubmitting(true);
     try {
-      const data = await login(email.trim().toLowerCase(), password);
+      const data = await login(parsed.email, parsed.password);
       setSession(data.token, data.user);
     } catch (err) {
       if (err instanceof LoginRejectedError) {
         router.push(
-          buildPendingApprovalHref(email.trim().toLowerCase(), {
+          buildPendingApprovalHref(parsed.email, {
             rejected: true,
             reason: err.rejectionReason ?? undefined,
           })
@@ -101,14 +109,16 @@ export default function LoginPage() {
   async function handleSendOtp(e: FormEvent) {
     e.preventDefault();
     setError("");
-    if (!mobileNumber.trim()) {
-      setError("Enter your mobile number.");
+    const mobileError = safeParseMessage(otpLoginMobileSchema, mobileNumber);
+    if (mobileError) {
+      setError(mobileError);
       return;
     }
+    const normalizedMobile = otpLoginMobileSchema.parse(mobileNumber);
     setIsSubmitting(true);
     try {
       const sent = await sendMobileOtp({
-        mobileNumber,
+        mobileNumber: normalizedMobile,
         purpose: "LOGIN",
       });
       setProviderSessionId(sent.providerSessionId);
@@ -124,16 +134,23 @@ export default function LoginPage() {
   async function handleVerifyOtp(e: FormEvent) {
     e.preventDefault();
     setError("");
-    if (!otpCode.trim()) {
-      setError("Enter the OTP code.");
+    const mobileError = safeParseMessage(otpLoginMobileSchema, mobileNumber);
+    if (mobileError) {
+      setError(mobileError);
       return;
     }
+    const codeError = safeParseMessage(otpCodeSchema, otpCode);
+    if (codeError) {
+      setError(codeError);
+      return;
+    }
+    const normalizedMobile = otpLoginMobileSchema.parse(mobileNumber);
     setIsSubmitting(true);
     try {
       const data = await verifyMobileOtp({
-        mobileNumber,
+        mobileNumber: normalizedMobile,
         purpose: "LOGIN",
-        code: otpCode,
+        code: otpCode.trim(),
         providerSessionId,
       });
       const token = data.accessToken ?? data.token;
@@ -209,6 +226,7 @@ export default function LoginPage() {
             <form
               onSubmit={otpSent ? handleVerifyOtp : handleSendOtp}
               className="auth-form"
+              noValidate
             >
               <p
                 style={{
@@ -227,7 +245,6 @@ export default function LoginPage() {
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel"
-                  required
                   value={mobileNumber}
                   onChange={(e) => setMobileNumber(e.target.value)}
                   className="auth-input"
@@ -243,7 +260,6 @@ export default function LoginPage() {
                     type="text"
                     inputMode="numeric"
                     autoComplete="one-time-code"
-                    required
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value)}
                     className="auth-input"
@@ -281,13 +297,12 @@ export default function LoginPage() {
               ) : null}
             </form>
           ) : (
-            <form onSubmit={handlePasswordLogin} className="auth-form">
+            <form onSubmit={handlePasswordLogin} className="auth-form" noValidate>
               <AuthField label="Email" htmlFor="email">
                 <input
                   id="email"
                   type="email"
                   autoComplete="email"
-                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="auth-input"
@@ -300,7 +315,6 @@ export default function LoginPage() {
                   id="password"
                   type="password"
                   autoComplete="current-password"
-                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="auth-input"

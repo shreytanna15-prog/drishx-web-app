@@ -2,28 +2,19 @@ export type OrderQuantityMode = "retail" | "wholesale";
 /** @deprecated Always pairs — kept for call-site compatibility. */
 export type QuantityUnit = "piece" | "pair";
 
+import {
+  isMultipleOfHalf,
+  isValidPairQuantity,
+  MIN_PAIR_QUANTITY,
+  pairQuantitySchema,
+} from "./validation/order-quantity";
+import { safeParseMessage } from "./validation/parse";
+
 export const PIECES_PER_PAIR = 2;
-export const MIN_PAIR_QUANTITY = 0.5;
+export { MIN_PAIR_QUANTITY, isMultipleOfHalf, isValidPairQuantity, pairQuantitySchema };
 export const PAIR_QUANTITY_STEP = 0.5;
 
 const PAIR_EPS = 1e-9;
-
-export function isMultipleOfHalf(value: number): boolean {
-  if (!Number.isFinite(value)) {
-    return false;
-  }
-  const doubled = value * 2;
-  return Math.abs(doubled - Math.round(doubled)) < PAIR_EPS;
-}
-
-/** Valid customer pair qty: 0.5, 1, 1.5, 2, … */
-export function isValidPairQuantity(pairs: number): boolean {
-  return (
-    Number.isFinite(pairs) &&
-    pairs >= MIN_PAIR_QUANTITY - PAIR_EPS &&
-    isMultipleOfHalf(pairs)
-  );
-}
 
 export function formatPairQuantity(pairs: number): string {
   if (!Number.isFinite(pairs)) {
@@ -105,8 +96,9 @@ export function validatePairQuantity(
   pairs: number,
   options?: { wholePairsOnly?: boolean }
 ): string | null {
-  if (!isValidPairQuantity(pairs)) {
-    return "Enter quantity in 0.5 pair steps (0.5, 1, 1.5, …). Minimum is 0.5.";
+  const schemaError = safeParseMessage(pairQuantitySchema, pairs);
+  if (schemaError) {
+    return schemaError;
   }
   if (
     options?.wholePairsOnly &&
