@@ -42,6 +42,30 @@ yarn-error.log*
 !.env.example
 !.env.deploy.example
 
+# local credentials and private signing material
+.npmrc
+.netrc
+.pypirc
+.ssh/
+id_rsa
+id_ed25519
+*.key
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
+*service-account*.json
+*credentials*.json
+secrets.json
+secrets.*.json
+*.secret.*
+/backups/
+*.dump
+*.backup
+*.sqlite
+*.sqlite3
+
 # vercel
 .vercel
 
