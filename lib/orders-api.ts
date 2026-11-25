@@ -25,6 +25,8 @@ type CreateOrderPayload = {
   notes?: string;
   userId?: string;
   deliveryServiceId?: string;
+  lensProductPowerId?: string;
+  stockMode?: "LIVE" | "NON_LIVE";
 };
 
 function buildOrderPayload(item: CartItem): CreateOrderPayload {
@@ -45,6 +47,11 @@ function buildOrderPayload(item: CartItem): CreateOrderPayload {
 
   if (lensType === "PROGRESSIVE" && item.eye) {
     payload.eye = item.eye.toUpperCase();
+  }
+
+  if (item.lensProductPowerId) {
+    payload.lensProductPowerId = item.lensProductPowerId;
+    payload.stockMode = "LIVE";
   }
 
   return payload;

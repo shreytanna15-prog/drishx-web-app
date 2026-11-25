@@ -34,6 +34,7 @@ import {
 import type { FilterOption, LensItem } from "@/lib/types/lens";
 import { cn } from "@/lib/utils";
 import {
+  EMPLOYEE_ON_BEHALF_CATALOG_PATH,
   EMPLOYEE_ON_BEHALF_COLOR_PATH,
   EMPLOYEE_ON_BEHALF_RX_PATH,
   EMPLOYEE_ON_BEHALF_WHITE_PATH,
@@ -52,6 +53,12 @@ const FILTER_OPTIONS: FilterOption[] = [
 ];
 
 const CUSTOM_ORDER_OPTIONS = [
+  {
+    id: "catalog",
+    label: "Catalog stock",
+    description: "Order by variant + power (live / non-live)",
+    path: EMPLOYEE_ON_BEHALF_CATALOG_PATH,
+  },
   {
     id: "rx",
     label: "Rx",

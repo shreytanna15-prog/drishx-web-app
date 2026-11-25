@@ -42,6 +42,8 @@ export type LensItem = {
   selectableRange?: SelectableRange | null;
   /** Catalog image from Supabase (by lens type). */
   imageUrl?: string | null;
+  /** New catalog stock leaf — when set, checkout uses placeCatalogOrder. */
+  lensProductPowerId?: string | null;
 };
 
 export type CartLineType = "RETAIL" | "WHOLESALE";

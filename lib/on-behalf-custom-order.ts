@@ -34,3 +34,4 @@ export function clearOnBehalfCustomOrderContext() {
 export const EMPLOYEE_ON_BEHALF_RX_PATH = "/employee/orders/on-behalf/rx";
 export const EMPLOYEE_ON_BEHALF_WHITE_PATH = "/employee/orders/on-behalf/white";
 export const EMPLOYEE_ON_BEHALF_COLOR_PATH = "/employee/orders/on-behalf/color";
+export const EMPLOYEE_ON_BEHALF_CATALOG_PATH = "/employee/orders/on-behalf/catalog";

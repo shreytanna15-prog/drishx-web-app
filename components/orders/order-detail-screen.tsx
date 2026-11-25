@@ -2,15 +2,20 @@
 
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { OrderGroupDetail } from "@/components/orders/order-group-detail";
 import { DeliverySummary } from "@/components/delivery/delivery-service-picker";
+import { BrandConfirmDialog } from "@/components/shared/brand-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
+import { useBrandConfirm } from "@/hooks/use-brand-confirm";
 import { groupOrdersForList } from "@/lib/order-list-display";
 import { useGetOrderGroup } from "@/lib/modules/orders/query/use-get-order-group";
+import { cancelOrder } from "@/lib/orders-api";
+
+const CUSTOMER_CANCEL_STATUSES = new Set(["PENDING", "AWAITING_PROCUREMENT"]);
 
 /**
  * Order detail loads the checkout batch (or single order) via batchId / detail GET —
@@ -21,6 +26,9 @@ export function OrderDetailScreen() {
   const groupKey = decodeURIComponent(params.id);
   const { user } = useAuth();
   const { data: orders = [], loading, error, refetch } = useGetOrderGroup(groupKey);
+  const { confirm, open, options, onConfirm, onCancel } = useBrandConfirm();
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const group = useMemo(() => {
     const groups = groupOrdersForList(orders, user?.businessName, "Your company");
@@ -30,6 +38,26 @@ export function OrderDetailScreen() {
       null
     );
   }, [orders, user?.businessName, groupKey]);
+
+  async function handleCancel(orderId: string, label: string) {
+    setCancelError(null);
+    const ok = await confirm({
+      title: "Cancel this order?",
+      description: `Order #${label} will be cancelled and reserved stock released.`,
+      confirmLabel: "Cancel order",
+      destructive: true,
+    });
+    if (!ok) return;
+    setCancellingId(orderId);
+    try {
+      await cancelOrder(orderId);
+      await refetch();
+    } catch (err) {
+      setCancelError(err instanceof Error ? err.message : "Could not cancel order.");
+    } finally {
+      setCancellingId(null);
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
@@ -79,8 +107,29 @@ export function OrderDetailScreen() {
         <div className="space-y-4">
           <OrderGroupDetail group={group} />
           <DeliverySummary order={group.orders[0]!} />
+          {cancelError ? <p role="alert" className="text-sm text-(--brand-danger)">{cancelError}</p> : null}
+          {group.orders.filter((order) => CUSTOMER_CANCEL_STATUSES.has(order.status)).map((order) => {
+            const label = String(order.orderNumber ?? order.id.slice(-8));
+            return (
+              <Button
+                key={`cancel-${order.id}`}
+                variant="outline"
+                className="border-red-400/40 text-red-600 hover:bg-red-50"
+                disabled={cancellingId === order.id}
+                onClick={() => void handleCancel(order.id, label)}
+              >
+                {cancellingId === order.id ? "Cancelling…" : `Cancel order #${label}`}
+              </Button>
+            );
+          })}
+          {group.orders.filter((order) => order.lensProductPowerId && !['CANCELLED', 'COMPLETED', 'DISPATCHED'].includes(order.status)).map((order) => (
+            <Button key={order.id} variant="outline" asChild>
+              <Link href={`/my-orders/${order.id}/change`}>Request change to order #{order.orderNumber ?? order.id.slice(-8)}</Link>
+            </Button>
+          ))}
         </div>
       )}
+      <BrandConfirmDialog open={open} options={options} onConfirm={onConfirm} onCancel={onCancel} />
     </div>
   );
 }

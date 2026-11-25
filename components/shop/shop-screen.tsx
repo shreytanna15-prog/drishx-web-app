@@ -1,9 +1,9 @@
 "use client";
 
-import { Blend, Eye, Layers, ShoppingCart } from "lucide-react";
+import { Blend, Eye, Layers, ShoppingCart, Boxes } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState, type ComponentType } from "react";
+import { useCallback, type ComponentType } from "react";
 import { CatalogSearchBar } from "@/components/shop/catalog-search-bar";
 import { ShopItemsGrid } from "@/components/shop/shop-items-grid";
 import { Button } from "@/components/ui/button";
@@ -33,18 +33,11 @@ const CATEGORY_CODES: Record<ShopCategoryId, string> = {
 export function ShopScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialCategory = parseShopCategory(searchParams.get("category"));
-  const [activeCategory, setActiveCategory] =
-    useState<ShopCategoryId>(initialCategory);
-
-  useEffect(() => {
-    setActiveCategory(parseShopCategory(searchParams.get("category")));
-  }, [searchParams]);
+  const activeCategory = parseShopCategory(searchParams.get("category"));
 
   const handleTabChange = useCallback(
     (value: string) => {
       const category = parseShopCategory(value);
-      setActiveCategory(category);
       router.replace(`/shop?category=${category}`, { scroll: false });
     },
     [router]
@@ -69,16 +62,21 @@ export function ShopScreen() {
             </p>
           </div>
 
-          <Button
-            variant="outline"
-            asChild
-            className="h-11 shrink-0 rounded-xl border-[var(--brand-input-border)] px-4 font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
-          >
-            <Link href="/cart">
-              <ShoppingCart className="size-4" />
-              View cart
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" asChild className="h-11 rounded-xl border-[var(--brand-input-border)] px-4 font-semibold text-[var(--brand-primary)]">
+              <Link href="/shop/catalog"><Boxes className="size-4" />Catalog stock</Link>
+            </Button>
+            <Button
+              variant="outline"
+              asChild
+              className="h-11 shrink-0 rounded-xl border-[var(--brand-input-border)] px-4 font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
+            >
+              <Link href="/cart">
+                <ShoppingCart className="size-4" />
+                View cart
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <CatalogSearchBar className="max-w-xl" />

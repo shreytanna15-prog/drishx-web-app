@@ -13,6 +13,10 @@ export const QUERY_REGISTRY = {
   getReturnRequests: "getReturnRequests",
   getReturnRequest: "getReturnRequest",
   getOutstandingReceivables: "getOutstandingReceivables",
+  getCatalogPowers: "getCatalogPowers",
+  getCatalogDeliveryServices: "getCatalogDeliveryServices",
+  getCatalogOrder: "getCatalogOrder",
+  getOrderModifications: "getOrderModifications",
 } as const;
 
 export const MUTATION_REGISTRY = {

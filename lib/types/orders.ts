@@ -44,6 +44,7 @@ export type WholesaleOrderLineItem = {
 
 export type OrderRecord = {
   id: string;
+  lensProductPowerId?: string | null;
   orderNumber?: number | null;
   checkoutBatchId?: string | null;
   orderImageUrl?: string | null;

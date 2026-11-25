@@ -27,6 +27,7 @@ export type ServerCartItem = {
   createdAt: string;
   lineType?: "RETAIL" | "WHOLESALE";
   wholesaleSpec?: WholesaleSpec | null;
+  lensProductPowerId?: string | null;
 };
 
 function mapServerItem(row: ServerCartItem): CartItem {
@@ -64,6 +65,7 @@ function mapServerItem(row: ServerCartItem): CartItem {
     coating: row.coating,
     lineType: row.lineType ?? "RETAIL",
     wholesaleSpec: row.wholesaleSpec ?? null,
+    lensProductPowerId: row.lensProductPowerId ?? null,
   };
 }
 
@@ -106,6 +108,7 @@ export async function upsertCartLine(
       coating: item.coating,
       item: item.item,
       lensTypeLabel: lensType,
+      ...(item.lensProductPowerId ? { lensProductPowerId: item.lensProductPowerId } : {}),
     }),
   });
 
@@ -141,6 +144,7 @@ function toBulkLineBody(item: LensItem, quantity: number) {
     coating: item.coating,
     item: item.item,
     lensTypeLabel: lensType,
+    ...(item.lensProductPowerId ? { lensProductPowerId: item.lensProductPowerId } : {}),
   };
 }
 
