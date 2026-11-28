@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node init && next dev -p 3001",
-    "prebuild": "node -e \"require('fs').rmSync('.next/dev',{recursive:true,force:true})\"",
-    "build": "node init && next build --webpack",
-    "start": "node init && next start",
+    "dev": "next dev -p 3001",
+    "prebuild": "node ./scripts/clean-next-dev.mjs",
+    "build": "next build --webpack",
+    "start": "next start",
     "lint": "eslint",
     "deploy:trigger": "node scripts/trigger-vercel-deploy.mjs"
   },
