@@ -108,7 +108,7 @@ export function ShopItemsGrid({ category, uppercase }: ShopItemsGridProps) {
       >
         {items.map((item) => (
           <ShopItemCard
-            key={item.name}
+            key={item.id ?? item.name}
             item={item}
             category={category}
             uppercase={uppercase}

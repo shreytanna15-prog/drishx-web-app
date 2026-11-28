@@ -137,11 +137,75 @@ export function mapApiLens(item: LensesPageResponse["items"][number]): LensItem 
 export type LensCatalogItem = {
   name: string;
   productCount: number;
+  /** Storefront card id when loaded from /api/storefront/cards */
+  id?: string;
 };
 
+export type StorefrontShopProduct = {
+  id: string;
+  productId: string;
+  name: string;
+  summary: string;
+  baseCode: string;
+  coating: string | null;
+  coatingName: string | null;
+  variantCount: number;
+  familyCode: string;
+  familyName: string;
+  source: "matched" | "pinned" | "excluded";
+};
+
+export type StorefrontCoatingFacet = {
+  coatingId: string;
+  coatingCode: string;
+  name: string;
+  productCount: number;
+};
+
+function mapStorefrontCardItems(
+  items: Array<{
+    id?: string;
+    name?: string;
+    productCount?: number;
+  }>
+): LensCatalogItem[] {
+  return items.flatMap((row) => {
+    const name = row.name?.trim();
+    if (!name) return [];
+    return [
+      {
+        id: row.id,
+        name,
+        productCount: Number(row.productCount) || 0,
+      },
+    ];
+  });
+}
+
+/**
+ * Prefer Storefront Catalog cards.
+ * If storefront responds OK, trust it even when empty (inactive cards must stay hidden).
+ * Fall back to legacy only when storefront is unreachable / non-OK.
+ */
 export async function fetchLensCatalogItems(
   type: string
 ): Promise<LensCatalogItem[]> {
+  const storefrontParams = new URLSearchParams({ family: type });
+  try {
+    const storefrontRes = await fetch(
+      `/api/storefront/cards?${storefrontParams.toString()}`,
+      { cache: "no-store" }
+    );
+    if (storefrontRes.ok) {
+      const data = (await storefrontRes.json()) as {
+        items?: Array<{ id?: string; name?: string; productCount?: number }>;
+      };
+      return mapStorefrontCardItems(data.items ?? []);
+    }
+  } catch {
+    // fall through to legacy
+  }
+
   const params = new URLSearchParams({ type });
   const response = await fetch(`/api/lenses/items?${params.toString()}`, {
     cache: "no-store",
@@ -151,6 +215,46 @@ export async function fetchLensCatalogItems(
   }
   const data = (await response.json()) as { items?: LensCatalogItem[] };
   return data.items ?? [];
+}
+
+/** Visible parents under a storefront card (same membership resolver as admin). */
+export async function fetchStorefrontProducts(
+  cardId: string
+): Promise<StorefrontShopProduct[]> {
+  const trimmed = cardId.trim();
+  if (!trimmed) return [];
+  const response = await fetch(
+    `/api/storefront/products?${new URLSearchParams({ cardId: trimmed }).toString()}`,
+    { cache: "no-store" }
+  );
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as {
+      error?: string;
+    };
+    if (response.status === 404) {
+      throw new Error(body.error || "This card is unavailable or inactive.");
+    }
+    throw new Error(body.error || "Failed to load storefront products");
+  }
+  const data = (await response.json()) as { items?: StorefrontShopProduct[] };
+  return data.items ?? [];
+}
+
+/** Derived coating facets for products visible on a storefront card. */
+export async function fetchStorefrontFacets(
+  cardId: string
+): Promise<StorefrontCoatingFacet[]> {
+  const trimmed = cardId.trim();
+  if (!trimmed) return [];
+  const response = await fetch(
+    `/api/storefront/facets?${new URLSearchParams({ cardId: trimmed }).toString()}`,
+    { cache: "no-store" }
+  );
+  if (!response.ok) {
+    throw new Error("Failed to load storefront facets");
+  }
+  const data = (await response.json()) as { facets?: StorefrontCoatingFacet[] };
+  return data.facets ?? [];
 }
 
 /** Distinct coating labels for a catalog subcategory (type + item). */

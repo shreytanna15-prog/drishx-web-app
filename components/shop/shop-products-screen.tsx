@@ -10,9 +10,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CoatingDot } from "@/components/shop/coating-dot";
 import { LensProductCard } from "@/components/shop/lens-product-card";
+import { StorefrontProductCard } from "@/components/shop/storefront-product-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,12 +21,15 @@ import {
   DEFAULT_LENS_SORT,
   fetchLensFacets,
   fetchLensesPage,
+  fetchStorefrontFacets,
+  fetchStorefrontProducts,
   LENS_SORT_OPTIONS,
   LOAD_MORE_AT_INDEX,
   mapApiLens,
   POWER_SHAPE_OPTIONS,
   type LensSortOption,
   type PowerShapeFilter,
+  type StorefrontShopProduct,
 } from "@/lib/lenses-api";
 import {
   parseShopCategory,
@@ -35,15 +39,48 @@ import {
 import type { LensItem } from "@/lib/types/lens";
 import { cn } from "@/lib/utils";
 
+function filterStorefrontProducts(
+  items: StorefrontShopProduct[],
+  search: string,
+  coating: string
+): StorefrontShopProduct[] {
+  const q = search.trim().toLowerCase();
+  const coatingFilter = coating.trim().toLowerCase();
+  return items.filter((row) => {
+    if (coatingFilter) {
+      const rowCoating = (row.coatingName || row.coating || "").toLowerCase();
+      if (rowCoating !== coatingFilter) return false;
+    }
+    if (!q) return true;
+    const haystack = [
+      row.name,
+      row.summary,
+      row.baseCode,
+      row.coatingName,
+      row.coating,
+      row.familyName,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(q);
+  });
+}
+
 export function ShopProductsScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const category = parseShopCategory(searchParams.get("category"));
   const selectedItem = searchParams.get("item")?.trim() ?? "";
+  const cardId = searchParams.get("cardId")?.trim() ?? "";
+  const useStorefront = Boolean(cardId);
   const filter = shopCategoryToFilter(category);
   const categoryTitle = shopCategoryDisplayTitle(category);
 
   const [lenses, setLenses] = useState<LensItem[]>([]);
+  const [storefrontProducts, setStorefrontProducts] = useState<
+    StorefrontShopProduct[]
+  >([]);
   const [totalCount, setTotalCount] = useState(0);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -71,7 +108,20 @@ export function ShopProductsScreen() {
   coatingRef.current = selectedCoating;
   powerShapeRef.current = selectedPowerShape;
 
-  const usePowerFilters = coatings.length === 0 && powerShapes.length > 0;
+  const usePowerFilters =
+    !useStorefront && coatings.length === 0 && powerShapes.length > 0;
+
+  const visibleStorefrontProducts = useMemo(
+    () =>
+      useStorefront
+        ? filterStorefrontProducts(
+            storefrontProducts,
+            debouncedSearch,
+            selectedCoating
+          )
+        : [],
+    [useStorefront, storefrontProducts, debouncedSearch, selectedCoating]
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 450);
@@ -85,11 +135,20 @@ export function ShopProductsScreen() {
     powerShapeRef.current = "";
     setCoatings([]);
     setPowerShapes([]);
-    if (!selectedItem) return;
+    if (!selectedItem && !cardId) return;
 
     let cancelled = false;
     void (async () => {
       try {
+        if (cardId) {
+          const facets = await fetchStorefrontFacets(cardId);
+          if (!cancelled) {
+            setCoatings(facets.map((facet) => facet.name));
+            setPowerShapes([]);
+          }
+          return;
+        }
+
         const facets = await fetchLensFacets({
           type: filter,
           item: selectedItem,
@@ -109,11 +168,38 @@ export function ShopProductsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [filter, selectedItem]);
+  }, [filter, selectedItem, cardId]);
+
+  const loadStorefront = useCallback(async () => {
+    if (!cardId) return;
+    const currentRequestId = ++requestIdRef.current;
+    setError(null);
+    setLoadingMore(false);
+    hasMoreRef.current = false;
+    setHasMore(false);
+
+    try {
+      const items = await fetchStorefrontProducts(cardId);
+      if (currentRequestId !== requestIdRef.current) return;
+      setStorefrontProducts(items);
+      setLenses([]);
+      setTotalCount(items.length);
+    } catch {
+      if (currentRequestId !== requestIdRef.current) return;
+      setStorefrontProducts([]);
+      setLenses([]);
+      setTotalCount(0);
+      setError("Unable to load products from the backend.");
+    } finally {
+      if (currentRequestId === requestIdRef.current) {
+        setInitialLoading(false);
+      }
+    }
+  }, [cardId]);
 
   const loadPage = useCallback(
     async (pageToLoad: number, replace: boolean) => {
-      if (!selectedItem) return;
+      if (!selectedItem || cardId) return;
 
       if (pageToLoad > 1) {
         if (loadingMoreRef.current || !hasMoreRef.current) return;
@@ -141,6 +227,7 @@ export function ShopProductsScreen() {
         if (currentRequestId !== requestIdRef.current) return;
 
         const mapped = data.items.map(mapApiLens);
+        setStorefrontProducts([]);
         setLenses((current) => (replace ? mapped : [...current, ...mapped]));
         setTotalCount(data.total);
         pageRef.current = data.page;
@@ -161,10 +248,17 @@ export function ShopProductsScreen() {
         }
       }
     },
-    [filter, selectedItem]
+    [filter, selectedItem, cardId]
   );
 
   useEffect(() => {
+    if (!cardId) return;
+    setInitialLoading(true);
+    void loadStorefront();
+  }, [cardId, loadStorefront]);
+
+  useEffect(() => {
+    if (cardId) return;
     if (!selectedItem) {
       setInitialLoading(false);
       return;
@@ -177,6 +271,7 @@ export function ShopProductsScreen() {
   }, [
     loadPage,
     selectedItem,
+    cardId,
     debouncedSearch,
     sort,
     selectedCoating,
@@ -184,6 +279,7 @@ export function ShopProductsScreen() {
   ]);
 
   useEffect(() => {
+    if (useStorefront) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (
@@ -202,20 +298,25 @@ export function ShopProductsScreen() {
     if (sentinel) observer.observe(sentinel);
 
     return () => observer.disconnect();
-  }, [loadPage, initialLoading, lenses.length, hasMore]);
+  }, [loadPage, initialLoading, lenses.length, hasMore, useStorefront]);
 
-  if (!selectedItem) {
+  if (!selectedItem && !cardId) {
     router.replace(`/shop?category=${category}`);
     return null;
   }
 
+  const listCount = useStorefront
+    ? visibleStorefrontProducts.length
+    : totalCount;
   const emptyMessage = selectedPowerShape
     ? "No products found for this power filter."
     : selectedCoating
       ? "No products found for this coating."
       : debouncedSearch
         ? "No products found for this search."
-        : "No products found for this item.";
+        : useStorefront
+          ? "No products match this card yet."
+          : "No products found for this item.";
 
   const chipClass = (active: boolean) =>
     cn(
@@ -224,6 +325,10 @@ export function ShopProductsScreen() {
         ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]"
         : "border-[var(--brand-card-border)] bg-[var(--brand-card)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
     );
+
+  const isEmpty = useStorefront
+    ? visibleStorefrontProducts.length === 0
+    : lenses.length === 0;
 
   return (
     <div className="relative mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -246,12 +351,12 @@ export function ShopProductsScreen() {
                 {categoryTitle}
               </p>
               <h1 className="text-2xl font-extrabold tracking-tight text-[var(--brand-text)] sm:text-3xl">
-                {selectedItem}
+                {selectedItem || "Products"}
               </h1>
               <p className="mt-1 text-sm font-medium text-[var(--brand-text-muted)]">
                 {initialLoading
                   ? "Loading products…"
-                  : `${totalCount} product${totalCount === 1 ? "" : "s"}`}
+                  : `${listCount} product${listCount === 1 ? "" : "s"}`}
               </p>
             </div>
 
@@ -261,25 +366,31 @@ export function ShopProductsScreen() {
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search power, coating, plano…"
+                  placeholder={
+                    useStorefront
+                      ? "Search product, coating…"
+                      : "Search power, coating, plano…"
+                  }
                   className="h-11 rounded-xl border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] pl-10"
                 />
               </div>
-              <div className="relative">
-                <select
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value as LensSortOption)}
-                  aria-label="Sort products"
-                  className="h-11 w-full appearance-none rounded-xl border border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] px-3 pr-10 text-sm font-semibold text-[var(--brand-text)] outline-none"
-                >
-                  {LENS_SORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-[var(--brand-text-muted)]" />
-              </div>
+              {!useStorefront ? (
+                <div className="relative">
+                  <select
+                    value={sort}
+                    onChange={(e) => setSort(e.target.value as LensSortOption)}
+                    aria-label="Sort products"
+                    className="h-11 w-full appearance-none rounded-xl border border-[var(--brand-input-border)] bg-[var(--brand-input-bg)] px-3 pr-10 text-sm font-semibold text-[var(--brand-text)] outline-none"
+                  >
+                    {LENS_SORT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-[var(--brand-text-muted)]" />
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -356,7 +467,11 @@ export function ShopProductsScreen() {
             <Button
               onClick={() => {
                 setInitialLoading(true);
-                void loadPage(1, true);
+                if (cardId) {
+                  void loadStorefront();
+                } else {
+                  void loadPage(1, true);
+                }
               }}
               className="rounded-xl bg-[var(--brand-primary)] font-bold text-[var(--brand-primary-text)]"
             >
@@ -364,12 +479,18 @@ export function ShopProductsScreen() {
               Retry
             </Button>
           </div>
-        ) : lenses.length === 0 ? (
+        ) : isEmpty ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--brand-card-border)] bg-[var(--brand-card)] px-6 py-16 text-center">
             <Package className="size-10 text-[var(--brand-text-muted)]" />
             <p className="text-sm font-medium text-[var(--brand-text-muted)]">
               {emptyMessage}
             </p>
+          </div>
+        ) : useStorefront ? (
+          <div className="space-y-3">
+            {visibleStorefrontProducts.map((item) => (
+              <StorefrontProductCard key={item.productId} item={item} />
+            ))}
           </div>
         ) : (
           <div className="space-y-3">

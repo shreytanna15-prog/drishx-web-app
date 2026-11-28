@@ -32,7 +32,10 @@ export function ShopItemCard({
   imageUrl,
 }: ShopItemCardProps) {
   const disabled = item.productCount < 1;
-  const href = `/shop/products?category=${category}&item=${encodeURIComponent(item.name)}`;
+  const cardQs = item.id
+    ? `&cardId=${encodeURIComponent(item.id)}`
+    : "";
+  const href = `/shop/products?category=${category}&item=${encodeURIComponent(item.name)}${cardQs}`;
   const { resolvedTheme } = useTheme();
   const blendedSrc =
     catalogImageUrlForShopCategory(null, category, resolvedTheme) ?? imageUrl;
